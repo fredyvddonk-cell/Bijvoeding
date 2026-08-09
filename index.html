@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#245f73">
+<title>Bijvoeding Voorraad 2.5.2</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>Bijvoeding Voorraad</h1>
+  <p>Versie 2.5.2 · kamers wijzigen</p>
+</header>
+
+<main>
+  <div class="mode-switch">
+    <button class="mode-btn active" data-mode="drink">🥤 Bijvoeding</button>
+    <button class="mode-btn" data-mode="sonde">🩺 Sondevoeding</button>
+    <button class="mode-btn" data-mode="general">📦 Algemeen</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview">Overzicht</button>
+    <button class="tab-btn" data-tab="counting">Voorraad tellen</button>
+    <button class="tab-btn" data-tab="usage" id="usageTabBtn">Kamers</button>
+    <button class="tab-btn" data-tab="products">Producten</button>
+    <button class="tab-btn" data-tab="orders">Bestellen</button>
+  </div>
+
+  <section id="overview" class="tab active">
+    <div class="card">
+      <h2 id="overviewTitle">Bijvoeding</h2>
+      <div class="grid">
+        <div class="stat"><span class="muted" id="statUsageLabel">Kamers</span><strong id="statUsage">0</strong></div>
+        <div class="stat"><span class="muted">Productregels</span><strong id="statProducts">0</strong></div>
+        <div class="stat"><span class="muted">Bestelregels</span><strong id="statOrders">0</strong></div>
+        <div class="stat"><span class="muted">Voorraaddoel</span><strong id="statWeeks">3 weken</strong></div>
+      </div>
+    </div>
+    <div class="card" id="weeksCard">
+      <h3>Gewenste voorraad</h3>
+      <div class="week-picker">
+        <button data-weeks="2">2 weken</button>
+        <button data-weeks="3">3 weken</button>
+        <button data-weeks="4">4 weken</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Aandacht nodig</h3>
+      <div id="attentionList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="counting" class="tab">
+    <div class="card">
+      <h2>Voorraad tellen</h2>
+      <p class="muted">Gebruik de plus- en minknoppen. De volgorde volgt jouw ingestelde productvolgorde.</p>
+      <div id="countList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="usage" class="tab">
+    <div class="card" id="roomFormCard">
+      <h2>Kamer toevoegen</h2>
+      <div class="row">
+        <div class="field"><label for="room">Kamernummer</label><input id="room" placeholder="Bijv. 210"></div>
+        <div class="field"><label for="unit">Unit</label><select id="unit"><option>1</option><option>2</option><option>3</option></select></div>
+      </div>
+      <div class="field"><label for="roomProduct">Product en smaak</label><select id="roomProduct"></select></div>
+      <div class="row">
+        <div class="field"><label for="dailyAmount">Verbruik per dag</label><input id="dailyAmount" type="number" min="0" step="0.1"></div>
+        <div class="field"><label for="dailyUnit">Eenheid</label><select id="dailyUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+      </div>
+      <button class="primary" id="saveRoom">Kamer opslaan</button>
+    </div>
+
+    <div class="card hidden" id="generalTargetCard">
+      <h2>Algemeen artikel toevoegen</h2>
+      <div class="field"><label for="generalProduct">Artikel</label><select id="generalProduct"></select></div>
+      <div class="field"><label for="generalTarget">Gewenste voorraad</label><input id="generalTarget" type="number" min="0" step="1"></div>
+      <button class="primary" id="saveGeneralTarget">Gewenste voorraad opslaan</button>
+    </div>
+
+    <div class="card">
+      <h3 id="usageListTitle">Ingevoerde kamers</h3>
+      <div id="usageList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="products" class="tab">
+    <div class="card">
+      <h2>Product toevoegen</h2>
+      <div class="row">
+        <div class="field"><label for="productName">Productnaam</label><input id="productName"></div>
+        <div class="field" id="flavorField"><label for="flavor">Smaak</label><input id="flavor"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="consumptionUnit">Verbruikseenheid</label><select id="consumptionUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+        <div class="field"><label for="orderUnit">Voorraad- en besteleenheid</label><select id="orderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
+      </div>
+      <div class="field"><label for="contentPerOrderUnit">Inhoud per besteleenheid</label><input id="contentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
+      <div class="row">
+        <div class="field"><label for="stockFull">Aantal verpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
+        <div class="field" id="looseField"><label for="stockLoose">Losse zakjes (alleen indien nodig)</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
+      </div>
+      <div class="field"><label for="alreadyOrdered">Reeds besteld in verpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div>
+      <div class="field"><label for="minimumStock">Minimumvoorraad in verpakkingen</label><input id="minimumStock" type="number" min="0" step="1" value="0"></div>
+      <button class="primary" id="saveProduct">Product opslaan</button>
+    </div>
+    <div class="card"><h3>Producten en volgorde</h3><div id="productList" class="list"></div></div>
+  </section>
+
+  <section id="orders" class="tab">
+    <div class="card"><h2>Besteladvies</h2><div id="orderList" class="list"></div></div>
+  </section>
+
+  <div class="footer-note">Gegevens worden lokaal in deze browser opgeslagen.</div>
+</main>
+
+<div id="roomEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="roomEditTitle">
+  <div class="modal-backdrop" onclick="closeRoomEdit()"></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="roomEditTitle">Kamer wijzigen</h2>
+      <button type="button" class="modal-close" onclick="closeRoomEdit()" aria-label="Sluiten">×</button>
+    </div>
+    <div class="row">
+      <div class="field"><label for="editRoomNumber">Kamernummer</label><input id="editRoomNumber" placeholder="Bijv. 210"></div>
+      <div class="field"><label for="editRoomUnit">Unit</label><select id="editRoomUnit"><option>1</option><option>2</option><option>3</option></select></div>
+    </div>
+    <div class="field"><label for="editRoomProduct">Product en smaak</label><select id="editRoomProduct"></select></div>
+    <div class="row">
+      <div class="field"><label for="editDailyAmount">Verbruik per dag</label><input id="editDailyAmount" type="number" min="0" step="0.1"></div>
+      <div class="field"><label for="editDailyUnit">Eenheid</label><select id="editDailyUnit" disabled><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+    </div>
+    <div class="modal-info"><strong>Informatie</strong><br><span>Het verbruik per dag wordt gebruikt voor het overzicht en het besteladvies.</span></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" onclick="closeRoomEdit()">Annuleren</button>
+      <button type="button" class="primary" id="saveRoomEdit">Kamer opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script src="data/defaults.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
