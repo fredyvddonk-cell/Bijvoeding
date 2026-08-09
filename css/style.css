@@ -58,6 +58,6 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 
 
 /* Productvolgorde slepen */
-.drag-handle{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--soft);color:var(--primary);font-size:1.35rem;font-weight:900;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.drag-handle{flex:0 0 auto;min-width:86px;height:44px;border:2px solid var(--primary);border-radius:11px;background:var(--primary);color:#fff;font-size:1.2rem;font-weight:900;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px}.drag-label{font-size:.82rem;font-weight:800}
 .drag-handle:active{cursor:grabbing}
 .product-sort-item.dragging{opacity:.72;box-shadow:0 12px 30px rgba(23,49,60,.18);transform:scale(1.01)}

@@ -110,7 +110,7 @@ function renderUsage(){
 function renderProducts(){
   const ps=productsForMode();
   productList.innerHTML=ps.length?ps.map((p,i)=>`<div class="item product-sort-item" data-product-id="${p.id}">
-    <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span></div><button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen">☰</button></div>
+    <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span></div><button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span><span class="drag-label">Slepen</span></button></div>
     <div style="margin-top:8px">
       Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit,p.stockFull))}${p.orderUnit==="doos"?` + ${fmt(p.stockLoose)} zakjes`:""}</strong><br>
       Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit,p.alreadyOrdered))}</strong><br>
@@ -188,10 +188,6 @@ function renderAll(){
 }
 function changeStock(id,d){const p=data.products.find(x=>x.id===id);p.stockFull=Math.max(0,Number(p.stockFull||0)+d);saveData()}
 function changeLoose(id,d){const p=data.products.find(x=>x.id===id);p.stockLoose=Math.max(0,Number(p.stockLoose||0)+d);saveData()}
-function moveProduct(id,dir){
-  const ps=productsForMode(),i=ps.findIndex(p=>p.id===id),j=i+dir;if(j<0||j>=ps.length)return;
-  const a=ps[i].order,b=ps[j].order;ps[i].order=b;ps[j].order=a;saveData()
-}
 let editingRoomId=null;
 function editRoom(id){
   const r=data.rooms.find(x=>x.id===id);
