@@ -1,3 +1,11 @@
+Bijvoeding Voorraad 2.7.1
+
+Nieuw in 2.7.1:
+- Hele bestelverpakkingen + losse eenheden tellen bij Bijvoeding, Sondevoeding en Algemeen.
+- Totaal losse eenheden wordt automatisch berekend.
+- Besteladvies blijft afronden op hele bestelverpakkingen.
+- Ondersteuning voor besteleenheid karton toegevoegd.
+
 Bijvoeding Voorraad 2.7.0
 
 Bestanden voor VS Code / GitHub:

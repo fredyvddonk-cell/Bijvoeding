@@ -114,3 +114,5 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
   .drag-handle{min-width:68px;padding:0 8px}
   .drag-label{display:none}
 }
+
+.count-total{margin-top:8px;font-size:.95rem;color:#2D2D37}.count-total strong{font-size:1.05rem}

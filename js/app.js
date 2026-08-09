@@ -125,11 +125,27 @@ function labelProduct(p) {
   return p?.flavor ? `${p.name} · ${p.flavor}` : (p?.name || "Product");
 }
 function plural(unit, n) {
-  const m = { flesje: "flesjes", bakje: "bakjes", fles: "flessen", doos: "dozen", pot: "potten", pak: "pakken" };
+  const m = { flesje: "flesjes", bakje: "bakjes", fles: "flessen", karton: "kartons", doos: "dozen", pot: "potten", pak: "pakken" };
   return Number(n) === 1 ? unit : (m[unit] || unit + "en");
 }
 function activeProduct(p) {
   return p.active !== false;
+}
+function hasLooseUnits(p) {
+  return Number(p?.contentPerOrderUnit || 1) > 1;
+}
+function looseUnitLabel(p, n = 2) {
+  const u = p?.consumptionUnit || "stuks";
+  if (u === "ml") return "ml";
+  if (Number(n) === 1) {
+    const singular = { flesjes:"flesje", bakjes:"bakje", zakjes:"zakje", stuks:"stuk" };
+    return singular[u] || u;
+  }
+  return u;
+}
+function packageCountLabel(p, n) {
+  const unit = plural(p.orderUnit, n);
+  return `${fmt(n)} ${unit} van ${fmt(p.contentPerOrderUnit || 1)}`;
 }
 function familyProducts(name, mode, includeInactive = false) {
   return data.products
@@ -326,7 +342,7 @@ function thtBadgeHtml(p) {
 function renderCounting() {
   const ps = productsForMode();
   countList.innerHTML = ps.length ? ps.map(p => {
-    const loose = p.orderUnit === "doos";
+    const loose = hasLooseUnits(p);
     const unusedStock = currentMode !== "general" && !isInUse(p) && stockUnits(p) > 0;
     return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
       <div class="item-head">
@@ -334,10 +350,10 @@ function renderCounting() {
         <div class="days-pill">${currentMode === "general" ? "" : esc(daysSupplyText(p))}</div>
       </div>
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
-      <span class="muted">Voorraad in ${esc(plural(p.orderUnit, 2))}</span>
+      <span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span>
       ${currentMode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
-      <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
-      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse zakjes</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} zakjes</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div></div>` : ""}
+      <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
+      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
       ${currentMode !== "general" ? `<div class="expiry-line">${thtStatusHtml(p) || `<span class="muted">THT nog niet vastgelegd</span>`}</div><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
@@ -377,10 +393,10 @@ function renderProducts() {
   const ps = productsForMode();
   productList.innerHTML = ps.length ? ps.map(p => `<div class="item product-sort-item ${!activeProduct(p) ? "inactive-product" : ""}" data-product-id="${p.id}">
     <div class="item-head">
-      <div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit, 2))}</span><div style="margin-top:6px">${currentMode !== "general" ? useBadge(p) : ""}</div></div>
+      <div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span><div style="margin-top:6px">${currentMode !== "general" ? useBadge(p) : ""}</div></div>
       <button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span><span class="drag-label">Slepen</span></button>
     </div>
-    <div style="margin-top:8px">Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}${p.orderUnit === "doos" ? ` + ${fmt(p.stockLoose)} zakjes` : ""}</strong><br>Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit, p.alreadyOrdered))}</strong><br>Minimum: <strong>${fmt(p.minimumStock || 0)} ${esc(plural(p.orderUnit, p.minimumStock || 0))}</strong>${currentMode !== "general" ? `<br><span class="muted">${esc(daysSupplyText(p))}</span>` : ""}</div>
+    <div style="margin-top:8px">Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}${hasLooseUnits(p) ? ` + ${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))} = ${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}` : ""}</strong><br>Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit, p.alreadyOrdered))}</strong><br>Minimum: <strong>${fmt(p.minimumStock || 0)} ${esc(plural(p.orderUnit, p.minimumStock || 0))}</strong>${currentMode !== "general" ? `<br><span class="muted">${esc(daysSupplyText(p))}</span>` : ""}</div>
     <div class="actions"><button class="small-primary" onclick="editStock('${p.id}')">Wijzigen</button><button class="small-danger" onclick="deleteProduct('${p.id}')">Verwijderen</button></div>
   </div>`).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -460,7 +476,7 @@ function renderOverview() {
 
 function renderAll() {
   flavorField.classList.toggle("hidden", currentMode === "sonde");
-  looseField.classList.toggle("hidden", orderUnit.value !== "doos");
+  looseField.classList.toggle("hidden", Number(contentPerOrderUnit.value || 1) <= 1);
   renderProductOptions();
   renderCounting();
   renderUsage();
@@ -597,7 +613,7 @@ function editStock(id) {
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
   editProductActiveRow.classList.toggle("hidden", p.mode === "general");
-  editLooseField.classList.toggle("hidden", p.orderUnit !== "doos");
+  editLooseField.classList.toggle("hidden", !hasLooseUnits(p));
   productEditModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -606,7 +622,9 @@ function closeProductEdit() {
   productEditModal.classList.add("hidden");
   document.body.style.overflow = "";
 }
-editOrderUnit.onchange = () => editLooseField.classList.toggle("hidden", editOrderUnit.value !== "doos");
+const syncEditLooseField = () => editLooseField.classList.toggle("hidden", Number(editContentPerOrderUnit.value || 1) <= 1);
+editOrderUnit.onchange = syncEditLooseField;
+editContentPerOrderUnit.oninput = syncEditLooseField;
 saveProductEdit.onclick = () => {
   const p = data.products.find(x => x.id === editingProductId);
   if (!p) return;
@@ -633,7 +651,7 @@ saveProductEdit.onclick = () => {
   p.orderUnit = editOrderUnit.value;
   p.contentPerOrderUnit = content;
   p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
-  p.stockLoose = p.orderUnit === "doos" ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
+  p.stockLoose = content > 1 ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
@@ -671,7 +689,7 @@ document.querySelectorAll(".week-picker button").forEach(b => b.onclick = () => 
   else data.settings.sondeWeeks = Number(b.dataset.weeks);
   saveData();
 });
-orderUnit.onchange = () => looseField.classList.toggle("hidden", orderUnit.value !== "doos");
+orderUnit.onchange = () => looseField.classList.toggle("hidden", Number(contentPerOrderUnit.value || 1) <= 1);
 roomProduct.onchange = () => {
   setRoomUnitFromProduct(roomProduct, dailyUnit);
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
@@ -719,7 +737,7 @@ saveProduct.onclick = () => {
   const ou = orderUnit.value;
   const content = Number(contentPerOrderUnit.value);
   const sf = Number(stockFull.value || 0);
-  const sl = ou === "doos" ? Number(stockLoose.value || 0) : 0;
+  const sl = content > 1 ? Number(stockLoose.value || 0) : 0;
   const ao = Number(alreadyOrdered.value || 0);
   const min = Number(minimumStock.value || 0);
   if (!name || content <= 0) {

@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#245f73">
-<title>Bijvoeding Voorraad 2.7.0</title>
+<title>Bijvoeding Voorraad 2.7.1</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
   <h1>Bijvoeding Voorraad</h1>
-  <p>Versie 2.7.0</p>
+  <p>Versie 2.7.1</p>
 </header>
 
 <main>
@@ -99,15 +99,15 @@
       </div>
       <div class="row">
         <div class="field"><label for="consumptionUnit">Verbruikseenheid</label><select id="consumptionUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
-        <div class="field"><label for="orderUnit">Voorraad- en besteleenheid</label><select id="orderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
+        <div class="field"><label for="orderUnit">Voorraad- en besteleenheid</label><select id="orderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="karton">karton</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
       </div>
       <div class="field"><label for="contentPerOrderUnit">Inhoud per besteleenheid</label><input id="contentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
       <div class="row">
-        <div class="field"><label for="stockFull">Aantal verpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
-        <div class="field" id="looseField"><label for="stockLoose">Losse zakjes (alleen indien nodig)</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
+        <div class="field"><label for="stockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
+        <div class="field" id="looseField"><label for="stockLoose">Losse eenheden</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
       </div>
-      <div class="field"><label for="alreadyOrdered">Reeds besteld in verpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div>
-      <div class="field"><label for="minimumStock">Minimumvoorraad in verpakkingen</label><input id="minimumStock" type="number" min="0" step="1" value="0"></div>
+      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div>
+      <div class="field"><label for="minimumStock">Minimumvoorraad in bestelverpakkingen</label><input id="minimumStock" type="number" min="0" step="1" value="0"></div>
       <button class="primary" id="saveProduct">Product opslaan</button>
     </div>
     <div class="card"><h3>Producten en volgorde</h3><p class="muted">Sleep met ☰ om de volgorde te wijzigen. De gekozen volgorde wordt ook gebruikt bij Voorraad tellen.</p><div id="productList" class="list"></div></div>
@@ -159,16 +159,16 @@
     </div>
     <div class="row">
       <div class="field"><label for="editConsumptionUnit">Verbruikseenheid</label><select id="editConsumptionUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
-      <div class="field"><label for="editOrderUnit">Voorraad- en besteleenheid</label><select id="editOrderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
+      <div class="field"><label for="editOrderUnit">Voorraad- en besteleenheid</label><select id="editOrderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="karton">karton</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
     </div>
     <div class="field"><label for="editContentPerOrderUnit">Inhoud per besteleenheid</label><input id="editContentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
     <div class="row">
-      <div class="field"><label for="editStockFull">Aantal verpakkingen op voorraad</label><input id="editStockFull" type="number" min="0" step="1"></div>
-      <div class="field" id="editLooseField"><label for="editStockLoose">Losse zakjes (alleen indien nodig)</label><input id="editStockLoose" type="number" min="0" step="1"></div>
+      <div class="field"><label for="editStockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="editStockFull" type="number" min="0" step="1"></div>
+      <div class="field" id="editLooseField"><label for="editStockLoose">Losse eenheden</label><input id="editStockLoose" type="number" min="0" step="1"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in verpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div>
-      <div class="field"><label for="editMinimumStock">Minimumvoorraad in verpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
+      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div>
+      <div class="field"><label for="editMinimumStock">Minimumvoorraad in bestelverpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
     </div>
 
     <div class="toggle-row" id="editProductActiveRow">
