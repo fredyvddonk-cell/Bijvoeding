@@ -2,13 +2,11 @@ let data=loadData(),currentMode="drink";
 
 function loadData(){
   try{
-    const d=JSON.parse(localStorage.getItem(STORAGE_KEY))||structuredClone(defaults);
+    const stored=localStorage.getItem(STORAGE_KEY);
+    const d=stored?JSON.parse(stored):structuredClone(defaults);
     if(!d.settings)d.settings={drinkWeeks:3,sondeWeeks:3};
     if(!Array.isArray(d.products))d.products=[];
     if(!Array.isArray(d.rooms))d.rooms=[];
-    defaults.products.forEach(dp=>{
-      if(!d.products.some(p=>p.mode===dp.mode&&p.name===dp.name&&p.flavor===dp.flavor))d.products.push(structuredClone(dp))
-    });
     d.products.forEach((p,i)=>{
       if(p.order==null)p.order=i+1;
       if(p.minimumStock==null)p.minimumStock=0;
@@ -111,8 +109,8 @@ function renderUsage(){
 }
 function renderProducts(){
   const ps=productsForMode();
-  productList.innerHTML=ps.length?ps.map((p,i)=>`<div class="item">
-    <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span></div><span class="badge">${i+1}</span></div>
+  productList.innerHTML=ps.length?ps.map((p,i)=>`<div class="item product-sort-item" data-product-id="${p.id}">
+    <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span></div><button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen">☰</button></div>
     <div style="margin-top:8px">
       Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit,p.stockFull))}${p.orderUnit==="doos"?` + ${fmt(p.stockLoose)} zakjes`:""}</strong><br>
       Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit,p.alreadyOrdered))}</strong><br>
@@ -120,12 +118,43 @@ function renderProducts(){
       ${belowMinimum(p)?`<br><span class="status-danger">Onder minimumvoorraad</span>`:""}
     </div>
     <div class="actions">
-      <button class="small-primary" onclick="moveProduct('${p.id}',-1)">⬆️ Omhoog</button>
-      <button class="small-primary" onclick="moveProduct('${p.id}',1)">⬇️ Omlaag</button>
       <button class="small-primary" onclick="editStock('${p.id}')">Wijzigen</button>
       <button class="small-danger" onclick="deleteProduct('${p.id}')">Verwijderen</button>
     </div></div>`).join(""):`<div class="empty">Nog geen producten.</div>`
 }
+
+let draggedProductItem=null;
+productList.addEventListener("pointerdown",e=>{
+  const handle=e.target.closest(".drag-handle");
+  if(!handle)return;
+  const item=handle.closest(".product-sort-item");
+  if(!item)return;
+  draggedProductItem=item;
+  item.classList.add("dragging");
+  handle.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
+});
+productList.addEventListener("pointermove",e=>{
+  if(!draggedProductItem)return;
+  const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".product-sort-item");
+  if(!target||target===draggedProductItem||target.parentElement!==productList)return;
+  const rect=target.getBoundingClientRect();
+  const before=e.clientY<rect.top+rect.height/2;
+  productList.insertBefore(draggedProductItem,before?target:target.nextSibling);
+});
+function finishProductDrag(){
+  if(!draggedProductItem)return;
+  draggedProductItem.classList.remove("dragging");
+  draggedProductItem=null;
+  [...productList.querySelectorAll(".product-sort-item")].forEach((el,i)=>{
+    const p=data.products.find(x=>x.id===el.dataset.productId);
+    if(p)p.order=i+1;
+  });
+  saveData();
+}
+productList.addEventListener("pointerup",finishProductDrag);
+productList.addEventListener("pointercancel",finishProductDrag);
+
 function renderOrders(){
   const rows=productsForMode().map(p=>({p,a:advice(p)})).filter(x=>currentMode==="general"||x.a.weekly>0);
   orderList.innerHTML=rows.length?rows.map(({p,a})=>`<div class="item note">

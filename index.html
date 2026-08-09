@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#245f73">
-<title>Bijvoeding Voorraad 2.5.3</title>
+<title>Bijvoeding Voorraad 2.5.4</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
   <h1>Bijvoeding Voorraad</h1>
-  <p>Versie 2.5.3 · meerdere bijvoedingen per kamer · producten wijzigen</p>
+  <p>Versie 2.5.4 · producten slepen · verwijderen blijft verwijderd</p>
 </header>
 
 <main>
@@ -109,7 +109,7 @@
       <div class="field"><label for="minimumStock">Minimumvoorraad in verpakkingen</label><input id="minimumStock" type="number" min="0" step="1" value="0"></div>
       <button class="primary" id="saveProduct">Product opslaan</button>
     </div>
-    <div class="card"><h3>Producten en volgorde</h3><div id="productList" class="list"></div></div>
+    <div class="card"><h3>Producten en volgorde</h3><p class="muted">Sleep met ☰ om de volgorde te wijzigen. De gekozen volgorde wordt ook gebruikt bij Voorraad tellen.</p><div id="productList" class="list"></div></div>
   </section>
 
   <section id="orders" class="tab">

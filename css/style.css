@@ -55,3 +55,9 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 .modal-info span{font-size:.9rem}
 .modal-actions{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(180px,1.5fr);gap:10px}
 @media(max-width:600px){.modal{padding:10px}.modal-panel{padding:17px;border-radius:16px}.modal-actions{grid-template-columns:1fr}.modal-head{margin-bottom:14px}}
+
+
+/* Productvolgorde slepen */
+.drag-handle{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--soft);color:var(--primary);font-size:1.35rem;font-weight:900;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.drag-handle:active{cursor:grabbing}
+.product-sort-item.dragging{opacity:.72;box-shadow:0 12px 30px rgba(23,49,60,.18);transform:scale(1.01)}
