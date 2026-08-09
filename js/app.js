@@ -1,293 +1,746 @@
-let data=loadData(),currentMode="drink";
+let data = loadData();
+let currentMode = "drink";
 
-function loadData(){
-  try{
-    const stored=localStorage.getItem(STORAGE_KEY);
-    const d=stored?JSON.parse(stored):structuredClone(defaults);
-    if(!d.settings)d.settings={drinkWeeks:3,sondeWeeks:3};
-    if(!Array.isArray(d.products))d.products=[];
-    if(!Array.isArray(d.rooms))d.rooms=[];
-    d.products.forEach((p,i)=>{
-      if(p.order==null)p.order=i+1;
-      if(p.minimumStock==null)p.minimumStock=0;
+const CUPBOARD_ORDER = [
+  ["Abound", "Neutraal"], ["Abound", "Sinaasappel"],
+  ["Nutridrink Crème 2 kcal Protein", "Banaan"], ["Nutridrink Crème 2 kcal Protein", "Bosvruchten"], ["Nutridrink Crème 2 kcal Protein", "Chocolade"], ["Nutridrink Crème 2 kcal Protein", "Mokka"], ["Nutridrink Crème 2 kcal Protein", "Vanille"],
+  ["Ensure Two Cal", "Aardbei"], ["Ensure Two Cal", "Banaan"], ["Ensure Two Cal", "Vanille"],
+  ["Glucerna Advance", "Aardbei"], ["Glucerna Advance", "Koffie"],
+  ["Ensure Plus Advance", "Aardbei"], ["Ensure Plus Advance", "Banaan"], ["Ensure Plus Advance", "Chocolade"], ["Ensure Plus Advance", "Koffie"], ["Ensure Plus Advance", "Vanille"],
+  ["Glucerna Advance", "Vanille"]
+];
+
+function canonicalName(name) {
+  return name === "Glucerna" ? "Glucerna Advance" : name;
+}
+function isoToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parseLocalDate(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function daysBetween(a, b) {
+  return Math.floor((b - a) / 86400000);
+}
+function formatDate(s) {
+  const d = parseLocalDate(s);
+  return d ? d.toLocaleDateString("nl-NL") : "";
+}
+function cloneDefaults() {
+  return typeof structuredClone === "function" ? structuredClone(defaults) : JSON.parse(JSON.stringify(defaults));
+}
+
+function loadData() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const d = stored ? JSON.parse(stored) : cloneDefaults();
+
+    if (!d.settings) d.settings = { drinkWeeks: 3, sondeWeeks: 3 };
+    if (!Array.isArray(d.products)) d.products = [];
+    if (!Array.isArray(d.rooms)) d.rooms = [];
+
+    d.products.forEach((p, i) => {
+      p.name = canonicalName(p.name);
+      if (p.order == null) p.order = i + 1;
+      if (p.minimumStock == null) p.minimumStock = 0;
+      if (p.expiryDate == null) p.expiryDate = "";
+      if (p.lastExpiryCheck == null) p.lastExpiryCheck = "";
+      if (p.active == null) p.active = true;
     });
-    if(!d.rooms.length){
-      const f=(name,flavor,mode="drink")=>d.products.find(p=>p.mode===mode&&p.name===name&&p.flavor===flavor)?.id;
-      d.rooms=[
-        {id:crypto.randomUUID(),mode:"drink",room:"113",unit:"1",productId:f("Glucerna","Niet gespecificeerd"),dailyAmount:3,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"207",unit:"2",productId:f("Ensure Two Cal","Niet gespecificeerd"),dailyAmount:3,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"210",unit:"2",productId:f("Abound","Neutraal"),dailyAmount:1,dailyUnit:"zakjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"214",unit:"2",productId:f("Ensure Plus Advance","Niet gespecificeerd"),dailyAmount:1,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"220",unit:"2",productId:f("Nutridrink Crème 2 kcal Protein","Niet gespecificeerd"),dailyAmount:1,dailyUnit:"bakjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"221",unit:"2",productId:f("Abound","Sinaasappel"),dailyAmount:1,dailyUnit:"zakjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"221",unit:"2",productId:f("Ensure Plus Advance","Niet gespecificeerd"),dailyAmount:1,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"305",unit:"3",productId:f("Abound","Neutraal"),dailyAmount:2,dailyUnit:"zakjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"305",unit:"3",productId:f("Glucerna","Aardbei"),dailyAmount:1,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"306",unit:"3",productId:f("Vruchtenkwark of vla","Niet gespecificeerd"),dailyAmount:1,dailyUnit:"bakjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"312",unit:"3",productId:f("Drinkyoghurt","Niet gespecificeerd"),dailyAmount:2,dailyUnit:"flesjes"},
-        {id:crypto.randomUUID(),mode:"drink",room:"315",unit:"3",productId:f("Nutridrink Crème 2 kcal Protein","Niet gespecificeerd"),dailyAmount:1,dailyUnit:"bakjes"},
-        {id:crypto.randomUUID(),mode:"sonde",room:"210",unit:"2",productId:f("Jevity 1.5","","sonde"),dailyAmount:1600,dailyUnit:"ml"}
-      ]
+
+    // Oude kamerregistraties omzetten naar de rustige structuur:
+    // product kiezen + één of meer voorkeurssmaken aanvinken.
+    d.rooms.forEach(r => {
+      if (!Array.isArray(r.selectedProductIds)) r.selectedProductIds = [];
+
+      if (r.productId) {
+        const p = d.products.find(x => x.id === r.productId);
+        if (p) {
+          r.productName = canonicalName(p.name);
+          if (p.flavor === "Niet gespecificeerd") {
+            r.allFlavors = true;
+            r.selectedProductIds = d.products
+              .filter(x => x.mode === r.mode && x.active !== false && canonicalName(x.name) === canonicalName(p.name) && x.flavor !== "Niet gespecificeerd")
+              .map(x => x.id);
+          } else {
+            r.selectedProductIds = [p.id];
+            r.allFlavors = false;
+          }
+        }
+      }
+
+      if (r.allFlavors && r.productName) {
+        const active = d.products.filter(p => p.mode === r.mode && p.active !== false && canonicalName(p.name) === canonicalName(r.productName));
+        r.selectedProductIds = active.map(p => p.id);
+      }
+
+      r.productName = r.productName ? canonicalName(r.productName) : r.productName;
+      r.productId = null;
+    });
+
+    // Verwijderde standaardproducten worden bewust niet opnieuw toegevoegd.
+    d.products = d.products.filter(p => p.flavor !== "Niet gespecificeerd");
+
+    if (!d.settings.cupboardOrderApplied) {
+      const rank = p => {
+        const i = CUPBOARD_ORDER.findIndex(([n, f]) => n === canonicalName(p.name) && f === p.flavor);
+        return i < 0 ? 1000 + Number(p.order || 0) : i;
+      };
+      d.products.filter(p => p.mode === "drink").sort((a, b) => rank(a) - rank(b)).forEach((p, i) => p.order = i + 1);
+      d.settings.cupboardOrderApplied = true;
     }
-    return d
-  }catch(e){return structuredClone(defaults)}
-}
-function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));renderAll()}
-function esc(v){return String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[s]))}
-function fmt(n){return Number.isInteger(Number(n))?String(Number(n)):Number(n).toFixed(1).replace(".",",")}
-function modeLabel(){return currentMode==="drink"?"Bijvoeding":currentMode==="sonde"?"Sondevoeding":"Algemene voorraad"}
-function targetWeeks(){return currentMode==="drink"?data.settings.drinkWeeks:data.settings.sondeWeeks}
-function productsForMode(){return data.products.filter(p=>p.mode===currentMode).sort((a,b)=>a.order-b.order)}
-function roomsForMode(){return data.rooms.filter(r=>r.mode===currentMode)}
-function labelProduct(p){return p.flavor?`${p.name} · ${p.flavor}`:p.name}
-function plural(unit,n){
-  const m={flesje:"flesjes",bakje:"bakjes",fles:"flessen",doos:"dozen",pot:"potten",pak:"pakken"};
-  return n===1?unit:(m[unit]||unit+"en")
-}
-function weeklyUsage(pid){return data.rooms.filter(r=>r.productId===pid).reduce((s,r)=>s+Number(r.dailyAmount||0)*7,0)}
-function stockUnits(p){return Number(p.stockFull||0)*Number(p.contentPerOrderUnit||1)+Number(p.stockLoose||0)}
-function orderedUnits(p){return Number(p.alreadyOrdered||0)*Number(p.contentPerOrderUnit||1)}
-function stockPackages(p){return Number(p.stockFull||0)+(Number(p.stockLoose||0)/Number(p.contentPerOrderUnit||1))}
-function belowMinimum(p){return stockPackages(p)<Number(p.minimumStock||0)}
-function advice(p){
-  const weekly=weeklyUsage(p.id);
-  const usageTarget=currentMode==="general"
-    ? Number(p.generalTarget||0)
-    : weekly*targetWeeks();
 
-  const minimumTarget=Number(p.minimumStock||0)*Number(p.contentPerOrderUnit||1);
-
-  // De hoogste grens geldt:
-  // - gewenste voorraad op basis van verbruik of handmatige doelvoorraad
-  // - minimumvoorraad per product
-  const needed=Math.max(usageTarget,minimumTarget);
-
-  const available=stockUnits(p)+orderedUnits(p);
-  const shortage=Math.max(0,needed-available);
-  const orderUnits=Math.ceil(shortage/Number(p.contentPerOrderUnit||1));
-
-  return {weekly,usageTarget,minimumTarget,needed,available,orderUnits}
-}
-function renderProductOptions(){
-  const opts=productsForMode().map(p=>`<option value="${p.id}">${esc(labelProduct(p))}</option>`).join("");
-  roomProduct.innerHTML=opts||`<option value="">Nog geen product</option>`;
-  generalProduct.innerHTML=opts||`<option value="">Nog geen artikel</option>`
-}
-function renderCounting(){
-  const ps=productsForMode();
-  countList.innerHTML=ps.length?ps.map(p=>{
-    const loose=p.orderUnit==="doos";
-    return `<div class="item count-card">
-      <strong>${esc(labelProduct(p))}</strong><br>
-      <span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span>
-      ${belowMinimum(p)?`<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>`:""}
-      <div class="counter-wrap">
-        <button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button>
-        <div class="counter-value">${fmt(p.stockFull)} ${esc(plural(p.orderUnit,p.stockFull))}</div>
-        <button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button>
-      </div>
-      ${loose?`<div style="margin-top:12px"><span class="muted">Losse zakjes</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} zakjes</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div></div>`:""}
-    </div>`
-  }).join(""):`<div class="empty">Nog geen producten.</div>`
-}
-function renderUsage(){
-  if(currentMode==="general"){
-    roomFormCard.classList.add("hidden");generalTargetCard.classList.remove("hidden");usageListTitle.textContent="Algemene artikelen";
-    const ps=productsForMode();
-    usageList.innerHTML=ps.length?ps.map(p=>`<div class="item"><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Gewenste voorraad: ${fmt(p.generalTarget||0)} ${esc(plural(p.orderUnit,p.generalTarget||0))}</span></div>`).join(""):`<div class="empty">Nog geen algemene artikelen.</div>`;
-    return
+    return d;
+  } catch (e) {
+    return cloneDefaults();
   }
-  roomFormCard.classList.remove("hidden");generalTargetCard.classList.add("hidden");usageListTitle.textContent="Ingevoerde kamers";
-  const rs=roomsForMode().sort((a,b)=>Number(a.unit)-Number(b.unit)||String(a.room).localeCompare(String(b.room),undefined,{numeric:true})||labelProduct(data.products.find(x=>x.id===a.productId)||{}).localeCompare(labelProduct(data.products.find(x=>x.id===b.productId)||{})));
-  usageList.innerHTML=rs.length?rs.map(r=>{
-    const p=data.products.find(x=>x.id===r.productId);
-    return `<div class="item"><div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${p?esc(labelProduct(p)):"Geen product"}</span></div></div><div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div><div class="actions">
-      <button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button>
-      <button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button>
-    </div></div>`
-  }).join(""):`<div class="empty">Nog geen kamers ingevoerd.</div>`
-}
-function renderProducts(){
-  const ps=productsForMode();
-  productList.innerHTML=ps.length?ps.map((p,i)=>`<div class="item product-sort-item" data-product-id="${p.id}">
-    <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit,2))}</span></div><button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span><span class="drag-label">Slepen</span></button></div>
-    <div style="margin-top:8px">
-      Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit,p.stockFull))}${p.orderUnit==="doos"?` + ${fmt(p.stockLoose)} zakjes`:""}</strong><br>
-      Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit,p.alreadyOrdered))}</strong><br>
-      Minimum: <strong>${fmt(p.minimumStock||0)} ${esc(plural(p.orderUnit,p.minimumStock||0))}</strong>
-      ${belowMinimum(p)?`<br><span class="status-danger">Onder minimumvoorraad</span>`:""}
-    </div>
-    <div class="actions">
-      <button class="small-primary" onclick="editStock('${p.id}')">Wijzigen</button>
-      <button class="small-danger" onclick="deleteProduct('${p.id}')">Verwijderen</button>
-    </div></div>`).join(""):`<div class="empty">Nog geen producten.</div>`
 }
 
-let draggedProductItem=null;
-productList.addEventListener("pointerdown",e=>{
-  const handle=e.target.closest(".drag-handle");
-  if(!handle)return;
-  const item=handle.closest(".product-sort-item");
-  if(!item)return;
-  draggedProductItem=item;
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  renderAll();
+}
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[s]));
+}
+function fmt(n) {
+  return Number.isInteger(Number(n)) ? String(Number(n)) : Number(n).toFixed(1).replace(".", ",");
+}
+function modeLabel() {
+  return currentMode === "drink" ? "Bijvoeding" : currentMode === "sonde" ? "Sondevoeding" : "Algemene voorraad";
+}
+function targetWeeks() {
+  return currentMode === "drink" ? data.settings.drinkWeeks : data.settings.sondeWeeks;
+}
+function productsForMode(mode = currentMode) {
+  return data.products.filter(p => p.mode === mode).sort((a, b) => Number(a.order) - Number(b.order));
+}
+function roomsForMode(mode = currentMode) {
+  return data.rooms.filter(r => r.mode === mode);
+}
+function labelProduct(p) {
+  return p?.flavor ? `${p.name} · ${p.flavor}` : (p?.name || "Product");
+}
+function plural(unit, n) {
+  const m = { flesje: "flesjes", bakje: "bakjes", fles: "flessen", doos: "dozen", pot: "potten", pak: "pakken" };
+  return Number(n) === 1 ? unit : (m[unit] || unit + "en");
+}
+function activeProduct(p) {
+  return p.active !== false;
+}
+function familyProducts(name, mode, includeInactive = false) {
+  return data.products
+    .filter(p => p.mode === mode && canonicalName(p.name) === canonicalName(name) && (includeInactive || activeProduct(p)))
+    .sort((a, b) => Number(a.order) - Number(b.order));
+}
+function familyNames(mode) {
+  const names = [];
+  productsForMode(mode).filter(activeProduct).forEach(p => {
+    if (!names.includes(p.name)) names.push(p.name);
+  });
+  return names;
+}
+function activeFlavorIds(name, mode) {
+  return familyProducts(name, mode).map(p => p.id);
+}
+function roomMatchesProduct(r, p) {
+  if (!activeProduct(p)) return false;
+  if (canonicalName(r.productName) !== canonicalName(p.name)) return false;
+  if (r.allFlavors) return true;
+  return Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(p.id);
+}
+function dailyUsage(pid) {
+  const p = data.products.find(x => x.id === pid);
+  if (!p || !activeProduct(p)) return 0;
+  return data.rooms
+    .filter(r => r.mode === p.mode && roomMatchesProduct(r, p))
+    .reduce((sum, r) => sum + Number(r.dailyAmount || 0), 0);
+}
+function isInUse(p) {
+  return dailyUsage(p.id) > 0;
+}
+function stockUnits(p) {
+  return Number(p.stockFull || 0) * Number(p.contentPerOrderUnit || 1) + Number(p.stockLoose || 0);
+}
+function orderedUnits(p) {
+  return Number(p.alreadyOrdered || 0) * Number(p.contentPerOrderUnit || 1);
+}
+function stockPackages(p) {
+  return Number(p.stockFull || 0) + Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1);
+}
+function belowMinimum(p) {
+  return stockPackages(p) < Number(p.minimumStock || 0);
+}
+function daysSupply(p) {
+  const d = dailyUsage(p.id);
+  return d > 0 ? stockUnits(p) / d : null;
+}
+function expiryInfo(p) {
+  const today = parseLocalDate(isoToday());
+  const last = parseLocalDate(p.lastExpiryCheck);
+  const quarterlyDue = !last || daysBetween(last, today) >= 90;
+  let expiryDays = null, expired = false, soon = false;
+  if (p.expiryDate) {
+    expiryDays = daysBetween(today, parseLocalDate(p.expiryDate));
+    expired = expiryDays < 0;
+    soon = expiryDays >= 0 && expiryDays <= 60;
+  }
+  return { quarterlyDue, expiryDays, expired, soon };
+}
+function advice(p) {
+  const daily = dailyUsage(p.id);
+  const weekly = daily * 7;
+  const usageTarget = currentMode === "general" ? Number(p.generalTarget || 0) : weekly * targetWeeks();
+  const minimumTarget = Number(p.minimumStock || 0) * Number(p.contentPerOrderUnit || 1);
+  const needed = currentMode === "general"
+    ? Math.max(usageTarget, minimumTarget)
+    : (daily > 0 && activeProduct(p) ? Math.max(usageTarget, minimumTarget) : 0);
+  const available = stockUnits(p) + orderedUnits(p);
+  const shortage = Math.max(0, needed - available);
+  return { daily, weekly, usageTarget, minimumTarget, needed, available, orderUnits: Math.ceil(shortage / Number(p.contentPerOrderUnit || 1)) };
+}
+
+function roomOptionValue(name) {
+  return `group:${encodeURIComponent(name)}`;
+}
+function parseRoomProductName(value) {
+  return value.startsWith("group:") ? decodeURIComponent(value.slice(6)) : "";
+}
+function roomOptions(mode) {
+  const names = familyNames(mode);
+  return names.length
+    ? names.map(name => `<option value="${esc(roomOptionValue(name))}">${esc(name)}</option>`).join("")
+    : `<option value="">Nog geen product</option>`;
+}
+function selectedRoomMode(selectEl) {
+  if (selectEl === editRoomProduct && editingRoomId) {
+    return data.rooms.find(r => r.id === editingRoomId)?.mode || currentMode;
+  }
+  return currentMode;
+}
+function setRoomUnitFromProduct(selectEl, unitEl) {
+  const name = parseRoomProductName(selectEl.value);
+  const p = familyProducts(name, selectedRoomMode(selectEl))[0];
+  if (p) unitEl.value = p.consumptionUnit;
+}
+function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false) {
+  const mode = selectedRoomMode(selectEl);
+  const name = parseRoomProductName(selectEl.value);
+  if (!name) {
+    boxEl.classList.add("hidden");
+    boxEl.innerHTML = "";
+    return;
+  }
+
+  const active = familyProducts(name, mode);
+  const flavored = active.filter(p => p.flavor);
+  const inactiveSelected = data.products.filter(p => p.mode === mode && !activeProduct(p) && canonicalName(p.name) === canonicalName(name) && checkedIds.includes(p.id));
+
+  if (!flavored.length && !inactiveSelected.length) {
+    boxEl.classList.add("hidden");
+    boxEl.innerHTML = "";
+    return;
+  }
+
+  const allChecked = forceAll || (active.length > 0 && active.every(p => checkedIds.includes(p.id)));
+  const rows = flavored.map(p => `
+    <label class="flavor-check">
+      <input type="checkbox" value="${esc(p.id)}" ${allChecked || checkedIds.includes(p.id) ? "checked" : ""}>
+      <span>${esc(p.flavor)}</span>
+    </label>`).join("");
+  const inactiveRows = inactiveSelected.map(p => `
+    <label class="flavor-check inactive-flavor">
+      <input type="checkbox" value="${esc(p.id)}" checked disabled>
+      <span>${esc(p.flavor || "Zonder smaak")} <small>niet actief</small></span>
+    </label>`).join("");
+
+  boxEl.innerHTML = `
+    <div class="flavor-choice-head">
+      <div class="flavor-choice-title">Voorkeurssmaken</div>
+      <button type="button" class="text-btn flavor-all-btn">Alles aanvinken</button>
+    </div>
+    <div class="flavor-choice-grid">${rows}${inactiveRows}</div>
+    <div class="field-help">Vink één, meerdere of alle smaken aan. Bij alle smaken blijft de bewoner vrij kiezen.</div>`;
+  boxEl.classList.remove("hidden");
+
+  const allBtn = boxEl.querySelector(".flavor-all-btn");
+  if (allBtn) {
+    allBtn.onclick = () => {
+      boxEl.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
+    };
+  }
+}
+function selectedFlavorIds(boxEl) {
+  return [...boxEl.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)')].map(x => x.value);
+}
+function selectionForRoom(name, mode, boxEl) {
+  const active = familyProducts(name, mode);
+  const flavored = active.filter(p => p.flavor);
+  if (!active.length) return { ids: [], allFlavors: false };
+  if (!flavored.length) return { ids: [active[0].id], allFlavors: false };
+
+  const ids = selectedFlavorIds(boxEl);
+  const allFlavors = active.length > 0 && active.every(p => ids.includes(p.id));
+  return { ids, allFlavors };
+}
+function renderProductOptions() {
+  roomProduct.innerHTML = roomOptions(currentMode);
+  generalProduct.innerHTML = productsForMode().filter(activeProduct).map(p => `<option value="${p.id}">${esc(labelProduct(p))}</option>`).join("") || `<option value="">Nog geen artikel</option>`;
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+}
+
+function useBadge(p) {
+  if (!activeProduct(p)) return `<span class="badge inactive-badge">Niet actief</span>`;
+  return isInUse(p) ? `<span class="badge use-yes">In gebruik</span>` : `<span class="badge use-no">Niet in gebruik</span>`;
+}
+function daysSupplyText(p) {
+  if (!activeProduct(p)) return "Niet actief";
+  const days = daysSupply(p);
+  if (days == null) return "Niet in gebruik";
+  if (!Number.isFinite(days)) return "—";
+  const rounded = Math.floor(days * 10) / 10;
+  return `${fmt(rounded)} ${rounded === 1 ? "dag" : "dagen"} voorraad`;
+}
+function thtStatusHtml(p) {
+  const e = expiryInfo(p);
+  const bits = [];
+  if (e.expired) bits.push(`<span class="status-danger">THT verstreken</span>`);
+  else if (e.soon) bits.push(`<span class="status-warn">THT ${esc(formatDate(p.expiryDate))} · Let op</span>`);
+  else if (p.expiryDate) bits.push(`<span class="muted">THT ${esc(formatDate(p.expiryDate))}</span>`);
+  if (e.quarterlyDue) bits.push(`<span class="status-warn">THT controleren</span>`);
+  return bits.join("<br>");
+}
+function thtBadgeHtml(p) {
+  const e = expiryInfo(p);
+  if (e.expired) return `<span class="attention-chip danger-chip">THT verstreken</span>`;
+  if (e.soon) return `<span class="attention-chip warn-chip">THT ${esc(formatDate(p.expiryDate))}</span>`;
+  if (e.quarterlyDue) return `<span class="attention-chip neutral-chip">THT controleren</span>`;
+  if (p.expiryDate) return `<span class="attention-chip neutral-chip">THT ${esc(formatDate(p.expiryDate))}</span>`;
+  return "";
+}
+
+function renderCounting() {
+  const ps = productsForMode();
+  countList.innerHTML = ps.length ? ps.map(p => {
+    const loose = p.orderUnit === "doos";
+    const unusedStock = currentMode !== "general" && !isInUse(p) && stockUnits(p) > 0;
+    return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
+      <div class="item-head">
+        <div><strong>${esc(labelProduct(p))}</strong><div class="count-meta">${currentMode === "general" ? "" : useBadge(p)}</div></div>
+        <div class="days-pill">${currentMode === "general" ? "" : esc(daysSupplyText(p))}</div>
+      </div>
+      ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
+      <span class="muted">Voorraad in ${esc(plural(p.orderUnit, 2))}</span>
+      ${currentMode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
+      <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
+      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse zakjes</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} zakjes</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div></div>` : ""}
+      ${currentMode !== "general" ? `<div class="expiry-line">${thtStatusHtml(p) || `<span class="muted">THT nog niet vastgelegd</span>`}</div><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Nog geen producten.</div>`;
+}
+
+function roomProductLabel(r) {
+  const name = r.productName || "Product";
+  const active = familyProducts(name, r.mode);
+  if (r.allFlavors && active.length) return `${name} · Alle smaken`;
+  const selected = (r.selectedProductIds || []).map(id => data.products.find(x => x.id === id)).filter(Boolean);
+  if (!selected.length) return name;
+  const flavors = selected.map(p => `${p.flavor || "Zonder smaak"}${activeProduct(p) ? "" : " (niet actief)"}`);
+  return `${name} · ${flavors.join(", ")}`;
+}
+function renderUsage() {
+  if (currentMode === "general") {
+    roomFormCard.classList.add("hidden");
+    generalTargetCard.classList.remove("hidden");
+    usageListTitle.textContent = "Algemene artikelen";
+    const ps = productsForMode();
+    usageList.innerHTML = ps.length ? ps.map(p => `<div class="item"><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Gewenste voorraad: ${fmt(p.generalTarget || 0)} ${esc(plural(p.orderUnit, p.generalTarget || 0))}</span></div>`).join("") : `<div class="empty">Nog geen algemene artikelen.</div>`;
+    return;
+  }
+
+  roomFormCard.classList.remove("hidden");
+  generalTargetCard.classList.add("hidden");
+  usageListTitle.textContent = "Ingevoerde kamers";
+  const rs = roomsForMode().sort((a, b) => Number(a.unit) - Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, { numeric: true }) || roomProductLabel(a).localeCompare(roomProductLabel(b)));
+  usageList.innerHTML = rs.length ? rs.map(r => `<div class="item">
+    <div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${esc(roomProductLabel(r))}</span></div></div>
+    <div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div>
+    <div class="actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+  </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+}
+
+function renderProducts() {
+  const ps = productsForMode();
+  productList.innerHTML = ps.length ? ps.map(p => `<div class="item product-sort-item ${!activeProduct(p) ? "inactive-product" : ""}" data-product-id="${p.id}">
+    <div class="item-head">
+      <div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">Voorraad in ${esc(plural(p.orderUnit, 2))}</span><div style="margin-top:6px">${currentMode !== "general" ? useBadge(p) : ""}</div></div>
+      <button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span><span class="drag-label">Slepen</span></button>
+    </div>
+    <div style="margin-top:8px">Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}${p.orderUnit === "doos" ? ` + ${fmt(p.stockLoose)} zakjes` : ""}</strong><br>Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit, p.alreadyOrdered))}</strong><br>Minimum: <strong>${fmt(p.minimumStock || 0)} ${esc(plural(p.orderUnit, p.minimumStock || 0))}</strong>${currentMode !== "general" ? `<br><span class="muted">${esc(daysSupplyText(p))}</span>` : ""}</div>
+    <div class="actions"><button class="small-primary" onclick="editStock('${p.id}')">Wijzigen</button><button class="small-danger" onclick="deleteProduct('${p.id}')">Verwijderen</button></div>
+  </div>`).join("") : `<div class="empty">Nog geen producten.</div>`;
+}
+
+let draggedProductItem = null;
+productList.addEventListener("pointerdown", e => {
+  const handle = e.target.closest(".drag-handle");
+  if (!handle) return;
+  const item = handle.closest(".product-sort-item");
+  if (!item) return;
+  draggedProductItem = item;
   item.classList.add("dragging");
   handle.setPointerCapture?.(e.pointerId);
   e.preventDefault();
 });
-productList.addEventListener("pointermove",e=>{
-  if(!draggedProductItem)return;
-  const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".product-sort-item");
-  if(!target||target===draggedProductItem||target.parentElement!==productList)return;
-  const rect=target.getBoundingClientRect();
-  const before=e.clientY<rect.top+rect.height/2;
-  productList.insertBefore(draggedProductItem,before?target:target.nextSibling);
+productList.addEventListener("pointermove", e => {
+  if (!draggedProductItem) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".product-sort-item");
+  if (!target || target === draggedProductItem || target.parentElement !== productList) return;
+  const rect = target.getBoundingClientRect();
+  productList.insertBefore(draggedProductItem, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
 });
-function finishProductDrag(){
-  if(!draggedProductItem)return;
+function finishProductDrag() {
+  if (!draggedProductItem) return;
   draggedProductItem.classList.remove("dragging");
-  draggedProductItem=null;
-  [...productList.querySelectorAll(".product-sort-item")].forEach((el,i)=>{
-    const p=data.products.find(x=>x.id===el.dataset.productId);
-    if(p)p.order=i+1;
+  draggedProductItem = null;
+  [...productList.querySelectorAll(".product-sort-item")].forEach((el, i) => {
+    const p = data.products.find(x => x.id === el.dataset.productId);
+    if (p) p.order = i + 1;
   });
   saveData();
 }
-productList.addEventListener("pointerup",finishProductDrag);
-productList.addEventListener("pointercancel",finishProductDrag);
+productList.addEventListener("pointerup", finishProductDrag);
+productList.addEventListener("pointercancel", finishProductDrag);
 
-function renderOrders(){
-  const rows=productsForMode().map(p=>({p,a:advice(p)})).filter(x=>currentMode==="general"||x.a.weekly>0);
-  orderList.innerHTML=rows.length?rows.map(({p,a})=>`<div class="item note">
-    <strong>${esc(labelProduct(p))}</strong><br>
-    ${a.orderUnits>0
-      ? `<span class="status-danger">${a.orderUnits} ${esc(plural(p.orderUnit,a.orderUnits))} bestellen</span>`
-      : `<span class="status-ok">Voldoende voorraad</span>`}
-    <div class="muted" style="margin-top:5px">
-      ${currentMode==="general"
-        ? `Doelvoorraad: ${fmt(a.needed/Number(p.contentPerOrderUnit||1))} ${esc(plural(p.orderUnit,a.needed/Number(p.contentPerOrderUnit||1)))}`
-        : `Verbruik: ${fmt(a.weekly)} ${esc(p.consumptionUnit)} per week`}
-      ${Number(p.minimumStock||0)>0
-        ? `<br>Minimum: ${fmt(p.minimumStock)} ${esc(plural(p.orderUnit,p.minimumStock))}`
-        : ""}
-    </div>
-  </div>`).join(""):`<div class="empty">Nog geen bestelgegevens.</div>`
+function renderOrders() {
+  const rows = productsForMode().map(p => ({ p, a: advice(p) })).filter(x => currentMode === "general" || (activeProduct(x.p) && x.a.daily > 0));
+  orderList.innerHTML = rows.length ? rows.map(({ p, a }) => {
+    const tht = currentMode === "general" ? "" : thtBadgeHtml(p);
+    return `<div class="item order-card">
+      <div class="order-product">${esc(labelProduct(p))}</div>
+      <div class="order-main">${a.orderUnits > 0 ? `<strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+      <div class="order-meta">${currentMode === "general" ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}` : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks()} weken`}${Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${fmt(p.minimumStock)} ${esc(plural(p.orderUnit, p.minimumStock))}` : ""}</div>
+      ${tht ? `<div class="order-chips">${tht}</div>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
 }
-function renderOverview(){
-  overviewTitle.textContent=modeLabel();usageTabBtn.textContent=currentMode==="general"?"Algemeen":"Kamers";
-  statUsageLabel.textContent=currentMode==="general"?"Artikelen":"Kamers";statUsage.textContent=currentMode==="general"?productsForMode().length:roomsForMode().length;
-  statProducts.textContent=productsForMode().length;statOrders.textContent=productsForMode().filter(p=>advice(p).orderUnits>0).length;
-  weeksCard.classList.toggle("hidden",currentMode==="general");statWeeks.textContent=currentMode==="general"?"Handmatig":`${targetWeeks()} weken`;
-  document.querySelectorAll(".week-picker button").forEach(b=>b.classList.toggle("active",Number(b.dataset.weeks)===targetWeeks()));
-  const attention=productsForMode().map(p=>({p,a:advice(p),low:belowMinimum(p)})).filter(x=>x.a.orderUnits>0||x.low);
-  attentionList.innerHTML=attention.length?attention.map(({p,a,low})=>`<div class="item"><strong>${esc(labelProduct(p))}</strong><br>${low?`<span class="status-danger">Onder minimumvoorraad</span><br>`:""}${a.orderUnits>0?`<span class="status-danger">${a.orderUnits} ${esc(plural(p.orderUnit,a.orderUnits))} bestellen</span>`:""}</div>`).join(""):`<div class="empty">Geen directe aandachtspunten.</div>`
+
+function renderOverview() {
+  overviewTitle.textContent = modeLabel();
+  usageTabBtn.textContent = currentMode === "general" ? "Algemeen" : "Kamers";
+  statUsageLabel.textContent = currentMode === "general" ? "Artikelen" : "Kamers";
+  statUsage.textContent = currentMode === "general" ? productsForMode().length : roomsForMode().length;
+  statProducts.textContent = productsForMode().length;
+  statOrders.textContent = productsForMode().filter(p => advice(p).orderUnits > 0).length;
+  weeksCard.classList.toggle("hidden", currentMode === "general");
+  statWeeks.textContent = currentMode === "general" ? "Handmatig" : `${targetWeeks()} weken`;
+  document.querySelectorAll(".week-picker button").forEach(b => b.classList.toggle("active", Number(b.dataset.weeks) === targetWeeks()));
+
+  const attention = [];
+  productsForMode().forEach(p => {
+    const a = advice(p), e = expiryInfo(p);
+    const unused = currentMode !== "general" && !isInUse(p) && stockUnits(p) > 0;
+    if (a.orderUnits > 0 || unused || e.expired || e.soon || e.quarterlyDue) attention.push({ p, a, e, unused });
+  });
+
+  attentionList.innerHTML = attention.length ? attention.map(({ p, a, unused }) => {
+    const tht = currentMode === "general" ? "" : thtBadgeHtml(p);
+    return `<div class="item attention-card">
+      <div class="attention-product">${esc(labelProduct(p))}</div>
+      ${a.orderUnits > 0 ? `<div class="attention-order"><strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span></div>` : ""}
+      ${unused ? `<div class="attention-unused">Voorraad aanwezig · niet in gebruik</div>` : ""}
+      ${tht ? `<div class="attention-chips">${tht}</div>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Geen directe aandachtspunten.</div>`;
 }
-function renderAll(){
-  flavorField.classList.toggle("hidden",currentMode==="sonde");
-  looseField.classList.toggle("hidden",orderUnit.value!=="doos");
-  renderProductOptions();renderCounting();renderUsage();renderProducts();renderOrders();renderOverview()
+
+function renderAll() {
+  flavorField.classList.toggle("hidden", currentMode === "sonde");
+  looseField.classList.toggle("hidden", orderUnit.value !== "doos");
+  renderProductOptions();
+  renderCounting();
+  renderUsage();
+  renderProducts();
+  renderOrders();
+  renderOverview();
 }
-function changeStock(id,d){const p=data.products.find(x=>x.id===id);p.stockFull=Math.max(0,Number(p.stockFull||0)+d);saveData()}
-function changeLoose(id,d){const p=data.products.find(x=>x.id===id);p.stockLoose=Math.max(0,Number(p.stockLoose||0)+d);saveData()}
-let editingRoomId=null;
-function editRoom(id){
-  const r=data.rooms.find(x=>x.id===id);
-  if(!r)return;
-  const modeProducts=data.products.filter(p=>p.mode===r.mode).sort((a,b)=>a.order-b.order);
-  if(!modeProducts.length){alert("Er zijn geen producten beschikbaar.");return}
-  editingRoomId=id;
-  editRoomNumber.value=r.room;
-  editRoomUnit.value=String(r.unit);
-  editRoomProduct.innerHTML=modeProducts.map(p=>`<option value="${p.id}">${esc(labelProduct(p))}</option>`).join("");
-  editRoomProduct.value=r.productId;
-  editDailyAmount.value=r.dailyAmount;
-  const p=data.products.find(x=>x.id===r.productId);
-  editDailyUnit.value=p?p.consumptionUnit:r.dailyUnit;
-  roomEditModal.classList.remove("hidden");
-  document.body.style.overflow="hidden";
+function changeStock(id, delta) {
+  const p = data.products.find(x => x.id === id);
+  if (!p) return;
+  p.stockFull = Math.max(0, Number(p.stockFull || 0) + delta);
+  saveData();
 }
-function closeRoomEdit(){
-  editingRoomId=null;
-  roomEditModal.classList.add("hidden");
-  document.body.style.overflow="";
+function changeLoose(id, delta) {
+  const p = data.products.find(x => x.id === id);
+  if (!p) return;
+  p.stockLoose = Math.max(0, Number(p.stockLoose || 0) + delta);
+  saveData();
 }
-editRoomProduct.onchange=()=>{
-  const p=data.products.find(x=>x.id===editRoomProduct.value);
-  if(p)editDailyUnit.value=p.consumptionUnit;
+
+let editingExpiryProductId = null;
+function openExpiryModal(id) {
+  const p = data.products.find(x => x.id === id);
+  if (!p) return;
+  editingExpiryProductId = id;
+  expiryProductLabel.textContent = labelProduct(p);
+  expiryDateInput.value = p.expiryDate || "";
+  lastExpiryCheckInfo.innerHTML = p.lastExpiryCheck
+    ? `Laatste THT-controle: <strong>${esc(formatDate(p.lastExpiryCheck))}</strong><br>Na 3 maanden geeft de app opnieuw een controlemelding.`
+    : `Nog geen THT-controle opgeslagen. Controleer ook de flesjes of verpakkingen achteraan in de kast.`;
+  expiryModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+function closeExpiryModal() {
+  editingExpiryProductId = null;
+  expiryModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+saveExpiryCheck.onclick = () => {
+  const p = data.products.find(x => x.id === editingExpiryProductId);
+  if (!p) return;
+  p.expiryDate = expiryDateInput.value || "";
+  p.lastExpiryCheck = isoToday();
+  closeExpiryModal();
+  saveData();
 };
-saveRoomEdit.onclick=()=>{
-  const r=data.rooms.find(x=>x.id===editingRoomId);
-  const p=data.products.find(x=>x.id===editRoomProduct.value);
-  const amount=Number(String(editDailyAmount.value).replace(",","."));
-  const roomNumber=editRoomNumber.value.trim();
-  if(!r||!p||!roomNumber||!Number.isFinite(amount)||amount<=0){alert("Vul kamernummer, product en verbruik in.");return}
-  r.room=roomNumber;
-  r.unit=editRoomUnit.value;
-  r.productId=p.id;
-  r.dailyAmount=amount;
-  r.dailyUnit=p.consumptionUnit;
+
+let editingRoomId = null;
+function editRoom(id) {
+  const r = data.rooms.find(x => x.id === id);
+  if (!r) return;
+  editingRoomId = id;
+  editRoomNumber.value = r.room;
+  editRoomUnit.value = String(r.unit);
+  editRoomProduct.innerHTML = roomOptions(r.mode);
+  editRoomProduct.value = roomOptionValue(r.productName || "");
+  editDailyAmount.value = r.dailyAmount;
+  setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
+  const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
+  renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, checked, !!r.allFlavors);
+  roomEditModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+function closeRoomEdit() {
+  editingRoomId = null;
+  editRoomFlavorChoices.classList.add("hidden");
+  editRoomFlavorChoices.innerHTML = "";
+  roomEditModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+editRoomProduct.onchange = () => {
+  setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
+  renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, []);
+};
+saveRoomEdit.onclick = () => {
+  const r = data.rooms.find(x => x.id === editingRoomId);
+  const amount = Number(String(editDailyAmount.value).replace(",", "."));
+  const roomNumber = editRoomNumber.value.trim();
+  const productName = parseRoomProductName(editRoomProduct.value);
+  if (!r || !roomNumber || !Number.isFinite(amount) || amount <= 0 || !productName) {
+    alert("Vul kamernummer, product en verbruik in.");
+    return;
+  }
+  const selection = selectionForRoom(productName, r.mode, editRoomFlavorChoices);
+  if (familyProducts(productName, r.mode).some(p => p.flavor) && selection.ids.length < 1) {
+    alert("Vink minimaal één voorkeurssmaak aan.");
+    return;
+  }
+  r.room = roomNumber;
+  r.unit = editRoomUnit.value;
+  r.productName = productName;
+  r.productId = null;
+  r.selectedProductIds = selection.ids;
+  r.allFlavors = selection.allFlavors;
+  r.dailyAmount = amount;
+  setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
+  r.dailyUnit = editDailyUnit.value;
   closeRoomEdit();
   saveData();
 };
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!roomEditModal.classList.contains("hidden"))closeRoomEdit();if(!productEditModal.classList.contains("hidden"))closeProductEdit()});
-function deleteRoom(id){if(confirm("Deze kamerregel verwijderen?")){data.rooms=data.rooms.filter(r=>r.id!==id);saveData()}}
-function deleteProduct(id){
-  if(data.rooms.some(r=>r.productId===id)){alert("Dit product is nog gekoppeld aan een kamer.");return}
-  if(confirm("Dit product verwijderen?")){data.products=data.products.filter(p=>p.id!==id);saveData()}
+
+function deleteRoom(id) {
+  if (confirm("Deze kamerregel verwijderen?")) {
+    data.rooms = data.rooms.filter(r => r.id !== id);
+    saveData();
+  }
 }
-let editingProductId=null;
-function editStock(id){
-  const p=data.products.find(x=>x.id===id);if(!p)return;
-  editingProductId=id;
-  editProductName.value=p.name||"";
-  editFlavor.value=p.flavor||"";
-  editFlavorField.classList.toggle("hidden",p.mode==="sonde");
-  editConsumptionUnit.value=p.consumptionUnit;
-  editOrderUnit.value=p.orderUnit;
-  editContentPerOrderUnit.value=p.contentPerOrderUnit;
-  editStockFull.value=p.stockFull||0;
-  editStockLoose.value=p.stockLoose||0;
-  editAlreadyOrdered.value=p.alreadyOrdered||0;
-  editMinimumStock.value=p.minimumStock||0;
-  editLooseField.classList.toggle("hidden",p.orderUnit!=="doos");
+function deleteProduct(id) {
+  const linked = data.rooms.some(r => Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(id));
+  if (linked) {
+    alert("Deze smaak is nog gekoppeld aan een kamer. Zet de smaak liever op Niet actief of pas eerst de kamer aan.");
+    return;
+  }
+  if (confirm("Dit product verwijderen?")) {
+    data.products = data.products.filter(p => p.id !== id);
+    saveData();
+  }
+}
+
+let editingProductId = null;
+function editStock(id) {
+  const p = data.products.find(x => x.id === id);
+  if (!p) return;
+  editingProductId = id;
+  editProductName.value = p.name || "";
+  editFlavor.value = p.flavor || "";
+  editFlavorField.classList.toggle("hidden", p.mode === "sonde");
+  editConsumptionUnit.value = p.consumptionUnit;
+  editOrderUnit.value = p.orderUnit;
+  editContentPerOrderUnit.value = p.contentPerOrderUnit;
+  editStockFull.value = p.stockFull || 0;
+  editStockLoose.value = p.stockLoose || 0;
+  editAlreadyOrdered.value = p.alreadyOrdered || 0;
+  editMinimumStock.value = p.minimumStock || 0;
+  editProductActive.checked = activeProduct(p);
+  editProductActiveRow.classList.toggle("hidden", p.mode === "general");
+  editLooseField.classList.toggle("hidden", p.orderUnit !== "doos");
   productEditModal.classList.remove("hidden");
-  document.body.style.overflow="hidden";
+  document.body.style.overflow = "hidden";
 }
-function closeProductEdit(){
-  editingProductId=null;
+function closeProductEdit() {
+  editingProductId = null;
   productEditModal.classList.add("hidden");
-  document.body.style.overflow="";
+  document.body.style.overflow = "";
 }
-editOrderUnit.onchange=()=>editLooseField.classList.toggle("hidden",editOrderUnit.value!=="doos");
-saveProductEdit.onclick=()=>{
-  const p=data.products.find(x=>x.id===editingProductId);if(!p)return;
-  const name=editProductName.value.trim();
-  const flavor=p.mode==="sonde"?"":editFlavor.value.trim();
-  const content=Number(String(editContentPerOrderUnit.value).replace(",","."));
-  if(!name||!Number.isFinite(content)||content<=0){alert("Vul productnaam en inhoud per besteleenheid in.");return}
-  p.name=name;p.flavor=flavor;p.consumptionUnit=editConsumptionUnit.value;p.orderUnit=editOrderUnit.value;p.contentPerOrderUnit=content;
-  p.stockFull=Math.max(0,Number(editStockFull.value)||0);
-  p.stockLoose=p.orderUnit==="doos"?Math.max(0,Number(editStockLoose.value)||0):0;
-  p.alreadyOrdered=Math.max(0,Number(editAlreadyOrdered.value)||0);
-  p.minimumStock=Math.max(0,Number(editMinimumStock.value)||0);
-  data.rooms.filter(r=>r.productId===p.id).forEach(r=>r.dailyUnit=p.consumptionUnit);
-  closeProductEdit();saveData();
+editOrderUnit.onchange = () => editLooseField.classList.toggle("hidden", editOrderUnit.value !== "doos");
+saveProductEdit.onclick = () => {
+  const p = data.products.find(x => x.id === editingProductId);
+  if (!p) return;
+  const oldName = p.name;
+  const name = canonicalName(editProductName.value.trim());
+  const flavor = p.mode === "sonde" ? "" : editFlavor.value.trim();
+  const content = Number(String(editContentPerOrderUnit.value).replace(",", "."));
+  if (!name || !Number.isFinite(content) || content <= 0) {
+    alert("Vul productnaam en inhoud per besteleenheid in.");
+    return;
+  }
+
+  if (canonicalName(oldName) !== canonicalName(name)) {
+    data.products
+      .filter(x => x.mode === p.mode && canonicalName(x.name) === canonicalName(oldName))
+      .forEach(x => x.name = name);
+    data.rooms
+      .filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(oldName))
+      .forEach(r => r.productName = name);
+  }
+  p.name = name;
+  p.flavor = flavor;
+  p.consumptionUnit = editConsumptionUnit.value;
+  p.orderUnit = editOrderUnit.value;
+  p.contentPerOrderUnit = content;
+  p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
+  p.stockLoose = p.orderUnit === "doos" ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
+  p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
+  p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
+  p.active = p.mode === "general" ? true : editProductActive.checked;
+
+  data.rooms.filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(name)).forEach(r => {
+    const first = familyProducts(name, r.mode, true)[0];
+    if (first) r.dailyUnit = first.consumptionUnit;
+  });
+
+  closeProductEdit();
+  saveData();
 };
-document.querySelectorAll(".mode-btn").forEach(b=>b.onclick=()=>{currentMode=b.dataset.mode;document.querySelectorAll(".mode-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderAll()});
-document.querySelectorAll(".tab-btn").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});
-document.querySelectorAll(".week-picker button").forEach(b=>b.onclick=()=>{if(currentMode==="drink")data.settings.drinkWeeks=Number(b.dataset.weeks);else data.settings.sondeWeeks=Number(b.dataset.weeks);saveData()});
-orderUnit.onchange=()=>looseField.classList.toggle("hidden",orderUnit.value!=="doos");
-saveRoom.onclick=()=>{
-  const roomV=room.value.trim(),unitV=unit.value,productId=roomProduct.value,dailyAmountV=Number(dailyAmount.value),dailyUnitV=dailyUnit.value,p=data.products.find(x=>x.id===productId);
-  if(!roomV||!productId||dailyAmountV<=0){alert("Vul kamernummer, product en verbruik in.");return}
-  if(p&&p.consumptionUnit!==dailyUnitV){alert(`Kies ${p.consumptionUnit} als eenheid.`);return}
-  data.rooms.push({id:crypto.randomUUID(),mode:currentMode,room:roomV,unit:unitV,productId,dailyAmount:dailyAmountV,dailyUnit:dailyUnitV});room.value="";dailyAmount.value="";saveData()
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!roomEditModal.classList.contains("hidden")) closeRoomEdit();
+  if (!productEditModal.classList.contains("hidden")) closeProductEdit();
+  if (!expiryModal.classList.contains("hidden")) closeExpiryModal();
+});
+
+document.querySelectorAll(".mode-btn").forEach(b => b.onclick = () => {
+  currentMode = b.dataset.mode;
+  document.querySelectorAll(".mode-btn").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  renderAll();
+});
+document.querySelectorAll(".tab-btn").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tab-btn").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById(b.dataset.tab).classList.add("active");
+});
+document.querySelectorAll(".week-picker button").forEach(b => b.onclick = () => {
+  if (currentMode === "drink") data.settings.drinkWeeks = Number(b.dataset.weeks);
+  else data.settings.sondeWeeks = Number(b.dataset.weeks);
+  saveData();
+});
+orderUnit.onchange = () => looseField.classList.toggle("hidden", orderUnit.value !== "doos");
+roomProduct.onchange = () => {
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
 };
-saveGeneralTarget.onclick=()=>{const p=data.products.find(x=>x.id===generalProduct.value),target=Number(generalTarget.value);if(!p||target<0){alert("Vul een geldige voorraad in.");return}p.generalTarget=target;generalTarget.value="";saveData()};
-saveProduct.onclick=()=>{
-  const name=productName.value.trim(),fl=currentMode==="sonde"?"":flavor.value.trim(),cu=consumptionUnit.value,ou=orderUnit.value,content=Number(contentPerOrderUnit.value),sf=Number(stockFull.value||0),sl=ou==="doos"?Number(stockLoose.value||0):0,ao=Number(alreadyOrdered.value||0),min=Number(minimumStock.value||0);
-  if(!name||content<=0){alert("Vul productnaam en inhoud per besteleenheid in.");return}
-  const maxOrder=Math.max(0,...productsForMode().map(p=>p.order||0));
-  data.products.push({id:crypto.randomUUID(),mode:currentMode,name,flavor:fl,consumptionUnit:cu,orderUnit:ou,contentPerOrderUnit:content,stockFull:sf,stockLoose:sl,alreadyOrdered:ao,generalTarget:0,minimumStock:min,order:maxOrder+1});
-  productName.value="";flavor.value="";contentPerOrderUnit.value="";stockFull.value="0";stockLoose.value="0";alreadyOrdered.value="0";minimumStock.value="0";saveData()
+saveRoom.onclick = () => {
+  const roomV = room.value.trim();
+  const unitV = unit.value;
+  const amount = Number(String(dailyAmount.value).replace(",", "."));
+  const productName = parseRoomProductName(roomProduct.value);
+  if (!roomV || amount <= 0 || !productName) {
+    alert("Vul kamernummer, product en verbruik in.");
+    return;
+  }
+  const selection = selectionForRoom(productName, currentMode, roomFlavorChoices);
+  if (familyProducts(productName, currentMode).some(p => p.flavor) && selection.ids.length < 1) {
+    alert("Vink minimaal één voorkeurssmaak aan.");
+    return;
+  }
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  data.rooms.push({
+    id: crypto.randomUUID(), mode: currentMode, room: roomV, unit: unitV,
+    productId: null, productName, allFlavors: selection.allFlavors,
+    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value
+  });
+  room.value = "";
+  dailyAmount.value = "";
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+  saveData();
 };
+saveGeneralTarget.onclick = () => {
+  const p = data.products.find(x => x.id === generalProduct.value);
+  const target = Number(generalTarget.value);
+  if (!p || target < 0) {
+    alert("Vul een geldige voorraad in.");
+    return;
+  }
+  p.generalTarget = target;
+  generalTarget.value = "";
+  saveData();
+};
+saveProduct.onclick = () => {
+  const name = canonicalName(productName.value.trim());
+  const fl = currentMode === "sonde" ? "" : flavor.value.trim();
+  const cu = consumptionUnit.value;
+  const ou = orderUnit.value;
+  const content = Number(contentPerOrderUnit.value);
+  const sf = Number(stockFull.value || 0);
+  const sl = ou === "doos" ? Number(stockLoose.value || 0) : 0;
+  const ao = Number(alreadyOrdered.value || 0);
+  const min = Number(minimumStock.value || 0);
+  if (!name || content <= 0) {
+    alert("Vul productnaam en inhoud per besteleenheid in.");
+    return;
+  }
+  const maxOrder = Math.max(0, ...productsForMode().map(p => p.order || 0));
+  data.products.push({
+    id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
+    consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content,
+    stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true
+  });
+  productName.value = "";
+  flavor.value = "";
+  contentPerOrderUnit.value = "";
+  stockFull.value = "0";
+  stockLoose.value = "0";
+  alreadyOrdered.value = "0";
+  minimumStock.value = "0";
+  saveData();
+};
+
 renderAll();

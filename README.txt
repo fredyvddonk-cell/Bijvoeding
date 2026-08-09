@@ -1,11 +1,18 @@
-Bijvoeding Voorraad 2.5.4
+Bijvoeding Voorraad 2.7.0
 
-Wijzigingen:
-- Eén kamer kan meerdere soorten bijvoeding hebben.
-- Kamer wijzigen via een apart wijzigscherm.
-- Product wijzigen via een apart wijzigscherm.
-- Producten kunnen met het ☰-handvat worden versleept, ook op een touchscreen.
-- De gekozen productvolgorde wordt bewaard en gebruikt bij Voorraad tellen.
-- Verwijderde standaardproducten worden niet meer automatisch opnieuw toegevoegd.
+Bestanden voor VS Code / GitHub:
+- index.html
+- css/style.css
+- js/app.js
+- data/defaults.js
 
-Gegevens blijven lokaal in de browser opgeslagen onder dezelfde opslagcode als versie 2.5.2/2.5.3, zodat bestaande gegevens behouden blijven.
+Belangrijk in 2.7.0:
+- Kamer: eerst product kiezen, daarna 1, meerdere of alle voorkeurssmaken aanvinken.
+- Alleen actieve smaken worden aangeboden; smaken kunnen via Product wijzigen op Niet actief worden gezet.
+- Niet-actieve smaken blijven zichtbaar bij Voorraad tellen zolang ze nog in de productlijst staan.
+- THT: alleen de vroegste THT per product/smaak + laatste controledatum.
+- Na 3 maanden verschijnt THT controleren.
+- Voorraad tellen toont In gebruik / Niet in gebruik en dagen voorraad.
+- Besteladvies bestelt niet automatisch voor producten die niet in gebruik of niet actief zijn.
+- Producten blijven in kastvolgorde en zijn met het sleep-handvat te verplaatsen.
+- De bestaande localStorage-sleutel is behouden, zodat bestaande gegevens in dezelfde browser blijven staan.
