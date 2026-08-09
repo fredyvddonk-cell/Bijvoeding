@@ -100,7 +100,7 @@ function renderUsage(){
     return
   }
   roomFormCard.classList.remove("hidden");generalTargetCard.classList.add("hidden");usageListTitle.textContent="Ingevoerde kamers";
-  const rs=roomsForMode().sort((a,b)=>Number(a.unit)-Number(b.unit)||String(a.room).localeCompare(String(b.room),undefined,{numeric:true}));
+  const rs=roomsForMode().sort((a,b)=>Number(a.unit)-Number(b.unit)||String(a.room).localeCompare(String(b.room),undefined,{numeric:true})||labelProduct(data.products.find(x=>x.id===a.productId)||{}).localeCompare(labelProduct(data.products.find(x=>x.id===b.productId)||{})));
   usageList.innerHTML=rs.length?rs.map(r=>{
     const p=data.products.find(x=>x.id===r.productId);
     return `<div class="item"><div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${p?esc(labelProduct(p)):"Geen product"}</span></div></div><div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div><div class="actions">
@@ -203,25 +203,50 @@ saveRoomEdit.onclick=()=>{
   closeRoomEdit();
   saveData();
 };
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!roomEditModal.classList.contains("hidden"))closeRoomEdit()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!roomEditModal.classList.contains("hidden"))closeRoomEdit();if(!productEditModal.classList.contains("hidden"))closeProductEdit()});
 function deleteRoom(id){if(confirm("Deze kamerregel verwijderen?")){data.rooms=data.rooms.filter(r=>r.id!==id);saveData()}}
 function deleteProduct(id){
   if(data.rooms.some(r=>r.productId===id)){alert("Dit product is nog gekoppeld aan een kamer.");return}
   if(confirm("Dit product verwijderen?")){data.products=data.products.filter(p=>p.id!==id);saveData()}
 }
+let editingProductId=null;
 function editStock(id){
   const p=data.products.find(x=>x.id===id);if(!p)return;
-  const full=prompt(`Aantal ${plural(p.orderUnit,2)} op voorraad:`,p.stockFull);if(full===null)return;
-  let loose=p.stockLoose;
-  if(p.orderUnit==="doos"){const v=prompt("Aantal losse zakjes:",p.stockLoose);if(v===null)return;loose=v}
-  const ordered=prompt(`Reeds besteld in ${plural(p.orderUnit,2)}:`,p.alreadyOrdered);if(ordered===null)return;
-  const minimum=prompt(`Minimumvoorraad in ${plural(p.orderUnit,2)}:`,p.minimumStock||0);if(minimum===null)return;
-  p.stockFull=Math.max(0,Number(full)||0);
-  p.stockLoose=Math.max(0,Number(loose)||0);
-  p.alreadyOrdered=Math.max(0,Number(ordered)||0);
-  p.minimumStock=Math.max(0,Number(minimum)||0);
-  saveData()
+  editingProductId=id;
+  editProductName.value=p.name||"";
+  editFlavor.value=p.flavor||"";
+  editFlavorField.classList.toggle("hidden",p.mode==="sonde");
+  editConsumptionUnit.value=p.consumptionUnit;
+  editOrderUnit.value=p.orderUnit;
+  editContentPerOrderUnit.value=p.contentPerOrderUnit;
+  editStockFull.value=p.stockFull||0;
+  editStockLoose.value=p.stockLoose||0;
+  editAlreadyOrdered.value=p.alreadyOrdered||0;
+  editMinimumStock.value=p.minimumStock||0;
+  editLooseField.classList.toggle("hidden",p.orderUnit!=="doos");
+  productEditModal.classList.remove("hidden");
+  document.body.style.overflow="hidden";
 }
+function closeProductEdit(){
+  editingProductId=null;
+  productEditModal.classList.add("hidden");
+  document.body.style.overflow="";
+}
+editOrderUnit.onchange=()=>editLooseField.classList.toggle("hidden",editOrderUnit.value!=="doos");
+saveProductEdit.onclick=()=>{
+  const p=data.products.find(x=>x.id===editingProductId);if(!p)return;
+  const name=editProductName.value.trim();
+  const flavor=p.mode==="sonde"?"":editFlavor.value.trim();
+  const content=Number(String(editContentPerOrderUnit.value).replace(",","."));
+  if(!name||!Number.isFinite(content)||content<=0){alert("Vul productnaam en inhoud per besteleenheid in.");return}
+  p.name=name;p.flavor=flavor;p.consumptionUnit=editConsumptionUnit.value;p.orderUnit=editOrderUnit.value;p.contentPerOrderUnit=content;
+  p.stockFull=Math.max(0,Number(editStockFull.value)||0);
+  p.stockLoose=p.orderUnit==="doos"?Math.max(0,Number(editStockLoose.value)||0):0;
+  p.alreadyOrdered=Math.max(0,Number(editAlreadyOrdered.value)||0);
+  p.minimumStock=Math.max(0,Number(editMinimumStock.value)||0);
+  data.rooms.filter(r=>r.productId===p.id).forEach(r=>r.dailyUnit=p.consumptionUnit);
+  closeProductEdit();saveData();
+};
 document.querySelectorAll(".mode-btn").forEach(b=>b.onclick=()=>{currentMode=b.dataset.mode;document.querySelectorAll(".mode-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderAll()});
 document.querySelectorAll(".tab-btn").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active")});
 document.querySelectorAll(".week-picker button").forEach(b=>b.onclick=()=>{if(currentMode==="drink")data.settings.drinkWeeks=Number(b.dataset.weeks);else data.settings.sondeWeeks=Number(b.dataset.weeks);saveData()});

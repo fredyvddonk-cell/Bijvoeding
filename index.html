@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#245f73">
-<title>Bijvoeding Voorraad 2.5.2</title>
+<title>Bijvoeding Voorraad 2.5.3</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
   <h1>Bijvoeding Voorraad</h1>
-  <p>Versie 2.5.2 · kamers wijzigen</p>
+  <p>Versie 2.5.3 · meerdere bijvoedingen per kamer · producten wijzigen</p>
 </header>
 
 <main>
@@ -62,7 +62,8 @@
 
   <section id="usage" class="tab">
     <div class="card" id="roomFormCard">
-      <h2>Kamer toevoegen</h2>
+      <h2>Bijvoeding aan kamer toevoegen</h2>
+      <p class="muted">Een kamer mag meerdere soorten bijvoeding hebben. Voeg voor ieder product een aparte regel toe.</p>
       <div class="row">
         <div class="field"><label for="room">Kamernummer</label><input id="room" placeholder="Bijv. 210"></div>
         <div class="field"><label for="unit">Unit</label><select id="unit"><option>1</option><option>2</option><option>3</option></select></div>
@@ -72,7 +73,7 @@
         <div class="field"><label for="dailyAmount">Verbruik per dag</label><input id="dailyAmount" type="number" min="0" step="0.1"></div>
         <div class="field"><label for="dailyUnit">Eenheid</label><select id="dailyUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
       </div>
-      <button class="primary" id="saveRoom">Kamer opslaan</button>
+      <button class="primary" id="saveRoom">Bijvoeding opslaan</button>
     </div>
 
     <div class="card hidden" id="generalTargetCard">
@@ -137,7 +138,40 @@
     <div class="modal-info"><strong>Informatie</strong><br><span>Het verbruik per dag wordt gebruikt voor het overzicht en het besteladvies.</span></div>
     <div class="modal-actions">
       <button type="button" class="secondary" onclick="closeRoomEdit()">Annuleren</button>
-      <button type="button" class="primary" id="saveRoomEdit">Kamer opslaan</button>
+      <button type="button" class="primary" id="saveRoomEdit">Wijzigingen opslaan</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="productEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="productEditTitle">
+  <div class="modal-backdrop" onclick="closeProductEdit()"></div>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="productEditTitle">Product wijzigen</h2>
+      <button type="button" class="modal-close" onclick="closeProductEdit()" aria-label="Sluiten">×</button>
+    </div>
+    <div class="row">
+      <div class="field"><label for="editProductName">Productnaam</label><input id="editProductName"></div>
+      <div class="field" id="editFlavorField"><label for="editFlavor">Smaak</label><input id="editFlavor"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="editConsumptionUnit">Verbruikseenheid</label><select id="editConsumptionUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+      <div class="field"><label for="editOrderUnit">Voorraad- en besteleenheid</label><select id="editOrderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
+    </div>
+    <div class="field"><label for="editContentPerOrderUnit">Inhoud per besteleenheid</label><input id="editContentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
+    <div class="row">
+      <div class="field"><label for="editStockFull">Aantal verpakkingen op voorraad</label><input id="editStockFull" type="number" min="0" step="1"></div>
+      <div class="field" id="editLooseField"><label for="editStockLoose">Losse zakjes (alleen indien nodig)</label><input id="editStockLoose" type="number" min="0" step="1"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in verpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div>
+      <div class="field"><label for="editMinimumStock">Minimumvoorraad in verpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
+    </div>
+    <div class="modal-info"><strong>Informatie</strong><br><span>Wijzigingen gelden direct overal waar dit product aan een kamer is gekoppeld.</span></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" onclick="closeProductEdit()">Annuleren</button>
+      <button type="button" class="primary" id="saveProductEdit">Wijzigingen opslaan</button>
     </div>
   </div>
 </div>
