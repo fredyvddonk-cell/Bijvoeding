@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#245f73">
-<title>Bijvoeding Voorraad 2.7.1</title>
+<title>Voorraad/bestellen 2.7.2</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header>
   <h1>Bijvoeding Voorraad</h1>
-  <p>Versie 2.7.1</p>
+  <p>Versie 2.7.2</p>
 </header>
 
 <main>
@@ -102,6 +102,7 @@
         <div class="field"><label for="orderUnit">Voorraad- en besteleenheid</label><select id="orderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="karton">karton</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
       </div>
       <div class="field"><label for="contentPerOrderUnit">Inhoud per besteleenheid</label><input id="contentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
+      <div class="field" id="looseAllowedField"><label for="looseUnitsAllowed">Losse eenheden mogelijk</label><select id="looseUnitsAllowed"><option value="yes">Ja</option><option value="no">Nee</option></select></div>
       <div class="row">
         <div class="field"><label for="stockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
         <div class="field" id="looseField"><label for="stockLoose">Losse eenheden</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
@@ -162,6 +163,7 @@
       <div class="field"><label for="editOrderUnit">Voorraad- en besteleenheid</label><select id="editOrderUnit"><option value="flesje">flesje</option><option value="bakje">bakje</option><option value="fles">fles</option><option value="karton">karton</option><option value="doos">doos</option><option value="pot">pot</option><option value="pak">pak</option></select></div>
     </div>
     <div class="field"><label for="editContentPerOrderUnit">Inhoud per besteleenheid</label><input id="editContentPerOrderUnit" type="number" min="0.1" step="0.1"></div>
+    <div class="field" id="editLooseAllowedField"><label for="editLooseUnitsAllowed">Losse eenheden mogelijk</label><select id="editLooseUnitsAllowed"><option value="yes">Ja</option><option value="no">Nee</option></select></div>
     <div class="row">
       <div class="field"><label for="editStockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="editStockFull" type="number" min="0" step="1"></div>
       <div class="field" id="editLooseField"><label for="editStockLoose">Losse eenheden</label><input id="editStockLoose" type="number" min="0" step="1"></div>

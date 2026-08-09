@@ -1,7 +1,7 @@
 const STORAGE_KEY="bijvoedingVoorraad_2_5_2";
 const makeProduct=(mode,name,flavor,consumptionUnit,orderUnit,content,order)=>({
   id:crypto.randomUUID(),mode,name,flavor,consumptionUnit,orderUnit,
-  contentPerOrderUnit:content,stockFull:0,stockLoose:0,alreadyOrdered:0,generalTarget:0,
+  contentPerOrderUnit:content,looseUnitsAllowed:content>1,stockFull:0,stockLoose:0,alreadyOrdered:0,generalTarget:0,
   minimumStock:0,order,expiryDate:"",lastExpiryCheck:"",active:true
 });
 const defaults={

@@ -49,6 +49,9 @@ function loadData() {
       if (p.expiryDate == null) p.expiryDate = "";
       if (p.lastExpiryCheck == null) p.lastExpiryCheck = "";
       if (p.active == null) p.active = true;
+      // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
+      // Daarna kan dit per product op Ja/Nee worden gezet.
+      if (p.looseUnitsAllowed == null) p.looseUnitsAllowed = Number(p.contentPerOrderUnit || 1) > 1;
     });
 
     // Oude kamerregistraties omzetten naar de rustige structuur:
@@ -132,7 +135,7 @@ function activeProduct(p) {
   return p.active !== false;
 }
 function hasLooseUnits(p) {
-  return Number(p?.contentPerOrderUnit || 1) > 1;
+  return Number(p?.contentPerOrderUnit || 1) > 1 && p?.looseUnitsAllowed !== false;
 }
 function looseUnitLabel(p, n = 2) {
   const u = p?.consumptionUnit || "stuks";
@@ -179,13 +182,13 @@ function isInUse(p) {
   return dailyUsage(p.id) > 0;
 }
 function stockUnits(p) {
-  return Number(p.stockFull || 0) * Number(p.contentPerOrderUnit || 1) + Number(p.stockLoose || 0);
+  return Number(p.stockFull || 0) * Number(p.contentPerOrderUnit || 1) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) : 0);
 }
 function orderedUnits(p) {
   return Number(p.alreadyOrdered || 0) * Number(p.contentPerOrderUnit || 1);
 }
 function stockPackages(p) {
-  return Number(p.stockFull || 0) + Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1);
+  return Number(p.stockFull || 0) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1) : 0);
 }
 function belowMinimum(p) {
   return stockPackages(p) < Number(p.minimumStock || 0);
@@ -607,6 +610,7 @@ function editStock(id) {
   editConsumptionUnit.value = p.consumptionUnit;
   editOrderUnit.value = p.orderUnit;
   editContentPerOrderUnit.value = p.contentPerOrderUnit;
+  editLooseUnitsAllowed.value = p.looseUnitsAllowed === false ? "no" : "yes";
   editStockFull.value = p.stockFull || 0;
   editStockLoose.value = p.stockLoose || 0;
   editAlreadyOrdered.value = p.alreadyOrdered || 0;
@@ -622,9 +626,14 @@ function closeProductEdit() {
   productEditModal.classList.add("hidden");
   document.body.style.overflow = "";
 }
-const syncEditLooseField = () => editLooseField.classList.toggle("hidden", Number(editContentPerOrderUnit.value || 1) <= 1);
+const syncEditLooseField = () => {
+  const multiple = Number(editContentPerOrderUnit.value || 1) > 1;
+  editLooseAllowedField.classList.toggle("hidden", !multiple);
+  editLooseField.classList.toggle("hidden", !multiple || editLooseUnitsAllowed.value !== "yes");
+};
 editOrderUnit.onchange = syncEditLooseField;
 editContentPerOrderUnit.oninput = syncEditLooseField;
+editLooseUnitsAllowed.onchange = syncEditLooseField;
 saveProductEdit.onclick = () => {
   const p = data.products.find(x => x.id === editingProductId);
   if (!p) return;
@@ -650,8 +659,9 @@ saveProductEdit.onclick = () => {
   p.consumptionUnit = editConsumptionUnit.value;
   p.orderUnit = editOrderUnit.value;
   p.contentPerOrderUnit = content;
+  p.looseUnitsAllowed = content > 1 && editLooseUnitsAllowed.value === "yes";
   p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
-  p.stockLoose = content > 1 ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
+  p.stockLoose = p.looseUnitsAllowed ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
@@ -730,14 +740,25 @@ saveGeneralTarget.onclick = () => {
   generalTarget.value = "";
   saveData();
 };
+const syncNewLooseField = () => {
+  const multiple = Number(contentPerOrderUnit.value || 1) > 1;
+  looseAllowedField.classList.toggle("hidden", !multiple);
+  looseField.classList.toggle("hidden", !multiple || looseUnitsAllowed.value !== "yes");
+};
+contentPerOrderUnit.oninput = syncNewLooseField;
+orderUnit.onchange = syncNewLooseField;
+looseUnitsAllowed.onchange = syncNewLooseField;
+syncNewLooseField();
+
 saveProduct.onclick = () => {
   const name = canonicalName(productName.value.trim());
   const fl = currentMode === "sonde" ? "" : flavor.value.trim();
   const cu = consumptionUnit.value;
   const ou = orderUnit.value;
   const content = Number(contentPerOrderUnit.value);
+  const allowLoose = content > 1 && looseUnitsAllowed.value === "yes";
   const sf = Number(stockFull.value || 0);
-  const sl = content > 1 ? Number(stockLoose.value || 0) : 0;
+  const sl = allowLoose ? Number(stockLoose.value || 0) : 0;
   const ao = Number(alreadyOrdered.value || 0);
   const min = Number(minimumStock.value || 0);
   if (!name || content <= 0) {
@@ -747,17 +768,19 @@ saveProduct.onclick = () => {
   const maxOrder = Math.max(0, ...productsForMode().map(p => p.order || 0));
   data.products.push({
     id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
-    consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content,
+    consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
     minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true
   });
   productName.value = "";
   flavor.value = "";
   contentPerOrderUnit.value = "";
+  looseUnitsAllowed.value = "yes";
   stockFull.value = "0";
   stockLoose.value = "0";
   alreadyOrdered.value = "0";
   minimumStock.value = "0";
+  syncNewLooseField();
   saveData();
 };
 
