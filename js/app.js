@@ -530,8 +530,8 @@ function renderOverview() {
 
   statOrders.textContent = groupInfo.filter(x => x.orderUnits > 0).length;
   weeksCard.classList.toggle("hidden", currentMode === "general");
-  statWeeks.textContent = currentMode === "general" ? "Handmatig" : "10 dagen minimum";
-  document.querySelectorAll(".week-picker button").forEach(b => b.classList.remove("active"));
+  statWeeks.textContent = currentMode === "general" ? "Handmatig" : `${targetWeeks()} weken`;
+  document.querySelectorAll(".week-picker button").forEach(b => b.classList.toggle("active", Number(b.dataset.weeks) === targetWeeks()));
 
   const attention = groupInfo.filter(x => x.attention);
   attentionList.innerHTML = attention.length ? attention.map(x => {
