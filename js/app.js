@@ -558,40 +558,94 @@ function drinkFamilyPlan(name) {
   const other = products.filter(p => !usedIds.has(p.id) && (stockUnits(p) + orderedUnits(p)) > 0);
   const acceptedStock = accepted.reduce((sum,p)=>sum+stockUnits(p)+orderedUnits(p),0);
 
-  return { name, products, active, rooms, roomPlans, daily, targetDays, targetDemand, shortage, orderUnits, rep, days, accepted, other, acceptedStock };
+  // Maak groepen van kamers met exact dezelfde toegestane smaken.
+  // Zo kan bijvoorbeeld "alleen Koffie" voldoende zijn, terwijl
+  // "Aardbei of Vanille" tegelijk een tekort heeft.
+  const grouped = new Map();
+  roomPlans.forEach(rp => {
+    const ids = rp.allowedIds.slice().sort();
+    const key = ids.join('|');
+    if (!grouped.has(key)) grouped.set(key, { key, allowedIds: ids, rooms: [], daily: 0 });
+    const g = grouped.get(key);
+    g.rooms.push(rp.room);
+    g.daily += rp.daily;
+  });
+
+  // Voorraad wordt één keer verdeeld. Eerst naar de meest beperkte groepen
+  // (minst toegestane smaken), zodat een flexibele kamer geen voorraad pakt
+  // die een kamer met maar één smaak nodig heeft.
+  const prefGroups = [...grouped.values()].sort((a,b) =>
+    a.allowedIds.length - b.allowedIds.length || b.daily - a.daily
+  );
+  const remaining = new Map(active.map(prod => [prod.id, Math.max(0, stockUnits(prod) + orderedUnits(prod))]));
+
+  prefGroups.forEach((g, gi) => {
+    const need = g.daily * targetDays;
+    let left = need;
+    let allocated = 0;
+
+    // Gebruik binnen de groep eerst smaken die voor zo min mogelijk andere
+    // nog te verwerken groepen nodig kunnen zijn.
+    const ids = g.allowedIds.slice().sort((a,b) => {
+      const usesA = prefGroups.slice(gi + 1).filter(x => x.allowedIds.includes(a)).length;
+      const usesB = prefGroups.slice(gi + 1).filter(x => x.allowedIds.includes(b)).length;
+      return usesA - usesB;
+    });
+
+    ids.forEach(id => {
+      if (left <= 0) return;
+      const avail = remaining.get(id) || 0;
+      const take = Math.min(avail, left);
+      remaining.set(id, avail - take);
+      allocated += take;
+      left -= take;
+    });
+
+    g.need = need;
+    g.allocated = allocated;
+    g.shortage = Math.max(0, need - allocated);
+    g.days = g.daily > 0 ? allocated / g.daily : null;
+    const gp = g.allowedIds.map(id => data.products.find(p => p.id === id)).find(Boolean) || rep;
+    const packSize = Number(gp?.contentPerOrderUnit || 1);
+    g.orderUnits = packSize > 0 ? Math.ceil(g.shortage / packSize) : 0;
+  });
+
+  return { name, products, active, rooms, roomPlans, daily, targetDays, targetDemand, shortage, orderUnits, rep, days, accepted, other, acceptedStock, prefGroups };
 }
 
 function renderDrinkOrders() {
   const groups = familyNames("drink").map(drinkFamilyPlan).filter(g => g.daily > 0 && g.rep);
   orderList.innerHTML = groups.length ? groups.map(g => {
     const p = g.rep;
-    const roomPrefs = g.roomPlans.map(rp => {
-      const names = rp.allowedIds.map(id => data.products.find(p => p.id === id)).filter(Boolean).map(p => variantLabel(p) || "Zonder smaak");
-      return `<div class="order-room-pref"><strong>Kamer ${esc(rp.room.room)}</strong>: ${esc(names.join(", "))}</div>`;
-    }).join("");
-    const acceptedRows = g.accepted.map(x => {
+
+    const stockRows = g.products.filter(x => activeProduct(x) || (stockUnits(x) + orderedUnits(x)) > 0).map(x => {
       const stock = stockUnits(x) + orderedUnits(x);
-      return `<div class="order-variant preferred"><span><strong>${esc(variantLabel(x) || "Zonder smaak")}</strong></span><span>${fmt(stock)} ${esc(looseUnitLabel(x, stock))}</span></div>`;
+      return `<div class="order-variant"><span><strong>${esc(variantLabel(x) || "Zonder smaak")}</strong></span><span>${fmt(stock)} ${esc(looseUnitLabel(x, stock))}</span></div>`;
     }).join("");
-    const otherRows = g.other.map(x => {
-      const stock = stockUnits(x) + orderedUnits(x);
-      return `<div class="order-variant other"><span>${esc(variantLabel(x) || "Zonder smaak")}</span><span>${fmt(stock)} ${esc(looseUnitLabel(x, stock))} · telt niet mee</span></div>`;
+
+    const prefSections = g.prefGroups.map(pg => {
+      const names = pg.allowedIds.map(id => data.products.find(x => x.id === id)).filter(Boolean).map(x => variantLabel(x) || "Zonder smaak");
+      const roomNames = pg.rooms.map(r => `Kamer ${r.room}`).join(" · ");
+      const days = pg.days == null ? null : Math.floor(pg.days * 10) / 10;
+      const choice = names.length === 1 ? names[0] : names.join(" of ");
+      return `<div class="order-pref-group">
+        <div class="order-room-pref"><strong>${esc(roomNames)}</strong></div>
+        <div class="order-pref-choice">Toegestaan: <strong>${esc(choice)}</strong></div>
+        <div class="order-main">${pg.orderUnits > 0
+          ? `<strong>${pg.orderUnits} ${esc(plural(p.orderUnit, pg.orderUnits))}</strong> <span>bestellen uit: ${esc(choice)}</span>`
+          : `<span class="status-ok">Voldoende voorraad voor deze kamer${pg.rooms.length > 1 ? "s" : ""}</span>`}
+        </div>
+        <div class="order-meta">Verbruik: ${fmt(pg.daily)} ${esc(p.consumptionUnit)} per dag · doel ${g.targetDays} dagen${days != null ? `<br>Toegewezen voorraad: ${fmt(pg.allocated)} ${esc(looseUnitLabel(p, pg.allocated))} · ± ${fmt(days)} dagen` : ""}</div>
+      </div>`;
     }).join("");
-    const roundedDays = g.days == null ? null : Math.floor(g.days * 10) / 10;
-    const uniqueSets = [...new Set(g.roomPlans.map(rp => rp.allowedIds.slice().sort().join("|")))];
-    let orderHint = "binnen de voorkeuren per kamer";
-    if (uniqueSets.length === 1 && g.roomPlans.length) {
-      const names = g.roomPlans[0].allowedIds.map(id => data.products.find(p => p.id === id)).filter(Boolean).map(p => variantLabel(p) || "Zonder smaak");
-      orderHint = names.length === 1 ? `van ${names[0]}` : `van ${names.join(" of ")}`;
-    }
+
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
-      <div class="order-preference-title">Toegestane smaken per kamer</div>
-      <div class="order-room-prefs">${roomPrefs}</div>
-      <div class="order-variant-list">${acceptedRows}${otherRows}</div>
-      <div class="order-main">${g.orderUnits > 0 ? `<strong>${g.orderUnits} ${esc(plural(p.orderUnit, g.orderUnits))}</strong> <span>bestellen ${esc(orderHint)}</span>` : `<span class="status-ok">Voldoende voorraad binnen de gekozen smaken</span>`}</div>
-      <div class="order-meta">Geschikte smaken samen: ${fmt(g.acceptedStock)} ${esc(looseUnitLabel(p, g.acceptedStock))}${roundedDays != null ? ` · ± ${fmt(roundedDays)} dagen voor alle kamers` : ""}<br>Verbruik samen: ${fmt(g.daily)} ${esc(p.consumptionUnit)} per dag · doel ${g.targetDays} dagen</div>
-      <div class="order-rule-note">Als één gekozen smaak op is, mag een andere gekozen smaak worden gebruikt. Niet-gekozen smaken tellen niet mee.</div>
+      <div class="order-preference-title">Voorraad per smaak</div>
+      <div class="order-variant-list">${stockRows}</div>
+      <div class="order-preference-title">Besteladvies per voorkeur</div>
+      <div class="order-pref-groups">${prefSections}</div>
+      <div class="order-rule-note">Voorraad van een smaak wordt eerst gereserveerd voor bewoners die minder keuze hebben. Een niet-toegestane smaak telt voor die bewoner niet mee.</div>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
 }

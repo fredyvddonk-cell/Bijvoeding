@@ -130,4 +130,6 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 .order-variant+.order-variant{border-top:1px solid var(--border)}
 .order-variant.preferred{color:var(--text)}
 .order-variant.other{color:var(--muted);font-size:.84rem}
-\n/* 2.7.9 - gezamenlijke voorraad van alleen toegestane smaken */\n.order-preference-title{font-size:.78rem;color:var(--muted);font-weight:800;margin-top:8px;text-transform:uppercase;letter-spacing:.03em}\n.order-room-prefs{display:grid;gap:4px;margin:6px 0 10px}\n.order-room-pref{font-size:.9rem;background:#f7fbfc;border-radius:9px;padding:7px 9px}\n.order-rule-note{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--soft);font-size:.82rem;color:var(--muted)}\n
+\n/* 2.7.9 - gezamenlijke voorraad van alleen toegestane smaken */\n.order-preference-title{font-size:.78rem;color:var(--muted);font-weight:800;margin-top:8px;text-transform:uppercase;letter-spacing:.03em}\n.order-room-prefs{display:grid;gap:4px;margin:6px 0 10px}\n.order-room-pref{font-size:.9rem;background:#f7fbfc;border-radius:9px;padding:7px 9px}\n.order-rule-note{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--soft);font-size:.82rem;color:var(--muted)}\n.order-pref-groups{display:grid;gap:12px;margin-top:10px}
+.order-pref-group{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff}
+.order-pref-choice{margin:4px 0 8px;color:var(--text)}
