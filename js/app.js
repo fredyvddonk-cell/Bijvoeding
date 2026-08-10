@@ -297,11 +297,13 @@ function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false)
   if (active.length <= 1 && !inactiveSelected.length) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
 
   if (mode === "sonde") {
-    const selectedId = checkedIds.find(id => active.some(p => p.id === id)) || active[0]?.id || "";
-    const rows = active.map(p => `<label class="flavor-check"><input type="radio" name="${boxEl.id}-sonde" value="${esc(p.id)}" ${p.id === selectedId ? "checked" : ""}><span>${esc(variantLabel(p))}</span></label>`).join("");
-    const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input type="radio" checked disabled><span>${esc(variantLabel(p))} <small>niet actief</small></span></label>`).join("");
-    boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Inhoud</div></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div>`;
+    const selectedIds = checkedIds.filter(id => active.some(p => p.id === id));
+    const rows = active.map(p => `<label class="flavor-check"><input type="checkbox" value="${esc(p.id)}" ${selectedIds.includes(p.id) ? "checked" : ""}><span>${esc(variantLabel(p))}</span></label>`).join("");
+    const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input type="checkbox" value="${esc(p.id)}" checked disabled><span>${esc(variantLabel(p))} <small>niet actief</small></span></label>`).join("");
+    boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Inhoud / variant</div><button type="button" class="text-btn flavor-all-btn">Alles aanvinken</button></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div>`;
     boxEl.classList.remove("hidden");
+    const allBtn = boxEl.querySelector(".flavor-all-btn");
+    if (allBtn) allBtn.onclick = () => boxEl.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
     return;
   }
 
@@ -324,7 +326,7 @@ function selectionForRoom(name, mode, boxEl) {
   if (!active.length) return { ids: [], allFlavors: false };
   if (mode === "sonde") {
     const ids = selectedFlavorIds(boxEl);
-    return { ids: ids.length ? [ids[0]] : [active[0].id], allFlavors: false };
+    return { ids, allFlavors: false };
   }
   if (!flavored.length) return { ids: [active[0].id], allFlavors: false };
 
@@ -638,6 +640,10 @@ saveRoomEdit.onclick = () => {
     alert("Vink minimaal één voorkeurssmaak aan.");
     return;
   }
+  if (r.mode === "sonde" && familyProducts(productName, r.mode).length > 1 && selection.ids.length < 1) {
+    alert("Vink minimaal één inhoud/variant aan.");
+    return;
+  }
   r.room = roomNumber;
   r.unit = editRoomUnit.value;
   r.productName = productName;
@@ -786,6 +792,10 @@ saveRoom.onclick = () => {
   const selection = selectionForRoom(productName, currentMode, roomFlavorChoices);
   if (currentMode === "drink" && familyProducts(productName, currentMode).some(p => p.flavor) && selection.ids.length < 1) {
     alert("Vink minimaal één voorkeurssmaak aan.");
+    return;
+  }
+  if (currentMode === "sonde" && familyProducts(productName, currentMode).length > 1 && selection.ids.length < 1) {
+    alert("Vink minimaal één inhoud/variant aan.");
     return;
   }
   setRoomUnitFromProduct(roomProduct, dailyUnit);
