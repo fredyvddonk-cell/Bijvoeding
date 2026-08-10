@@ -124,8 +124,14 @@ function productsForMode(mode = currentMode) {
 function roomsForMode(mode = currentMode) {
   return data.rooms.filter(r => r.mode === mode);
 }
+function variantLabel(p) {
+  if (!p) return "";
+  if (p.mode === "sonde") return `${fmt(p.contentPerOrderUnit || 0)} ${p.consumptionUnit || "ml"}`;
+  return p.flavor || "";
+}
 function labelProduct(p) {
-  return p?.flavor ? `${p.name} · ${p.flavor}` : (p?.name || "Product");
+  const variant = variantLabel(p);
+  return variant ? `${p.name} · ${variant}` : (p?.name || "Product");
 }
 function plural(unit, n) {
   const m = { flesje: "flesjes", bakje: "bakjes", fles: "flessen", karton: "kartons", doos: "dozen", pot: "potten", pak: "pakken" };
@@ -168,7 +174,7 @@ function activeFlavorIds(name, mode) {
 function roomMatchesProduct(r, p) {
   if (!activeProduct(p)) return false;
   if (canonicalName(r.productName) !== canonicalName(p.name)) return false;
-  if (r.allFlavors) return true;
+  if (r.mode === "drink" && r.allFlavors) return true;
   return Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(p.id);
 }
 function dailyUsage(pid) {
@@ -214,11 +220,13 @@ function familyDaysSupplyText(p) {
 function autoMinimumUnits(p) {
   if (p.mode === "general") return Number(p.minimumStock || 0) * Number(p.contentPerOrderUnit || 1);
   // Bijvoeding: minimum voor het product als geheel; alle smaken tellen samen.
-  // Sondevoeding: er zijn geen smaakvarianten, dus dit blijft exact het vaste product.
+  // Sondevoeding: 500 ml / 1000 ml zijn aparte varianten en worden per kamer vast gekozen.
+  if (p.mode === "sonde") return dailyUsage(p.id) * DELIVERY_DAYS;
   return familyDailyUsage(p.name, p.mode) * DELIVERY_DAYS;
 }
 function belowMinimum(p) {
   if (p.mode === "general") return stockPackages(p) < Number(p.minimumStock || 0);
+  if (p.mode === "sonde") return stockUnits(p) < autoMinimumUnits(p);
   return familyStockUnits(p.name, p.mode) < autoMinimumUnits(p);
 }
 function minimumText(p) {
@@ -282,57 +290,42 @@ function setRoomUnitFromProduct(selectEl, unitEl) {
 function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false) {
   const mode = selectedRoomMode(selectEl);
   const name = parseRoomProductName(selectEl.value);
-  if (!name) {
-    boxEl.classList.add("hidden");
-    boxEl.innerHTML = "";
-    return;
-  }
+  if (!name) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
 
   const active = familyProducts(name, mode);
-  const flavored = active.filter(p => p.flavor);
   const inactiveSelected = data.products.filter(p => p.mode === mode && !activeProduct(p) && canonicalName(p.name) === canonicalName(name) && checkedIds.includes(p.id));
+  if (active.length <= 1 && !inactiveSelected.length) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
 
-  if (!flavored.length && !inactiveSelected.length) {
-    boxEl.classList.add("hidden");
-    boxEl.innerHTML = "";
+  if (mode === "sonde") {
+    const selectedId = checkedIds.find(id => active.some(p => p.id === id)) || active[0]?.id || "";
+    const rows = active.map(p => `<label class="flavor-check"><input type="radio" name="${boxEl.id}-sonde" value="${esc(p.id)}" ${p.id === selectedId ? "checked" : ""}><span>${esc(variantLabel(p))}</span></label>`).join("");
+    const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input type="radio" checked disabled><span>${esc(variantLabel(p))} <small>niet actief</small></span></label>`).join("");
+    boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Inhoud</div></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div>`;
+    boxEl.classList.remove("hidden");
     return;
   }
 
+  const flavored = active.filter(p => p.flavor);
+  if (!flavored.length && !inactiveSelected.length) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
   const allChecked = forceAll || (active.length > 0 && active.every(p => checkedIds.includes(p.id)));
-  const rows = flavored.map(p => `
-    <label class="flavor-check">
-      <input type="checkbox" value="${esc(p.id)}" ${allChecked || checkedIds.includes(p.id) ? "checked" : ""}>
-      <span>${esc(p.flavor)}</span>
-    </label>`).join("");
-  const inactiveRows = inactiveSelected.map(p => `
-    <label class="flavor-check inactive-flavor">
-      <input type="checkbox" value="${esc(p.id)}" checked disabled>
-      <span>${esc(p.flavor || "Zonder smaak")} <small>niet actief</small></span>
-    </label>`).join("");
-
-  boxEl.innerHTML = `
-    <div class="flavor-choice-head">
-      <div class="flavor-choice-title">Voorkeurssmaken</div>
-      <button type="button" class="text-btn flavor-all-btn">Alles aanvinken</button>
-    </div>
-    <div class="flavor-choice-grid">${rows}${inactiveRows}</div>
-    <div class="field-help">Vink één, meerdere of alle smaken aan. Bij alle smaken blijft de bewoner vrij kiezen.</div>`;
+  const rows = flavored.map(p => `<label class="flavor-check"><input type="checkbox" value="${esc(p.id)}" ${allChecked || checkedIds.includes(p.id) ? "checked" : ""}><span>${esc(p.flavor)}</span></label>`).join("");
+  const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input type="checkbox" value="${esc(p.id)}" checked disabled><span>${esc(p.flavor || "Zonder smaak")} <small>niet actief</small></span></label>`).join("");
+  boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Voorkeurssmaken</div><button type="button" class="text-btn flavor-all-btn">Alles aanvinken</button></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div>`;
   boxEl.classList.remove("hidden");
-
   const allBtn = boxEl.querySelector(".flavor-all-btn");
-  if (allBtn) {
-    allBtn.onclick = () => {
-      boxEl.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
-    };
-  }
+  if (allBtn) allBtn.onclick = () => boxEl.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
 }
 function selectedFlavorIds(boxEl) {
-  return [...boxEl.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)')].map(x => x.value);
+  return [...boxEl.querySelectorAll('input:checked:not(:disabled)')].map(x => x.value);
 }
 function selectionForRoom(name, mode, boxEl) {
   const active = familyProducts(name, mode);
   const flavored = active.filter(p => p.flavor);
   if (!active.length) return { ids: [], allFlavors: false };
+  if (mode === "sonde") {
+    const ids = selectedFlavorIds(boxEl);
+    return { ids: ids.length ? [ids[0]] : [active[0].id], allFlavors: false };
+  }
   if (!flavored.length) return { ids: [active[0].id], allFlavors: false };
 
   const ids = selectedFlavorIds(boxEl);
@@ -399,11 +392,11 @@ function renderCounting() {
 function roomProductLabel(r) {
   const name = r.productName || "Product";
   const active = familyProducts(name, r.mode);
-  if (r.allFlavors && active.length) return `${name} · Alle smaken`;
+  if (r.mode === "drink" && r.allFlavors && active.length) return `${name} · Alle smaken`;
   const selected = (r.selectedProductIds || []).map(id => data.products.find(x => x.id === id)).filter(Boolean);
   if (!selected.length) return name;
-  const flavors = selected.map(p => `${p.flavor || "Zonder smaak"}${activeProduct(p) ? "" : " (niet actief)"}`);
-  return `${name} · ${flavors.join(", ")}`;
+  const variants = selected.map(p => `${variantLabel(p) || "Zonder smaak"}${activeProduct(p) ? "" : " (niet actief)"}`);
+  return `${name} · ${variants.join(", ")}`;
 }
 function renderUsage() {
   if (currentMode === "general") {
@@ -641,7 +634,7 @@ saveRoomEdit.onclick = () => {
     return;
   }
   const selection = selectionForRoom(productName, r.mode, editRoomFlavorChoices);
-  if (familyProducts(productName, r.mode).some(p => p.flavor) && selection.ids.length < 1) {
+  if (r.mode === "drink" && familyProducts(productName, r.mode).some(p => p.flavor) && selection.ids.length < 1) {
     alert("Vink minimaal één voorkeurssmaak aan.");
     return;
   }
@@ -791,7 +784,7 @@ saveRoom.onclick = () => {
     return;
   }
   const selection = selectionForRoom(productName, currentMode, roomFlavorChoices);
-  if (familyProducts(productName, currentMode).some(p => p.flavor) && selection.ids.length < 1) {
+  if (currentMode === "drink" && familyProducts(productName, currentMode).some(p => p.flavor) && selection.ids.length < 1) {
     alert("Vink minimaal één voorkeurssmaak aan.");
     return;
   }
