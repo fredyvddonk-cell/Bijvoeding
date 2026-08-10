@@ -121,3 +121,12 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 .overview-stock { margin-top: 6px; font-size: .95rem; }
 .overview-minimum { margin-top: 3px; color: var(--muted); font-size: .88rem; }
 .overview-ok { margin-top: 7px; font-weight: 700; color: #2f6f55; }
+
+/* 2.7.8 - duidelijk besteladvies op basis van voorkeurssmaken */
+.order-room{margin-top:3px;color:var(--muted);font-size:.88rem}
+.order-preference{margin-top:8px;font-size:.92rem}
+.order-variant-list{margin-top:9px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.order-variant{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:.9rem}
+.order-variant+.order-variant{border-top:1px solid var(--border)}
+.order-variant.preferred{color:var(--text)}
+.order-variant.other{color:var(--muted);font-size:.84rem}

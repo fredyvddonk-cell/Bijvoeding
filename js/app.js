@@ -464,7 +464,57 @@ function finishProductDrag() {
 productList.addEventListener("pointerup", finishProductDrag);
 productList.addEventListener("pointercancel", finishProductDrag);
 
+function drinkFamilyOrderInfo(name) {
+  const products = familyProducts(name, "drink", true);
+  const active = products.filter(activeProduct);
+  const rooms = data.rooms.filter(r => r.mode === "drink" && canonicalName(r.productName) === canonicalName(name));
+  const daily = rooms.reduce((sum, r) => sum + Number(r.dailyAmount || 0), 0);
+  const preferredIds = new Set();
+  rooms.forEach(r => {
+    if (r.allFlavors) active.forEach(p => preferredIds.add(p.id));
+    else (r.selectedProductIds || []).forEach(id => preferredIds.add(id));
+  });
+  // Oude kamerdata zonder expliciete voorkeur: alle actieve smaken mogen meetellen.
+  if (!preferredIds.size && rooms.length) active.forEach(p => preferredIds.add(p.id));
+  const preferred = products.filter(p => preferredIds.has(p.id));
+  const other = products.filter(p => !preferredIds.has(p.id) && (stockUnits(p) + orderedUnits(p)) > 0);
+  const available = preferred.reduce((sum, p) => sum + stockUnits(p) + orderedUnits(p), 0);
+  const needed = daily > 0 ? Math.max(daily * 7 * targetWeeks(), daily * DELIVERY_DAYS) : 0;
+  const shortage = Math.max(0, needed - available);
+  const rep = preferred.find(activeProduct) || active[0] || products[0];
+  const pack = Number(rep?.contentPerOrderUnit || 1);
+  const orderUnits = pack > 0 ? Math.ceil(shortage / pack) : 0;
+  return { name, products, rooms, daily, preferred, other, available, needed, orderUnits, rep };
+}
+
+function renderDrinkOrders() {
+  const groups = familyNames("drink").map(drinkFamilyOrderInfo).filter(g => g.daily > 0 && g.rep);
+  orderList.innerHTML = groups.length ? groups.map(g => {
+    const p = g.rep;
+    const preferredNames = g.preferred.map(x => variantLabel(x) || "Zonder smaak");
+    const roomText = g.rooms.map(r => `Kamer ${esc(r.room)}`).join(" · ");
+    const preferredRows = g.preferred.map(x => {
+      const stock = stockUnits(x) + orderedUnits(x);
+      return `<div class="order-variant preferred"><span><strong>${esc(variantLabel(x) || "Zonder smaak")}</strong></span><span>${fmt(stock)} ${esc(looseUnitLabel(x, stock))}</span></div>`;
+    }).join("");
+    const otherRows = g.other.map(x => {
+      const stock = stockUnits(x) + orderedUnits(x);
+      return `<div class="order-variant other"><span>${esc(variantLabel(x) || "Zonder smaak")}</span><span>${fmt(stock)} ${esc(looseUnitLabel(x, stock))} · telt niet mee</span></div>`;
+    }).join("");
+    const days = g.daily > 0 ? g.available / g.daily : null;
+    return `<div class="item order-card order-family-card">
+      <div class="order-product">${esc(g.name)}</div>
+      <div class="order-room">${roomText}</div>
+      <div class="order-preference">Voorkeur: <strong>${esc(preferredNames.join(", ") || "alle smaken")}</strong></div>
+      <div class="order-variant-list">${preferredRows}${otherRows}</div>
+      <div class="order-main">${g.orderUnits > 0 ? `<strong>${g.orderUnits} ${esc(plural(p.orderUnit, g.orderUnits))}</strong> <span>bestellen van de voorkeurssmaken</span>` : `<span class="status-ok">Voldoende van de voorkeurssmaken</span>`}</div>
+      <div class="order-meta">Voorkeursvoorraad: ${fmt(g.available)} ${esc(looseUnitLabel(p, g.available))}${days != null ? ` · ± ${fmt(Math.floor(days * 10) / 10)} dagen` : ""}<br>Verbruik: ${fmt(g.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks()} weken</div>
+    </div>`;
+  }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
+}
+
 function renderOrders() {
+  if (currentMode === "drink") { renderDrinkOrders(); return; }
   const rows = productsForMode().map(p => ({ p, a: advice(p) })).filter(x => currentMode === "general" || (activeProduct(x.p) && x.a.daily > 0));
   orderList.innerHTML = rows.length ? rows.map(({ p, a }) => {
     const tht = currentMode === "general" ? "" : thtBadgeHtml(p);

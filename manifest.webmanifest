@@ -1,6 +1,6 @@
 {
-  "name": "Bijvoeding Voorraad",
-  "short_name": "Bijvoeding",
+  "name": "Voorraad & Bestellen",
+  "short_name": "Voorraad",
   "description": "Voorraad tellen en bestellen van bijvoeding, sondevoeding en algemene voedingsproducten.",
   "start_url": "./",
   "scope": "./",
