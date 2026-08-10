@@ -116,3 +116,8 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 }
 
 .count-total{margin-top:8px;font-size:.95rem;color:#2D2D37}.count-total strong{font-size:1.05rem}
+
+/* 2.7.4 - Overzicht als actielijst */
+.overview-stock { margin-top: 6px; font-size: .95rem; }
+.overview-minimum { margin-top: 3px; color: var(--muted); font-size: .88rem; }
+.overview-ok { margin-top: 7px; font-weight: 700; color: #2f6f55; }

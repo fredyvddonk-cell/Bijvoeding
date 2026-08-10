@@ -1,4 +1,4 @@
-Bijvoeding Voorraad 2.7.2 - PWA
+Bijvoeding Voorraad 2.7.4 - PWA
 
 Bestanden die de PWA mogelijk maken:
 - manifest.webmanifest

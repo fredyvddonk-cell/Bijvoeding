@@ -190,8 +190,42 @@ function orderedUnits(p) {
 function stockPackages(p) {
   return Number(p.stockFull || 0) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1) : 0);
 }
+const DELIVERY_DAYS = 10;
+function familyDailyUsage(name, mode) {
+  return data.rooms
+    .filter(r => r.mode === mode && canonicalName(r.productName) === canonicalName(name))
+    .reduce((sum, r) => sum + Number(r.dailyAmount || 0), 0);
+}
+function familyStockUnits(name, mode) {
+  return familyProducts(name, mode, true).reduce((sum, p) => sum + stockUnits(p) + orderedUnits(p), 0);
+}
+function familyDaysSupply(p) {
+  if (p.mode === "general") return null;
+  const daily = familyDailyUsage(p.name, p.mode);
+  if (daily <= 0) return null;
+  return familyStockUnits(p.name, p.mode) / daily;
+}
+function familyDaysSupplyText(p) {
+  const days = familyDaysSupply(p);
+  if (days == null) return "Niet in gebruik";
+  const rounded = Math.floor(days * 10) / 10;
+  return `± ${fmt(rounded)} ${rounded === 1 ? "dag" : "dagen"} voorraad`;
+}
+function autoMinimumUnits(p) {
+  if (p.mode === "general") return Number(p.minimumStock || 0) * Number(p.contentPerOrderUnit || 1);
+  // Bijvoeding: minimum voor het product als geheel; alle smaken tellen samen.
+  // Sondevoeding: er zijn geen smaakvarianten, dus dit blijft exact het vaste product.
+  return familyDailyUsage(p.name, p.mode) * DELIVERY_DAYS;
+}
 function belowMinimum(p) {
-  return stockPackages(p) < Number(p.minimumStock || 0);
+  if (p.mode === "general") return stockPackages(p) < Number(p.minimumStock || 0);
+  return familyStockUnits(p.name, p.mode) < autoMinimumUnits(p);
+}
+function minimumText(p) {
+  if (p.mode === "general") return `${fmt(p.minimumStock || 0)} ${plural(p.orderUnit, p.minimumStock || 0)}`;
+  const units = autoMinimumUnits(p);
+  const unit = p.consumptionUnit || looseUnitLabel(p, units);
+  return `${fmt(units)} ${unit} (10 dagen)`;
 }
 function daysSupply(p) {
   const d = dailyUsage(p.id);
@@ -213,7 +247,7 @@ function advice(p) {
   const daily = dailyUsage(p.id);
   const weekly = daily * 7;
   const usageTarget = currentMode === "general" ? Number(p.generalTarget || 0) : weekly * targetWeeks();
-  const minimumTarget = Number(p.minimumStock || 0) * Number(p.contentPerOrderUnit || 1);
+  const minimumTarget = autoMinimumUnits(p);
   const needed = currentMode === "general"
     ? Math.max(usageTarget, minimumTarget)
     : (daily > 0 && activeProduct(p) ? Math.max(usageTarget, minimumTarget) : 0);
@@ -399,7 +433,7 @@ function renderProducts() {
       <div><strong>${esc(labelProduct(p))}</strong><br><span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span><div style="margin-top:6px">${currentMode !== "general" ? useBadge(p) : ""}</div></div>
       <button type="button" class="drag-handle" aria-label="Sleep om product te verplaatsen" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span><span class="drag-label">Slepen</span></button>
     </div>
-    <div style="margin-top:8px">Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}${hasLooseUnits(p) ? ` + ${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))} = ${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}` : ""}</strong><br>Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit, p.alreadyOrdered))}</strong><br>Minimum: <strong>${fmt(p.minimumStock || 0)} ${esc(plural(p.orderUnit, p.minimumStock || 0))}</strong>${currentMode !== "general" ? `<br><span class="muted">${esc(daysSupplyText(p))}</span>` : ""}</div>
+    <div style="margin-top:8px">Voorraad: <strong>${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}${hasLooseUnits(p) ? ` + ${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))} = ${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}` : ""}</strong><br>Besteld: <strong>${fmt(p.alreadyOrdered)} ${esc(plural(p.orderUnit, p.alreadyOrdered))}</strong><br>Minimum: <strong>${esc(minimumText(p))}</strong>${currentMode !== "general" ? `<br><span class="muted">${esc(daysSupplyText(p))}</span>` : ""}</div>
     <div class="actions"><button class="small-primary" onclick="editStock('${p.id}')">Wijzigen</button><button class="small-danger" onclick="deleteProduct('${p.id}')">Verwijderen</button></div>
   </div>`).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -442,7 +476,7 @@ function renderOrders() {
     return `<div class="item order-card">
       <div class="order-product">${esc(labelProduct(p))}</div>
       <div class="order-main">${a.orderUnits > 0 ? `<strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
-      <div class="order-meta">${currentMode === "general" ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}` : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks()} weken`}${Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${fmt(p.minimumStock)} ${esc(plural(p.orderUnit, p.minimumStock))}` : ""}</div>
+      <div class="order-meta">${currentMode === "general" ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}` : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks()} weken`}${currentMode !== "general" ? `<br>Minimum: ${esc(minimumText(p))}` : (Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${esc(minimumText(p))}` : "")}</div>
       ${tht ? `<div class="order-chips">${tht}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
@@ -454,31 +488,74 @@ function renderOverview() {
   statUsageLabel.textContent = currentMode === "general" ? "Artikelen" : "Kamers";
   statUsage.textContent = currentMode === "general" ? productsForMode().length : roomsForMode().length;
   statProducts.textContent = productsForMode().length;
-  statOrders.textContent = productsForMode().filter(p => advice(p).orderUnits > 0).length;
+
+  const groups = currentMode === "general"
+    ? productsForMode().map(p => ({ name: labelProduct(p), products: [p], representative: p }))
+    : familyNames(currentMode).map(name => {
+        const products = familyProducts(name, currentMode, true);
+        return { name, products, representative: products.find(activeProduct) || products[0] };
+      });
+
+  const groupInfo = groups.map(g => {
+    const p = g.representative;
+    if (!p) return null;
+    if (currentMode === "general") {
+      const a = advice(p);
+      const e = expiryInfo(p);
+      return {
+        ...g, p, orderUnits: a.orderUnits, stock: stockUnits(p), days: null,
+        minimum: Number(p.minimumStock || 0), unused: false,
+        thtHtml: "", attention: a.orderUnits > 0
+      };
+    }
+
+    const daily = familyDailyUsage(g.name, currentMode);
+    const stock = familyStockUnits(g.name, currentMode);
+    const days = daily > 0 ? stock / daily : null;
+    const minimum = daily * DELIVERY_DAYS;
+    const shortage = Math.max(0, minimum - stock);
+    const pack = Number(p.contentPerOrderUnit || 1);
+    const orderUnits = daily > 0 ? Math.ceil(shortage / pack) : 0;
+    const unused = daily <= 0 && stock > 0;
+    const thtHtml = g.products.map(x => thtBadgeHtml(x)).filter(Boolean).join("");
+    const hasThtAttention = g.products.some(x => {
+      const e = expiryInfo(x);
+      return e.expired || e.soon || e.quarterlyDue;
+    });
+    return {
+      ...g, p, daily, stock, days, minimum, orderUnits, unused, thtHtml,
+      attention: orderUnits > 0 || unused || hasThtAttention
+    };
+  }).filter(Boolean);
+
+  statOrders.textContent = groupInfo.filter(x => x.orderUnits > 0).length;
   weeksCard.classList.toggle("hidden", currentMode === "general");
-  statWeeks.textContent = currentMode === "general" ? "Handmatig" : `${targetWeeks()} weken`;
-  document.querySelectorAll(".week-picker button").forEach(b => b.classList.toggle("active", Number(b.dataset.weeks) === targetWeeks()));
+  statWeeks.textContent = currentMode === "general" ? "Handmatig" : "10 dagen minimum";
+  document.querySelectorAll(".week-picker button").forEach(b => b.classList.remove("active"));
 
-  const attention = [];
-  productsForMode().forEach(p => {
-    const a = advice(p), e = expiryInfo(p);
-    const unused = currentMode !== "general" && !isInUse(p) && stockUnits(p) > 0;
-    if (a.orderUnits > 0 || unused || e.expired || e.soon || e.quarterlyDue) attention.push({ p, a, e, unused });
-  });
-
-  attentionList.innerHTML = attention.length ? attention.map(({ p, a, unused }) => {
-    const tht = currentMode === "general" ? "" : thtBadgeHtml(p);
+  const attention = groupInfo.filter(x => x.attention);
+  attentionList.innerHTML = attention.length ? attention.map(x => {
+    const p = x.p;
+    const unit = p.consumptionUnit || looseUnitLabel(p, x.stock);
+    const stockLine = currentMode === "general"
+      ? `Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>`
+      : `Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong> · <strong>${esc(familyDaysSupplyText(p))}</strong>`;
+    const minimumLine = currentMode === "general"
+      ? `Minimum: ${esc(minimumText(p))}`
+      : `Minimum: <strong>10 dagen</strong> · ${fmt(x.minimum)} ${esc(unit)}`;
     return `<div class="item attention-card">
-      <div class="attention-product">${esc(labelProduct(p))}</div>
-      ${a.orderUnits > 0 ? `<div class="attention-order"><strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span></div>` : ""}
-      ${unused ? `<div class="attention-unused">Voorraad aanwezig · niet in gebruik</div>` : ""}
-      ${tht ? `<div class="attention-chips">${tht}</div>` : ""}
+      <div class="attention-product">${esc(x.name)}</div>
+      <div class="overview-stock">${stockLine}</div>
+      <div class="overview-minimum">${minimumLine}</div>
+      ${x.orderUnits > 0 ? `<div class="attention-order"><strong>${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))}</strong> <span>bestellen</span></div>` : `<div class="overview-ok">Voldoende voorraad</div>`}
+      ${x.unused ? `<div class="attention-unused">Voorraad aanwezig · niet in gebruik</div>` : ""}
+      ${x.thtHtml ? `<div class="attention-chips">${x.thtHtml}</div>` : ""}
     </div>`;
-  }).join("") : `<div class="empty">Geen directe aandachtspunten.</div>`;
+  }).join("") : `<div class="empty">Geen directe aandachtspunten. Alles is voldoende op voorraad en er zijn geen THT-meldingen.</div>`;
 }
-
 function renderAll() {
   flavorField.classList.toggle("hidden", currentMode === "sonde");
+  if (typeof manualMinimumField !== "undefined") manualMinimumField.classList.toggle("hidden", currentMode !== "general");
   looseField.classList.toggle("hidden", Number(contentPerOrderUnit.value || 1) <= 1);
   renderProductOptions();
   renderCounting();
