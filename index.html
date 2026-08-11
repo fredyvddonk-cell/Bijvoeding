@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3.5</title>
+<title>Bij- &amp; Sondevoeding V3.3.6</title>
 <link rel="stylesheet" href="css/style.css?v=3.3.5">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3.5</span>
+    <span class="version">V3.3.6</span>
   </div>
 </header>
 
@@ -125,7 +125,7 @@
         <div class="field"><label for="stockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
         <div class="field" id="looseField"><label for="stockLoose">Losse eenheden</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
       </div>
-      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in Voorraad of Bestellen.</div></div><label class="switch"><input id="externalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="externalQuantityField"><label for="externalQuantity">Aantal</label><input id="externalQuantity" type="number" min="0" step="1" value="0"><div class="field-help">Alleen ter registratie; dit aantal wordt niet meegenomen in Voorraad of Bestellen.</div></div><div class="field hidden" id="externalDaysField"><label>Dagen</label><div class="chip-picker day-picker" id="externalDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="externalDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"><div class="field-help">Standaard alle dagen. Tik een dag uit als deze bijvoeding die dag niet nodig is.</div></div>
+      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in Voorraad of Bestellen.</div></div><label class="switch"><input id="externalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="externalQuantityField"><label for="externalQuantity">Aantal</label><input id="externalQuantity" type="number" min="0" step="1" value="0"><div class="field-help">Alleen ter registratie; dit aantal wordt niet meegenomen in Voorraad of Bestellen.</div></div>
       <div class="field" id="manualMinimumField"><label for="minimumStock">Minimumvoorraad (alleen Algemeen)</label><input id="minimumStock" type="number" min="0" step="1" value="0"><div class="field-help">Bij Bijvoeding en Sondevoeding berekent de app dit automatisch op basis van 10 dagen levertijd.</div></div>
       <div class="form-actions-inline">
         <button type="button" class="secondary" id="cancelProductAdd">Annuleren</button>
@@ -196,7 +196,7 @@
       <div class="field" id="editLooseField"><label for="editStockLoose">Losse eenheden</label><input id="editStockLoose" type="number" min="0" step="1"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel gebruiken bij Kamers en PDF-lijsten; niet tonen bij Voorraad en Bestellen.</div></div><label class="switch"><input id="editExternalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="editExternalQuantityField"><label for="editExternalQuantity">Aantal</label><input id="editExternalQuantity" type="number" min="0" step="1" value="0"></div><div class="field hidden" id="editExternalDaysField"><label>Dagen</label><div class="chip-picker day-picker" id="editExternalDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="editExternalDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"></div>
+      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel gebruiken bij Kamers en PDF-lijsten; niet tonen bij Voorraad en Bestellen.</div></div><label class="switch"><input id="editExternalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="editExternalQuantityField"><label for="editExternalQuantity">Aantal</label><input id="editExternalQuantity" type="number" min="0" step="1" value="0"></div>
       <div class="field"><label for="editMinimumStock">Minimumvoorraad in bestelverpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
     </div>
 
