@@ -666,7 +666,7 @@ function renderOrders() {
 
 function renderOverview() {
   overviewTitle.textContent = modeLabel();
-
+  usageTabBtn.textContent = currentMode === "general" ? "Algemeen" : "Kamers";
   statUsageLabel.textContent = currentMode === "general" ? "Artikelen" : "Kamers";
   statUsage.textContent = currentMode === "general" ? productsForMode().length : roomsForMode().length;
   statProducts.textContent = productsForMode().length;
