@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.1.10</title>
-<link rel="stylesheet" href="css/style.css?v=3.1.10">
+<title>Bij- &amp; Sondevoeding V3.2</title>
+<link rel="stylesheet" href="css/style.css?v=3.2">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.1.10</span>
+    <span class="version">V3.2</span>
   </div>
 </header>
 
@@ -194,6 +194,13 @@
       </div>
       <label class="switch" aria-label="Smaak actief"><input id="editProductActive" type="checkbox"><span class="switch-slider"></span></label>
     </div>
+    <div class="toggle-row hidden" id="editProductPhaseOutRow">
+      <div>
+        <strong>Uitlopend product</strong>
+        <div class="field-help">Voorraad blijft meetellen bij dezelfde sondevoeding, maar deze verpakking wordt niet meer geadviseerd om te bestellen.</div>
+      </div>
+      <label class="switch" aria-label="Uitlopend product"><input id="editProductPhaseOut" type="checkbox"><span class="switch-slider"></span></label>
+    </div>
     <div class="modal-info"><strong>Informatie</strong><br><span>Wijzigingen gelden direct overal waar dit product aan een kamer is gekoppeld.</span></div>
     <button type="button" class="modal-delete-product" id="deleteProductFromModal">Product verwijderen</button>
     <div class="modal-actions">
@@ -225,7 +232,7 @@
 </div>
 
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.1.10"></script>
+<script src="js/app.js?v=3.2"></script>
 
 <script>
 if ("serviceWorker" in navigator) {

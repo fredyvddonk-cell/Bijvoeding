@@ -156,3 +156,11 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 
 /* V3.1.10 — minder gevoelig slepen */
 .drag-handle.drag-pending{opacity:.72;transform:scale(.97)}
+
+
+/* V3.2 — uitlopende sondevoeding en overdrachtsmelding */
+.phaseout-badge{background:#f2eef8;color:#6f568f;border:1px solid #ddd2eb;margin-left:6px}
+.phaseout-card{border-left:4px solid #a98dc2}
+.phaseout-note,.phaseout-status{color:#6f568f;font-weight:700}
+.attention-unused.attention-action{display:flex;flex-direction:column;gap:3px;background:#f1f6fb;color:#35566d;border:1px solid #d9e6ef}
+.unused-hint{font-size:.82rem;font-weight:600;color:#647a89}

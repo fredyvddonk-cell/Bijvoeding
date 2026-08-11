@@ -140,6 +140,12 @@ function plural(unit, n) {
 function activeProduct(p) {
   return p.active !== false;
 }
+function phaseOutProduct(p) {
+  return p?.mode === "sonde" && p.phaseOut === true;
+}
+function orderableProduct(p) {
+  return activeProduct(p) && !phaseOutProduct(p);
+}
 function hasLooseUnits(p) {
   return Number(p?.contentPerOrderUnit || 1) > 1 && p?.looseUnitsAllowed !== false;
 }
@@ -227,14 +233,12 @@ function familyDaysSupplyText(p) {
 }
 function autoMinimumUnits(p) {
   if (p.mode === "general") return Number(p.minimumStock || 0) * Number(p.contentPerOrderUnit || 1);
-  // Bijvoeding: minimum voor het product als geheel; alle smaken tellen samen.
-  // Sondevoeding: 500 ml / 1000 ml zijn aparte varianten en worden per kamer vast gekozen.
-  if (p.mode === "sonde") return dailyUsage(p.id) * DELIVERY_DAYS;
+  // Bij- en sondevoeding worden voor de minimumvoorraad per productfamilie beoordeeld.
+  // Verschillende inhoudsvarianten van dezelfde sondevoeding tellen dus samen.
   return familyDailyUsage(p.name, p.mode) * DELIVERY_DAYS;
 }
 function belowMinimum(p) {
   if (p.mode === "general") return stockPackages(p) < Number(p.minimumStock || 0);
-  if (p.mode === "sonde") return stockUnits(p) < autoMinimumUnits(p);
   return familyStockUnits(p.name, p.mode) < autoMinimumUnits(p);
 }
 function minimumText(p) {
@@ -356,7 +360,7 @@ function useBadge(p) {
 }
 function daysSupplyText(p) {
   if (!activeProduct(p)) return "Niet actief";
-  const days = daysSupply(p);
+  const days = p.mode === "sonde" ? familyDaysSupply(p) : daysSupply(p);
   if (days == null) return "Niet in gebruik";
   if (!Number.isFinite(days)) return "—";
   const rounded = Math.floor(days * 10) / 10;
@@ -948,6 +952,8 @@ function editStock(id) {
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
   editProductActiveRow.classList.toggle("hidden", p.mode === "general");
+  editProductPhaseOut.checked = phaseOutProduct(p);
+  editProductPhaseOutRow.classList.toggle("hidden", p.mode !== "sonde");
   editLooseField.classList.toggle("hidden", !hasLooseUnits(p));
   productEditModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
@@ -996,6 +1002,7 @@ saveProductEdit.onclick = () => {
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
+  p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
 
   data.rooms.filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(name)).forEach(r => {
     const first = familyProducts(name, r.mode, true)[0];
@@ -1105,7 +1112,7 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false
   });
   productName.value = "";
   flavor.value = "";
@@ -1146,34 +1153,28 @@ function adviceForProduct(p) {
   const result = advice(p);
   currentMode = old;
 
-  // V3.1.5 — dezelfde sondevoeding met verschillende verpakkingsinhouden
-  // telt als één gezamenlijke voorraad voor het bepalen of er voldoende is.
-  // Voorbeeld: 500 ml + 1000 ml van hetzelfde product worden samen in ml geteld.
-  // Is de gezamenlijke voorraad (incl. reeds besteld) voldoende voor de ingestelde
-  // periode/minimumvoorraad, dan krijgen alle inhoudsvarianten "Voldoende voorraad".
+  // V3.2 — dezelfde sondevoeding met verschillende inhoudsvarianten vormt één voorraad.
+  // Uitlopende varianten blijven meetellen in de voorraad, maar worden nooit besteladvies.
   if (p.mode === "sonde") {
     const family = familyProducts(p.name, "sonde", true);
-    if (family.length > 1) {
-      const daily = familyDailyUsage(p.name, "sonde");
-      const weekly = daily * 7;
-      const usageTarget = weekly * targetWeeks("sonde");
-      const minimumTarget = daily * DELIVERY_DAYS;
-      const needed = daily > 0 ? Math.max(usageTarget, minimumTarget) : 0;
-      const available = familyStockUnits(p.name, "sonde");
-      if (needed > 0 && available >= needed) {
-        return {
-          ...result,
-          daily,
-          weekly,
-          usageTarget,
-          minimumTarget,
-          needed,
-          available,
-          orderUnits: 0,
-          familyCombined: true
-        };
-      }
-    }
+    const daily = familyDailyUsage(p.name, "sonde");
+    const weekly = daily * 7;
+    const usageTarget = weekly * targetWeeks("sonde");
+    const minimumTarget = daily * DELIVERY_DAYS;
+    const needed = daily > 0 ? Math.max(usageTarget, minimumTarget) : 0;
+    const available = familyStockUnits(p.name, "sonde");
+    const shortage = Math.max(0, needed - available);
+    const orderable = family.filter(orderableProduct);
+    // Bestel bij voorkeur de grootste nog actieve verpakking; uitlopend nooit bestellen.
+    const preferred = orderable.slice().sort((a,b) => Number(b.contentPerOrderUnit||1)-Number(a.contentPerOrderUnit||1))[0] || null;
+    const orderUnits = preferred && p.id === preferred.id && shortage > 0
+      ? Math.ceil(shortage / Number(preferred.contentPerOrderUnit || 1))
+      : 0;
+    return {
+      ...result, daily, weekly, usageTarget, minimumTarget, needed, available, shortage,
+      orderUnits, familyCombined: family.length > 1, preferredOrderProductId: preferred?.id || null,
+      phaseOut: phaseOutProduct(p)
+    };
   }
   return result;
 }
@@ -1201,7 +1202,7 @@ function renderCounting() {
     const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
     return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
       <div class="item-head">
-        <div><strong>${esc(labelProduct(p))}</strong></div>
+        <div><strong>${esc(labelProduct(p))}</strong>${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
       </div>
       ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
@@ -1253,10 +1254,13 @@ function sondeOrGeneralOrderCard(p) {
   const tht = p.mode === "general" ? "" : thtBadgeHtml(p);
   const meta = p.mode === "general"
     ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}${Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${esc(minimumText(p))}` : ""}`
-    : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks(p.mode)} weken<br>Minimum: ${esc(minimumText(p))}`;
-  return `<div class="item order-card">
-    <div class="order-product">${esc(labelProduct(p))}</div>
-    <div class="order-main">${a.orderUnits > 0 ? `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+    : `${esc(familyDaysSupplyText(p))} · gezamenlijk verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks(p.mode)} weken<br>Minimum: ${esc(minimumText(p))}${phaseOutProduct(p) ? `<br><strong class="phaseout-note">Uitlopend product · voorraad telt mee, niet bestellen</strong>` : ""}`;
+  let status = `<span class="status-ok">Voldoende voorraad</span>`;
+  if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
+  else if (phaseOutProduct(p) && a.shortage > 0) status = `<span class="phaseout-status">Uitlopend · niet bestellen</span>`;
+  return `<div class="item order-card ${phaseOutProduct(p) ? "phaseout-card" : ""}">
+    <div class="order-product">${esc(labelProduct(p))}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
+    <div class="order-main">${status}</div>
     <div class="order-meta">${meta}</div>
     ${tht ? `<div class="order-chips">${tht}</div>` : ""}
   </div>`;
@@ -1293,11 +1297,13 @@ function overviewAttentionItems() {
     if (!p) return;
     const plan = drinkFamilyPlan(name);
     const stock = familyStockUnits(name, "drink");
-    const unused = familyDailyUsage(name, "drink") <= 0 && stock > 0;
     const thtSummary = familyThtSummary(products);
-    if (plan.orderUnits > 0 || unused || thtSummary.attention) {
-      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused, tht:thtSummary.html, mode:"drink"});
+    if (plan.orderUnits > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused:false, tht:thtSummary.html, mode:"drink"});
     }
+    products.filter(x => stockUnits(x) > 0 && !isInUse(x)).forEach(x => {
+      items.push({p:x, name:labelProduct(x), orderUnits:0, stock:stockUnits(x), days:null, unused:true, tht:"", mode:"drink", transferOnly:true});
+    });
   });
 
   const sondeNames = [...new Set(allProductsOrdered().filter(p => p.mode === "sonde").map(p => p.name))];
@@ -1307,11 +1313,13 @@ function overviewAttentionItems() {
     if (!p) return;
     const a = adviceForProduct(p);
     const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
-    const unused = products.every(x => !isInUse(x)) && stock > 0;
     const thtSummary = familyThtSummary(products);
-    if (a.orderUnits > 0 || unused || thtSummary.attention) {
-      items.push({p, name, orderUnits:a.orderUnits, stock, days:daysSupply(p), unused, tht:thtSummary.html, mode:"sonde"});
+    if (a.orderUnits > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits:a.orderUnits, stock, days:familyDaysSupply(p), unused:false, tht:thtSummary.html, mode:"sonde"});
     }
+    products.filter(x => stockUnits(x) > 0 && !isInUse(x)).forEach(x => {
+      items.push({p:x, name:labelProduct(x), orderUnits:0, stock:stockUnits(x), days:null, unused:true, tht:"", mode:"sonde", transferOnly:true});
+    });
   });
 
   const generalNames = [...new Set(allProductsOrdered().filter(p => p.mode === "general").map(p => p.name))];
@@ -1366,16 +1374,16 @@ function renderOverview() {
     const p = x.p;
     const unit = p.consumptionUnit || looseUnitLabel(p, x.stock);
     const daysText = x.mode === "general" || x.days == null ? "" : ` · <strong>± ${fmt(Math.floor(x.days * 10) / 10)} dagen voorraad</strong>`;
-    const minimum = x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`;
+    const minimum = x.transferOnly ? "" : (x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`);
     const expiredTht = x.tht && x.tht.includes("danger-chip");
     const soonTht = x.tht && x.tht.includes("warn-chip");
     const attentionClass = x.orderUnits > 0 ? "attention-card order-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
     return `<div class="item ${attentionClass}">
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
-      <div class="overview-minimum">${minimum}</div>
+      ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
       ${x.orderUnits > 0 ? `<div class="attention-order attention-action"><strong>BESTELLEN</strong></div>` : ""}
-      ${x.unused ? `<div class="attention-unused attention-action">Voorraad aanwezig · niet in gebruik</div>` : ""}
+      ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty overview-clear">✓ Geen acties of aandachtspunten</div>`;
@@ -1464,7 +1472,7 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false
   });
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
