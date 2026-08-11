@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3-test2</title>
-<link rel="stylesheet" href="css/style.css?v=3.3-test">
+<title>Bij- &amp; Sondevoeding V3.3-test4</title>
+<link rel="stylesheet" href="css/style.css?v=3.3-test4">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3-test2</span>
+    <span class="version">V3.3-test4</span>
   </div>
 </header>
 
@@ -85,8 +85,8 @@
         <div class="field"><label for="dailyUnit">Eenheid</label><select id="dailyUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
       </div>
       <div class="schedule-fields">
-        <div class="field"><label for="scheduleTimes">Tijdstip(pen)</label><input id="scheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"><div class="field-help">Meerdere tijden scheiden met een komma.</div></div>
-        <div class="row"><div class="field"><label for="scheduleAmount">Hoeveelheid per keer</label><input id="scheduleAmount" type="number" min="0" step="0.1" placeholder="Bijv. 1"></div><div class="field"><label for="scheduleDays">Dagen</label><select id="scheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+        <div class="field"><label>Tijdstip(pen)</label><div class="chip-picker" id="scheduleTimeChips"><button type="button" data-time="08:00">08:00</button><button type="button" data-time="10:00">10:00</button><button type="button" data-time="12:30">12:30</button><button type="button" data-time="15:00">15:00</button><button type="button" data-time="17:00">17:00</button><button type="button" class="other-time">+ Andere tijd</button></div><input id="scheduleOtherTime" class="hidden compact-time-input" type="time"><input id="scheduleTimes" type="hidden"></div>
+        <div class="row"><div class="field"><label for="scheduleAmount">Hoeveelheid per keer</label><input id="scheduleAmount" type="number" min="0" step="0.1" placeholder="Bijv. 1"></div><div class="field"><label>Dagen</label><div class="chip-picker day-picker" id="scheduleDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="scheduleDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"></div></div>
         <div class="field"><label for="scheduleChoice">Gebruik op dit tijdstip</label><select id="scheduleChoice"><option value="fixed">Deze voeding geven</option><option value="or">OF-keuze met andere bijvoeding</option></select><div class="field-help">Kies OF wanneer op hetzelfde tijdstip één van meerdere bijvoedingen gegeven mag worden. Voeg ieder alternatief als aparte voedingsregel toe met hetzelfde tijdstip.</div></div>
         <div class="field"><label for="scheduleNote">Extra informatie</label><input id="scheduleNote" placeholder="Bijv. na het eten geven"></div>
       </div>
@@ -160,8 +160,8 @@
       <div class="field"><label for="editDailyUnit">Eenheid</label><select id="editDailyUnit" disabled><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
     </div>
     <div class="schedule-fields">
-      <div class="field"><label for="editScheduleTimes">Tijdstip(pen)</label><input id="editScheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"></div>
-      <div class="row"><div class="field"><label for="editScheduleAmount">Hoeveelheid per keer</label><input id="editScheduleAmount" type="number" min="0" step="0.1"></div><div class="field"><label for="editScheduleDays">Dagen</label><select id="editScheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+      <div class="field"><label>Tijdstip(pen)</label><div class="chip-picker" id="editScheduleTimeChips"><button type="button" data-time="08:00">08:00</button><button type="button" data-time="10:00">10:00</button><button type="button" data-time="12:30">12:30</button><button type="button" data-time="15:00">15:00</button><button type="button" data-time="17:00">17:00</button><button type="button" class="other-time">+ Andere tijd</button></div><input id="editScheduleOtherTime" class="hidden compact-time-input" type="time"><input id="editScheduleTimes" type="hidden"></div>
+      <div class="row"><div class="field"><label for="editScheduleAmount">Hoeveelheid per keer</label><input id="editScheduleAmount" type="number" min="0" step="0.1"></div><div class="field"><label>Dagen</label><div class="chip-picker day-picker" id="editScheduleDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="editScheduleDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"></div></div>
       <div class="field"><label for="editScheduleChoice">Gebruik op dit tijdstip</label><select id="editScheduleChoice"><option value="fixed">Deze voeding geven</option><option value="or">OF-keuze met andere bijvoeding</option></select><div class="field-help">OF-keuzes met hetzelfde kamer- en tijdstip worden samen weergegeven in het dagschema.</div></div>
       <div class="field"><label for="editScheduleNote">Extra informatie</label><input id="editScheduleNote" placeholder="Bijv. na het eten geven"></div>
     </div>
@@ -258,8 +258,11 @@
   </div>
 </div>
 
+<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF dagschema</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Kies de unit waarvoor je het dagschema wilt maken en delen.</p><div class="unit-pdf-buttons"><button type="button" onclick="makeDaySchedule('1')">Unit 1</button><button type="button" onclick="makeDaySchedule('2')">Unit 2</button><button type="button" onclick="makeDaySchedule('3')">Unit 3</button></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.3-test"></script>
+<script src="js/app.js?v=3.3-test4"></script>
 
 <script>
 if ("serviceWorker" in navigator) {

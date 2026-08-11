@@ -199,3 +199,14 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 /* V3.3-test2 — OF-keuzes */
 .choice-chip{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;background:#f1e9fb;color:#7b4db2;font-size:.68rem;font-weight:800;vertical-align:middle}
 @media print{#daySchedulePrint .pdf-choice{font-weight:800;color:#5f3f8e}#daySchedulePrint .pdf-choice-row{background:#fbf8ff}}
+
+/* V3.3-test4 — snelle tijd- en dagkeuze */
+.chip-picker{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.chip-picker button{border:1px solid #d9d1e8;background:#fff;color:#4b4554;border-radius:10px;padding:8px 10px;font-weight:700;min-width:58px}
+.chip-picker button.selected{background:#957AC1;border-color:#957AC1;color:#fff}
+.day-picker button{min-width:40px;padding:8px 7px}
+.compact-time-input{margin-top:8px;max-width:150px}
+.unit-pdf-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:16px}
+.unit-pdf-buttons button{background:#957AC1;color:#fff;border:0;border-radius:12px;padding:13px 8px;font-weight:800}
+.pdf-unit-panel{max-width:430px}
+.pdf-choice-label{font-weight:900;color:#7b4db2;letter-spacing:.02em}

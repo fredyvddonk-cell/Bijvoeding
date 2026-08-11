@@ -134,8 +134,10 @@ function labelProduct(p) {
   return variant ? `${p.name} · ${variant}` : (p?.name || "Product");
 }
 function plural(unit, n) {
-  const m = { flesje: "flesjes", bakje: "bakjes", fles: "flessen", karton: "kartons", doos: "dozen", pot: "potten", pak: "pakken" };
-  return Number(n) === 1 ? unit : (m[unit] || unit + "en");
+  const singular = {flesjes:"flesje",bakjes:"bakje",zakjes:"zakje",flessen:"fles",kartons:"karton",dozen:"doos",potten:"pot",pakken:"pak"};
+  const base = singular[unit] || unit;
+  const m = { flesje:"flesjes", bakje:"bakjes", zakje:"zakjes", fles:"flessen", karton:"kartons", doos:"dozen", pot:"potten", pak:"pakken", ml:"ml" };
+  return Number(n) === 1 ? base : (m[base] || base);
 }
 function activeProduct(p) {
   return p.active !== false;
@@ -307,7 +309,15 @@ function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false)
 
   const active = familyProducts(name, mode);
   const inactiveSelected = data.products.filter(p => p.mode === mode && !activeProduct(p) && canonicalName(p.name) === canonicalName(name) && checkedIds.includes(p.id));
-  if (active.length <= 1 && !inactiveSelected.length) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
+  // Bij bijvoeding moet Smaak/soort ook zichtbaar blijven als er maar één actieve smaak is.
+  // Zo kan de gekozen smaak expliciet aan de kamerregel en het dagschema worden gekoppeld.
+  // Alleen een product zonder smaak/soort heeft geen extra keuze nodig.
+  if (mode !== "sonde") {
+    const hasFlavorChoice = active.some(p => String(p.flavor || "").trim()) || inactiveSelected.some(p => String(p.flavor || "").trim());
+    if (!hasFlavorChoice) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
+  } else if (active.length <= 1 && !inactiveSelected.length) {
+    boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return;
+  }
 
   if (mode === "sonde") {
     const selectedIds = checkedIds.filter(id => active.some(p => p.id === id));
@@ -871,7 +881,8 @@ function editRoom(id) {
   editDailyAmount.value = r.dailyAmount;
   editScheduleTimes.value = r.scheduleTimes || "";
   editScheduleAmount.value = r.scheduleAmount || "";
-  editScheduleDays.value = r.scheduleDays || "Alle dagen";
+  editScheduleDays.value = normalizeDays(r.scheduleDays);
+  syncChipPicker("edit", editScheduleTimes.value, editScheduleDays.value);
   editScheduleChoice.value = r.scheduleChoice || "fixed";
   editScheduleNote.value = r.scheduleNote || "";
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
@@ -1467,7 +1478,7 @@ saveRoom.onclick = () => {
     scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
     scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim()
   });
-  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = "Alle dagen"; scheduleChoice.value = "fixed"; scheduleNote.value = "";
+  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = ALL_DAYS; scheduleChoice.value = "fixed"; scheduleNote.value = ""; syncChipPicker("add", "", ALL_DAYS);
   // Kamernummer en unit blijven staan, zodat een tweede product snel aan dezelfde kamer kan worden toegevoegd.
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
@@ -1551,70 +1562,122 @@ if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(produc
 renderAll();
 
 
-// V3.3-test2 — één A4 dagschema via de afdruk/PDF-functie van de telefoon.
+// V3.3-test4 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
+const ALL_DAYS = "Ma,Di,Wo,Do,Vr,Za,Zo";
+function normalizeDays(v){
+  if(!v || v==="Alle dagen") return ALL_DAYS;
+  if(v==="Maandag t/m vrijdag") return "Ma,Di,Wo,Do,Vr";
+  if(v==="Weekend") return "Za,Zo";
+  return v;
+}
+function setupChipPicker(prefix){
+  const isEdit=prefix==="edit";
+  const timeBox=document.getElementById(isEdit?"editScheduleTimeChips":"scheduleTimeChips");
+  const timeInput=document.getElementById(isEdit?"editScheduleTimes":"scheduleTimes");
+  const other=document.getElementById(isEdit?"editScheduleOtherTime":"scheduleOtherTime");
+  const dayBox=document.getElementById(isEdit?"editScheduleDayChips":"scheduleDayChips");
+  const dayInput=document.getElementById(isEdit?"editScheduleDays":"scheduleDays");
+  function writeTimes(){
+    const vals=[...timeBox.querySelectorAll("[data-time].selected")].map(b=>b.dataset.time);
+    if(other.value) vals.push(other.value);
+    timeInput.value=[...new Set(vals)].sort().join(", ");
+  }
+  timeBox.querySelectorAll("[data-time]").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");writeTimes();});
+  timeBox.querySelector(".other-time").onclick=()=>{other.classList.toggle("hidden"); if(!other.classList.contains("hidden")) other.focus();};
+  other.onchange=writeTimes;
+  dayBox.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
+    b.classList.toggle("selected");
+    dayInput.value=[...dayBox.querySelectorAll("[data-day].selected")].map(x=>x.dataset.day).join(",");
+  });
+}
+function syncChipPicker(prefix,times,days){
+  const isEdit=prefix==="edit";
+  const timeBox=document.getElementById(isEdit?"editScheduleTimeChips":"scheduleTimeChips");
+  const other=document.getElementById(isEdit?"editScheduleOtherTime":"scheduleOtherTime");
+  const dayBox=document.getElementById(isEdit?"editScheduleDayChips":"scheduleDayChips");
+  if(!timeBox||!dayBox) return;
+  const vals=normalizedTimes(times); const fixed=["08:00","10:00","12:30","15:00","17:00"];
+  timeBox.querySelectorAll("[data-time]").forEach(b=>b.classList.toggle("selected",vals.includes(b.dataset.time)));
+  const custom=vals.find(x=>!fixed.includes(x))||""; other.value=custom; other.classList.toggle("hidden",!custom);
+  const selected=normalizeDays(days).split(",").filter(Boolean);
+  dayBox.querySelectorAll("[data-day]").forEach(b=>b.classList.toggle("selected",selected.includes(b.dataset.day)));
+}
+setupChipPicker("add"); setupChipPicker("edit");
+
 function scheduleFlavorText(r){
   if (r.mode !== "drink") return "";
   if (r.allFlavors) return "Alle smaken";
   const ids = r.selectedProductIds || [];
-  const names = ids.map(id => data.products.find(p => p.id === id)?.flavor).filter(Boolean);
-  return names.join("/");
+  return ids.map(id => data.products.find(p => p.id === id)?.flavor).filter(Boolean).join("/");
 }
-function normalizedTimes(v){
-  return String(v||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean).map(x=>x.replace(".",":"));
-}
-function makeDaySchedule(){
+function normalizedTimes(v){return String(v||"").split(/[,;]+/).map(x=>x.trim().replace(".",":")).filter(Boolean);}
+function dayText(r){const d=normalizeDays(r.scheduleDays); return d===ALL_DAYS ? "" : d.split(",").join(" ");}
+function amountText(r){return r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${plural(r.dailyUnit,r.scheduleAmount)}` : `${fmt(r.dailyAmount)} ${plural(r.dailyUnit,r.dailyAmount)} per dag`;}
+function productWithFlavor(r){const f=scheduleFlavorText(r);return `${r.productName}${f?` (${f})`:""}`;}
+function closePdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.add("hidden");document.body.style.overflow="";}
+function openPdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.remove("hidden");document.body.style.overflow="hidden";}
+
+document.getElementById("printDaySchedule")?.addEventListener("click",openPdfUnitModal);
+
+function buildUnitRows(unit){
   const rows=[];
-  data.rooms.filter(r=>r.mode==="drink" && r.scheduleTimes).forEach(r=>{
-    normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r}));
-  });
-  rows.sort((a,b)=>a.time.localeCompare(b.time)||Number(a.r.unit)-Number(b.r.unit)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
-  if(!rows.length){ alert("Vul bij minimaal één kamervoeding een tijdstip in."); return; }
-
-  const old=document.getElementById("daySchedulePrint"); if(old) old.remove();
-  const box=document.createElement("section"); box.id="daySchedulePrint";
-  let last="";
-  const consumed=new Set();
-  const out=[];
-
-  function productWithFlavor(r){
-    const flavor=scheduleFlavorText(r);
-    return `${r.productName}${flavor ? ` (${flavor})` : ""}`;
-  }
-  function amountText(r){
-    return r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${plural(r.dailyUnit,r.scheduleAmount)}` : `${fmt(r.dailyAmount)} ${r.dailyUnit} per dag`;
-  }
-
-  rows.forEach((entry,idx)=>{
-    if(consumed.has(idx)) return;
-    const {time,r}=entry;
-    let group=[{entry,idx}];
-    if(r.scheduleChoice === "or"){
-      group=rows.map((x,i)=>({entry:x,idx:i})).filter(x=>
-        !consumed.has(x.idx) && x.entry.time===time && x.entry.r.scheduleChoice==="or" &&
-        String(x.entry.r.room)===String(r.room) && String(x.entry.r.unit)===String(r.unit)
-      );
+  data.rooms.filter(r=>String(r.unit)===String(unit) && r.mode==="drink" && r.scheduleTimes).forEach(r=>normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r})));
+  rows.sort((a,b)=>a.time.localeCompare(b.time)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
+  const result=[],used=new Set();
+  rows.forEach((x,i)=>{
+    if(used.has(i)) return;
+    if(x.r.scheduleChoice==="or"){
+      const group=rows.map((y,j)=>({y,j})).filter(z=>!used.has(z.j)&&z.y.time===x.time&&z.y.r.scheduleChoice==="or"&&String(z.y.r.room)===String(x.r.room));
+      group.forEach(z=>used.add(z.j));
+      if(group.length>1){result.push({time:x.time,room:x.r.room,choice:true,items:group.map(z=>z.y.r)});return;}
     }
-    group.forEach(x=>consumed.add(x.idx));
-    if(time!==last){ out.push(`<div class="pdf-time">${esc(time)} uur</div>`); last=time; }
-
-    if(group.length>1){
-      const products=group.map(x=>productWithFlavor(x.entry.r)).join(" óf ");
-      const amount=amountText(r);
-      const day= r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : "";
-      const notes=[...new Set(group.map(x=>x.entry.r.scheduleNote).filter(Boolean))].join(" / ");
-      const extras=[amount,day].filter(Boolean).join(" · ");
-      out.push(`<div class="pdf-row pdf-choice-row"><strong>Kamer ${esc(r.room)}</strong> · <span class="pdf-choice">${esc(products)}</span>${extras?` · ${esc(extras)}`:""}${notes?` · <span class="pdf-note">${esc(notes)}</span>`:""}</div>`);
-    } else {
-      const flavor=scheduleFlavorText(r);
-      const amount=amountText(r);
-      const extras=[flavor, amount, r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : ""].filter(Boolean).join(" · ");
-      out.push(`<div class="pdf-row"><strong>Kamer ${esc(r.room)}</strong> · ${esc(r.productName)}${extras?` · ${esc(extras)}`:""}${r.scheduleNote?` · <span class="pdf-note">${esc(r.scheduleNote)}</span>`:""}</div>`);
-    }
+    used.add(i);result.push({time:x.time,room:x.r.room,choice:false,items:[x.r]});
   });
-
-  box.innerHTML='<h1>Bijvoeding dagschema</h1>'+out.join("");
-  document.body.appendChild(box);
-  window.print();
-  setTimeout(()=>box.remove(),1000);
+  return result;
 }
-document.getElementById("printDaySchedule")?.addEventListener("click",makeDaySchedule);
+function pdfLinesForRow(row){
+  if(row.choice){
+    const items=row.items.map(r=>`${productWithFlavor(r)} - ${amountText(r)}`);
+    const notes=[...new Set(row.items.map(r=>r.scheduleNote).filter(Boolean))];
+    const days=[...new Set(row.items.map(dayText).filter(Boolean))];
+    return [`Kamer ${row.room}  |  KIES 1 VAN DE ${items.length}`, items.join("  OF  "), ...days, ...notes];
+  }
+  const r=row.items[0];
+  return [`Kamer ${row.room}  |  ${productWithFlavor(r)}  |  ${amountText(r)}`, ...[dayText(r),r.scheduleNote].filter(Boolean)];
+}
+async function makeDaySchedule(unit){
+  closePdfUnitModal();
+  const rows=buildUnitRows(unit);
+  if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
+  if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
+  const {jsPDF}=window.jspdf;
+  // Landscape geeft de meeste ruimte; lettergrootte schaalt zodat het schema één A4 blijft.
+  const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+  const W=297,H=210, margin=10, usable=H-20;
+  let logical=0,last=""; rows.forEach(row=>{if(row.time!==last){logical+=1.5;last=row.time;} logical+=pdfLinesForRow(row).length;});
+  const fs=Math.max(6.4,Math.min(10, usable/(logical*1.75)));
+  let y=12;
+  doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(15);doc.text(`Bijvoeding dagschema - Unit ${unit}`,margin,y);y+=7;
+  last="";
+  rows.forEach(row=>{
+    if(row.time!==last){
+      y+=2;doc.setFillColor(233,226,244);doc.roundedRect(margin,y-4,W-2*margin,7,1.5,1.5,"F");doc.setTextColor(95,63,142);doc.setFont("helvetica","bold");doc.setFontSize(Math.max(fs+1,8));doc.text(`${row.time} uur`,margin+3,y+1);y+=6;last=row.time;
+    }
+    const lines=pdfLinesForRow(row);doc.setFontSize(fs);doc.setTextColor(45,45,55);
+    lines.forEach((line,k)=>{
+      doc.setFont("helvetica", row.choice && k===0 ? "bold" : (k===0?"bold":"normal"));
+      if(row.choice && k===0) doc.setTextColor(123,77,178); else doc.setTextColor(45,45,55);
+      const wrapped=doc.splitTextToSize(line,W-2*margin-6);
+      wrapped.forEach(part=>{doc.text(part,margin+3,y);y+=fs*0.42;});
+    }); y+=1.2;
+  });
+  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}.pdf`; const file=new File([blob],filename,{type:"application/pdf"});
+  try{
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+      await navigator.share({title:`Bijvoeding dagschema Unit ${unit}`,text:`Bijgevoegd het bijvoedingsschema van Unit ${unit}.`,files:[file]});
+    }else{
+      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+      alert("De PDF is gedownload. Je kunt hem nu als bijlage mailen.");
+    }
+  }catch(e){if(e?.name!=="AbortError"){doc.save(filename);}}
+}
