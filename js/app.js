@@ -1102,6 +1102,36 @@ function adviceForProduct(p) {
   currentMode = p.mode;
   const result = advice(p);
   currentMode = old;
+
+  // V3.1.5 — dezelfde sondevoeding met verschillende verpakkingsinhouden
+  // telt als één gezamenlijke voorraad voor het bepalen of er voldoende is.
+  // Voorbeeld: 500 ml + 1000 ml van hetzelfde product worden samen in ml geteld.
+  // Is de gezamenlijke voorraad (incl. reeds besteld) voldoende voor de ingestelde
+  // periode/minimumvoorraad, dan krijgen alle inhoudsvarianten "Voldoende voorraad".
+  if (p.mode === "sonde") {
+    const family = familyProducts(p.name, "sonde", true);
+    if (family.length > 1) {
+      const daily = familyDailyUsage(p.name, "sonde");
+      const weekly = daily * 7;
+      const usageTarget = weekly * targetWeeks("sonde");
+      const minimumTarget = daily * DELIVERY_DAYS;
+      const needed = daily > 0 ? Math.max(usageTarget, minimumTarget) : 0;
+      const available = familyStockUnits(p.name, "sonde");
+      if (needed > 0 && available >= needed) {
+        return {
+          ...result,
+          daily,
+          weekly,
+          usageTarget,
+          minimumTarget,
+          needed,
+          available,
+          orderUnits: 0,
+          familyCombined: true
+        };
+      }
+    }
+  }
   return result;
 }
 
