@@ -51,6 +51,7 @@ function loadData() {
       if (p.active == null) p.active = true;
       if (p.externalProduct == null) p.externalProduct = false;
       if (p.externalQuantity == null) p.externalQuantity = 0;
+      if (p.externalDays == null) p.externalDays = "Ma,Di,Wo,Do,Vr,Za,Zo";
       // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
       // Daarna kan dit per product op Ja/Nee worden gezet.
       if (p.looseUnitsAllowed == null) p.looseUnitsAllowed = Number(p.contentPerOrderUnit || 1) > 1;
@@ -984,6 +985,8 @@ function editStock(id) {
   editAlreadyOrdered.value = p.alreadyOrdered || 0;
   editExternalProduct.checked = p.externalProduct === true;
   editExternalQuantity.value = p.externalQuantity || 0;
+  editExternalDays.value = p.externalDays || "Ma,Di,Wo,Do,Vr,Za,Zo";
+  syncExternalSimpleDays("edit", editExternalDays.value);
   syncExternalEditForm();
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
@@ -1039,6 +1042,7 @@ saveProductEdit.onclick = () => {
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
   p.externalProduct = isExternal;
   p.externalQuantity = isExternal ? Math.max(0, Number(editExternalQuantity.value) || 0) : 0;
+  p.externalDays = isExternal ? (editExternalDays.value || "Ma,Di,Wo,Do,Vr,Za,Zo") : "Ma,Di,Wo,Do,Vr,Za,Zo";
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
@@ -1140,6 +1144,7 @@ const syncExternalNewForm = () => {
   if (ext) { productType.value = "drink"; currentMode = "drink"; }
   productType.disabled = ext;
   externalQuantityField.classList.toggle("hidden", !ext);
+  externalDaysField.classList.toggle("hidden", !ext);
   [consumptionUnit, orderUnit, contentPerOrderUnit, looseUnitsAllowed, stockFull, stockLoose, alreadyOrdered, minimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
   flavorField.classList.remove("hidden");
 };
@@ -1148,6 +1153,7 @@ externalProduct.onchange = syncExternalNewForm;
 const syncExternalEditForm = () => {
   const ext = editExternalProduct.checked;
   editExternalQuantityField.classList.toggle("hidden", !ext);
+  editExternalDaysField.classList.toggle("hidden", !ext);
   [editConsumptionUnit, editOrderUnit, editContentPerOrderUnit, editLooseUnitsAllowed, editStockFull, editStockLoose, editAlreadyOrdered, editMinimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
   editProductActiveRow.classList.toggle("hidden", ext || (data.products.find(x => x.id === editingProductId)?.mode === "general"));
   editProductPhaseOutRow.classList.add("hidden");
@@ -1177,7 +1183,8 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: isExternal, externalQuantity: isExternal ? Math.max(0, Number(externalQuantity.value) || 0) : 0
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: isExternal, externalQuantity: isExternal ? Math.max(0, Number(externalQuantity.value) || 0) : 0,
+    externalDays: isExternal ? (externalDays.value || "Ma,Di,Wo,Do,Vr,Za,Zo") : "Ma,Di,Wo,Do,Vr,Za,Zo"
   });
   productName.value = "";
   flavor.value = "";
@@ -1186,7 +1193,7 @@ saveProduct.onclick = () => {
   stockFull.value = "0";
   stockLoose.value = "0";
   alreadyOrdered.value = "0";
-  minimumStock.value = "0"; externalQuantity.value = "0"; externalProduct.checked = false; productType.disabled = false;
+  minimumStock.value = "0"; externalQuantity.value = "0"; externalDays.value = "Ma,Di,Wo,Do,Vr,Za,Zo"; syncExternalSimpleDays("add", externalDays.value); externalProduct.checked = false; productType.disabled = false;
   syncExternalNewForm(); syncNewLooseField();
   saveData();
 };
@@ -1484,6 +1491,11 @@ roomProduct.onchange = () => {
   currentMode = roomType.value;
   setRoomUnitFromProduct(roomProduct, dailyUnit);
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+  const extDefault = familyProducts(parseRoomProductName(roomProduct.value), currentMode, true).find(p => p.externalProduct === true);
+  if (extDefault) {
+    scheduleDays.value = extDefault.externalDays || ALL_DAYS;
+    syncChipPicker("add", scheduleTimes.value, scheduleDays.value);
+  }
 };
 productType.onchange = syncProductTypeFields;
 
@@ -1543,11 +1555,13 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked,
+    externalQuantity: externalProduct.checked ? Math.max(0, Number(externalQuantity.value) || 0) : 0,
+    externalDays: externalProduct.checked ? (externalDays.value || "Ma,Di,Wo,Do,Vr,Za,Zo") : "Ma,Di,Wo,Do,Vr,Za,Zo"
   });
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
-  alreadyOrdered.value = "0"; minimumStock.value = "0"; externalProduct.checked = false; syncNewLooseField(); saveData();
+  alreadyOrdered.value = "0"; minimumStock.value = "0"; externalQuantity.value = "0"; externalDays.value = "Ma,Di,Wo,Do,Vr,Za,Zo"; syncExternalSimpleDays("add", externalDays.value); externalProduct.checked = false; syncExternalNewForm(); syncNewLooseField(); saveData();
   if (productFormCardV316) productFormCardV316.classList.add("hidden");
   if (showProductFormBtn) showProductFormBtn.focus();
 };
@@ -1601,6 +1615,26 @@ renderAll();
 
 // V3.3.1-test4 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
 const ALL_DAYS = "Ma,Di,Wo,Do,Vr,Za,Zo";
+function setupExternalSimpleDays(prefix){
+  const edit = prefix === "edit";
+  const box = document.getElementById(edit ? "editExternalDayChips" : "externalDayChips");
+  const input = document.getElementById(edit ? "editExternalDays" : "externalDays");
+  if(!box || !input) return;
+  box.querySelectorAll("[data-day]").forEach(btn => btn.onclick = () => {
+    btn.classList.toggle("selected");
+    input.value = [...box.querySelectorAll("[data-day].selected")].map(x => x.dataset.day).join(",");
+  });
+}
+function syncExternalSimpleDays(prefix, days){
+  const edit = prefix === "edit";
+  const box = document.getElementById(edit ? "editExternalDayChips" : "externalDayChips");
+  const input = document.getElementById(edit ? "editExternalDays" : "externalDays");
+  if(!box || !input) return;
+  const selected = normalizeDays(days || ALL_DAYS).split(",").filter(Boolean);
+  input.value = selected.join(",");
+  box.querySelectorAll("[data-day]").forEach(b => b.classList.toggle("selected", selected.includes(b.dataset.day)));
+}
+setupExternalSimpleDays("add"); setupExternalSimpleDays("edit");
 function normalizeDays(v){
   if(!v || v==="Alle dagen") return ALL_DAYS;
   if(v==="Maandag t/m vrijdag") return "Ma,Di,Wo,Do,Vr";
@@ -1796,7 +1830,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.3",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.5",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1836,7 +1870,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.3",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.5",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){
