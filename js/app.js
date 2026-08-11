@@ -1677,15 +1677,22 @@ async function makeDaySchedule(unit){
   // PDF altijd expliciet A4 PORTRAIT maken.
   const doc=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),ml=7,mr=7,top=8,bottom=7, tableW=W-ml-mr;
+  // Printervriendelijk: de hele PDF heeft een volledig witte achtergrond.
+  doc.setFillColor(255,255,255);doc.rect(0,0,W,H,"F");
   // Portrait: compacte kamer- en dagkolommen, met zoveel mogelijk ruimte voor de voedingsinformatie.
   const roomW=15,dayW=13,detailW=tableW-roomW-7*dayW;
   const fmtDate=d=>`${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
   const longDate=d=>`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
   // Bepaal compacte schaal zodat de volledige week altijd op één A4 blijft.
   const groups=[]; let last=""; rows.forEach(row=>{if(row.time!==last){groups.push({time:row.time,rows:[]});last=row.time;}groups[groups.length-1].rows.push(row);});
-  let fs=7.2, lineH=3.15, headerH=9, timeH=6;
-  const calcHeight=()=>top+13+headerH+groups.reduce((sum,g)=>sum+timeH+g.rows.reduce((s2,r)=>s2+Math.max(7,rowDetailLines(r).length*lineH+2),0),0)+bottom;
-  while(calcHeight()>H && fs>5.2){fs-=0.25;lineH-=0.10;headerH=Math.max(7.5,headerH-.15);timeH=Math.max(5,timeH-.1);}
+  let fs=7.2, lineH=3.15, headerH=9, timeH=6, groupGap=2.4;
+  const wrappedLineCount=(row)=>{
+    doc.setFontSize(fs);
+    return rowDetailLines(row).reduce((count,line)=>count+Math.max(1,doc.splitTextToSize(line,detailW-3).length),0);
+  };
+  const rowHeight=(row)=>Math.max(7,wrappedLineCount(row)*lineH+2.8);
+  const calcHeight=()=>top+13+headerH+groups.reduce((sum,g,gi)=>sum+(gi?groupGap:0)+timeH+g.rows.reduce((s2,r)=>s2+rowHeight(r),0),0)+bottom;
+  while(calcHeight()>H && fs>5.2){fs-=0.25;lineH=Math.max(2.45,lineH-.10);headerH=Math.max(7.5,headerH-.15);timeH=Math.max(5,timeH-.1);groupGap=Math.max(1.2,groupGap-.1);}
   let y=top;
   doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.text(`Bijvoeding aftekenlijst - Unit ${unit}`,ml,y+4);y+=6;
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text(`Week ${week} - ${longDate(dates[0])} t/m ${longDate(dates[6])}`,ml,y+3);y+=7;
@@ -1696,10 +1703,15 @@ async function makeDaySchedule(unit){
     dates.forEach((d,i)=>{doc.setTextColor(45,45,55);const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
   };
   drawHeader();
-  groups.forEach(g=>{
+  groups.forEach((g,gi)=>{
+    if(gi){
+      y+=groupGap/2;
+      doc.setDrawColor(210,210,215);doc.setLineWidth(0.6);doc.line(ml,y,ml+tableW,y);
+      y+=groupGap/2;doc.setLineWidth(0.2);
+    }
     doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,timeH,"F");doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,timeH);doc.setTextColor(46,115,67);doc.setFont("helvetica","bold");doc.setFontSize(fs+1);doc.text(`${g.time} uur`,ml+2,y+timeH-1.7);y+=timeH;
     g.rows.forEach(row=>{
-      const lines=rowDetailLines(row); const rh=Math.max(7,lines.length*lineH+2); let x=ml;
+      const lines=rowDetailLines(row); const rh=rowHeight(row); let x=ml;
       doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,rh,"F");
       doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+rh/2+1,{align:"center"});
