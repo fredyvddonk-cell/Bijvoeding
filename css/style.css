@@ -133,3 +133,78 @@ button.primary{background:var(--primary);color:#fff}button.secondary{background:
 \n/* 2.7.9 - gezamenlijke voorraad van alleen toegestane smaken */\n.order-preference-title{font-size:.78rem;color:var(--muted);font-weight:800;margin-top:8px;text-transform:uppercase;letter-spacing:.03em}\n.order-room-prefs{display:grid;gap:4px;margin:6px 0 10px}\n.order-room-pref{font-size:.9rem;background:#f7fbfc;border-radius:9px;padding:7px 9px}\n.order-rule-note{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--soft);font-size:.82rem;color:var(--muted)}\n.order-pref-groups{display:grid;gap:12px;margin-top:10px}
 .order-pref-group{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff}
 .order-pref-choice{margin:4px 0 8px;color:var(--text)}
+
+/* 2.9.0 - professionele zorgstijl */
+:root{
+  --bg:#f3f7ed;
+  --card:#ffffff;
+  --primary:#4f9f24;
+  --primary2:#68b632;
+  --drink:#4f9f24;
+  --sonde:#3e7f22;
+  --general:#678c3c;
+  --soft:#edf5e5;
+  --border:#dfe8d8;
+  --text:#10243a;
+  --muted:#687481;
+  --danger:#d83b36;
+  --ok:#2f8a35;
+  --warn:#d97813;
+  --shadow:0 8px 22px rgba(35,58,30,.08);
+}
+body{background:linear-gradient(180deg,#f6f9f2 0,#eef5e8 100%);color:var(--text)}
+header{
+  position:relative;top:auto;
+  padding:26px 18px 20px;
+  background:linear-gradient(160deg,#fbfdf8 0%,#f0f7e8 100%);
+  color:var(--text);box-shadow:none;border-bottom:1px solid var(--border)
+}
+header h1{font-size:1.62rem;letter-spacing:-.025em;max-width:980px;margin:0 auto}
+header .app-slogan{max-width:980px;margin:7px auto 0;color:#438e22;font-size:.98rem;font-weight:650;font-style:italic;opacity:1}
+.version-label{display:block;max-width:980px;margin:8px auto 0;font-size:.76rem;color:var(--muted);font-weight:700}
+main{max-width:980px;padding:16px 14px 105px}
+.mode-switch{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 16px;padding:2px}
+.mode-switch::-webkit-scrollbar{display:none}
+.mode-btn{flex:1 0 150px;box-shadow:none;border:1px solid var(--border);border-radius:999px;padding:11px 14px;background:#fff;font-size:.9rem}
+.mode-btn.active[data-mode="drink"],.mode-btn.active[data-mode="sonde"],.mode-btn.active[data-mode="general"]{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 5px 14px rgba(79,159,36,.18)}
+.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  margin:0;padding:7px max(8px,calc((100vw - 980px)/2));
+  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(36,56,32,.07)
+}
+.tab-btn{box-shadow:none;border-radius:12px;background:transparent;color:#707982;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem}
+.tab-btn.active{background:transparent;color:var(--primary)}
+.nav-icon{font-size:1.25rem;line-height:1;font-weight:900}
+.card{border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
+.card h2{font-size:1.2rem;letter-spacing:-.015em}.card h3{font-size:1.04rem}
+.hero-card{background:linear-gradient(145deg,#ffffff 0%,#f7fbf2 100%);padding:20px}
+.hero-card h2{font-size:1.35rem}
+.grid{gap:9px}.stat{background:var(--soft);border:1px solid #e2edd7;border-radius:14px;padding:13px}.stat strong{color:var(--primary);font-size:1.45rem;margin-top:3px}
+.week-picker button{box-shadow:none;background:#fff}.week-picker button.active{background:var(--primary);border-color:var(--primary)}
+.item{border:1px solid var(--border);border-radius:14px;box-shadow:0 3px 10px rgba(35,58,30,.035);padding:14px}
+.item-head strong,.attention-product,.order-product{color:var(--text)}
+.badge,.days-pill{background:var(--soft);color:#357b1d}
+.status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-danger{color:var(--danger)}
+.attention-card{position:relative;overflow:hidden}.attention-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f19a2b}.attention-card:has(.status-danger):before{background:var(--danger)}
+button.primary{background:linear-gradient(135deg,var(--primary),var(--primary2));box-shadow:0 5px 14px rgba(79,159,36,.15)}
+button.secondary,.small-primary,.counter-btn{background:var(--soft);color:#357b1d}
+input,select{border-color:var(--border);background:#fff;min-height:46px}
+input:focus,select:focus{outline:2px solid rgba(79,159,36,.22);border-color:var(--primary)}
+.section-label{font-size:.82rem;text-transform:uppercase;letter-spacing:.055em;font-weight:900;color:#63705d;margin:18px 5px 8px}
+.beheer-intro{background:linear-gradient(145deg,#fff,#f7fbf2)}
+.flavor-choice-box{background:#f8fbf5;border-color:var(--border)}
+.modal-backdrop{background:rgba(16,36,58,.5)}
+.modal-panel{border-radius:22px;border:1px solid var(--border)}
+.modal-info{background:var(--soft);border-color:#d7e7c9}
+.footer-note{padding:8px 8px 4px}
+@media(max-width:760px){
+  main{padding:14px 12px 98px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.row{grid-template-columns:1fr}.mode-switch{grid-template-columns:none}
+}
+@media(max-width:480px){
+  header{padding:22px 16px 17px}header h1{font-size:1.48rem}header .app-slogan{font-size:.9rem;line-height:1.35}
+  .card{padding:15px;border-radius:16px}.stat{padding:11px}.stat strong{font-size:1.28rem}
+  .tabs{padding-bottom:max(7px,env(safe-area-inset-bottom))}.tab-btn{font-size:.68rem}
+  .mode-btn{flex-basis:132px;padding:10px 12px}
+}
