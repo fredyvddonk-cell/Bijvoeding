@@ -245,3 +245,16 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .pdf-week-option.selected{border:1.5px solid var(--purple);background:#fff}
 .pdf-week-option.selected .pdf-week-box{background:var(--green);border-color:var(--green)}
 @media(max-width:380px){.pdf-type-grid{grid-template-columns:1fr}.pdf-type-check{padding:8px 10px}.pdf-unit-grid{gap:5px}.pdf-unit-check-label{font-size:.78rem}}
+
+/* V3.3.7 — back-up in Beheer */
+.backup-card{margin-top:12px}
+.backup-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.backup-actions button{min-height:44px}
+@media(max-width:520px){.backup-actions{grid-template-columns:1fr 1fr}.backup-actions button{padding:10px 8px;font-size:14px}}
+
+
+/* V3.3.8 — product zoeken */
+.product-search{margin:10px 0 14px}
+.product-search input[type="search"]{width:100%;min-height:44px;padding:10px 13px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text);font:inherit;outline:none}
+.product-search input[type="search"]:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(149,122,193,.13)}
+.product-search input[type="search"]::placeholder{color:#8a8a93}

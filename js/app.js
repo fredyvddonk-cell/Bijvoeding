@@ -60,6 +60,7 @@ function loadData() {
     // product kiezen + één of meer voorkeurssmaken aanvinken.
     d.rooms.forEach(r => {
       if (!Array.isArray(r.selectedProductIds)) r.selectedProductIds = [];
+      if (!Array.isArray(r.dislikedProductIds)) r.dislikedProductIds = [];
 
       if (r.productId) {
         const p = d.products.find(x => x.id === r.productId);
@@ -304,7 +305,7 @@ function setRoomUnitFromProduct(selectEl, unitEl) {
   const p = familyProducts(name, selectedRoomMode(selectEl))[0];
   if (p) unitEl.value = p.consumptionUnit;
 }
-function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false) {
+function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false, dislikedIds = []) {
   const mode = selectedRoomMode(selectEl);
   const name = parseRoomProductName(selectEl.value);
   if (!name) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
@@ -335,29 +336,31 @@ function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false)
   const flavored = active.filter(p => p.flavor);
   if (!flavored.length && !inactiveSelected.length) { boxEl.classList.add("hidden"); boxEl.innerHTML = ""; return; }
   const allChecked = forceAll || (active.length > 0 && active.every(p => checkedIds.includes(p.id)));
-  const rows = flavored.map(p => `<label class="flavor-check"><input type="checkbox" value="${esc(p.id)}" ${allChecked || checkedIds.includes(p.id) ? "checked" : ""}><span>${esc(p.flavor)}</span></label>`).join("");
-  const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input type="checkbox" value="${esc(p.id)}" checked disabled><span>${esc(p.flavor || "Zonder smaak")} <small>niet actief</small></span></label>`).join("");
-  boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Voorkeurssmaken</div><button type="button" class="text-btn flavor-all-btn">Alles aanvinken</button></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div>`;
+  const rows = flavored.map(p => `<label class="flavor-check"><input class="pref-flavor" type="checkbox" value="${esc(p.id)}" ${allChecked || checkedIds.includes(p.id) ? "checked" : ""}><span>${esc(p.flavor)}</span></label>`).join("");
+  const inactiveRows = inactiveSelected.map(p => `<label class="flavor-check inactive-flavor"><input class="pref-flavor" type="checkbox" value="${esc(p.id)}" checked disabled><span>${esc(p.flavor || "Zonder smaak")} <small>niet actief</small></span></label>`).join("");
+  const dislikeRows = flavored.map(p => `<label class="flavor-check"><input class="dislike-flavor" type="checkbox" value="${esc(p.id)}" ${dislikedIds.includes(p.id) ? "checked" : ""}><span>${esc(p.flavor)}</span></label>`).join("");
+  boxEl.innerHTML = `<div class="flavor-choice-head"><div class="flavor-choice-title">Voorkeurssmaken</div></div><div class="flavor-choice-grid">${rows}${inactiveRows}</div><div class="flavor-choice-head" style="margin-top:12px"><div class="flavor-choice-title">Lust absoluut niet</div></div><div class="flavor-choice-grid">${dislikeRows}</div><div class="field-help">Alle andere smaken mogen incidenteel als alternatief worden gebruikt.</div>`;
   boxEl.classList.remove("hidden");
-  const allBtn = boxEl.querySelector(".flavor-all-btn");
-  if (allBtn) allBtn.onclick = () => boxEl.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => cb.checked = true);
+  boxEl.querySelectorAll('.pref-flavor').forEach(cb => cb.onchange = () => { if (cb.checked) { const d = boxEl.querySelector(`.dislike-flavor[value="${cb.value}"]`); if (d) d.checked = false; } });
+  boxEl.querySelectorAll('.dislike-flavor').forEach(cb => cb.onchange = () => { if (cb.checked) { const d = boxEl.querySelector(`.pref-flavor[value="${cb.value}"]`); if (d) d.checked = false; } });
 }
 function selectedFlavorIds(boxEl) {
-  return [...boxEl.querySelectorAll('input:checked:not(:disabled)')].map(x => x.value);
+  return [...boxEl.querySelectorAll('input.pref-flavor:checked:not(:disabled), input:not(.dislike-flavor):not(.pref-flavor):checked:not(:disabled)')].map(x => x.value);
 }
+function selectedDislikedIds(boxEl) { return [...boxEl.querySelectorAll('.dislike-flavor:checked:not(:disabled)')].map(x => x.value); }
 function selectionForRoom(name, mode, boxEl) {
   const active = familyProducts(name, mode);
   const flavored = active.filter(p => p.flavor);
-  if (!active.length) return { ids: [], allFlavors: false };
+  if (!active.length) return { ids: [], allFlavors: false, dislikedIds: [] };
   if (mode === "sonde") {
     const ids = selectedFlavorIds(boxEl);
-    return { ids, allFlavors: false };
+    return { ids, allFlavors: false, dislikedIds: [] };
   }
-  if (!flavored.length) return { ids: [active[0].id], allFlavors: false };
+  if (!flavored.length) return { ids: [active[0].id], allFlavors: false, dislikedIds: [] };
 
   const ids = selectedFlavorIds(boxEl);
   const allFlavors = active.length > 0 && active.every(p => ids.includes(p.id));
-  return { ids, allFlavors };
+  return { ids, allFlavors, dislikedIds: selectedDislikedIds(boxEl) };
 }
 function renderProductOptions() {
   roomProduct.innerHTML = roomOptions(currentMode);
@@ -551,14 +554,15 @@ function drinkFamilyPlan(name) {
   const activeIds = new Set(active.map(p => p.id));
 
   const roomPlans = rooms.map(r => {
-    let allowedIds = [];
-    if (r.allFlavors) allowedIds = active.map(p => p.id);
-    else allowedIds = (r.selectedProductIds || []).filter(id => activeIds.has(id));
-    // Oude data zonder expliciete voorkeur: alle actieve smaken zijn toegestaan.
-    if (!allowedIds.length) allowedIds = active.map(p => p.id);
+    const dislikedIds = (r.dislikedProductIds || []).filter(id => activeIds.has(id));
+    const preferredIds = (r.selectedProductIds || []).filter(id => activeIds.has(id) && !dislikedIds.includes(id));
+    // Alle actieve smaken behalve "Lust absoluut niet" mogen als alternatief meetellen.
+    const allowedIds = active.map(p => p.id).filter(id => !dislikedIds.includes(id));
     return {
       room: r,
       daily: Number(r.dailyAmount || 0),
+      preferredIds: [...new Set(preferredIds)],
+      dislikedIds: [...new Set(dislikedIds)],
       allowedIds: [...new Set(allowedIds)]
     };
   }).filter(x => x.daily > 0 && x.allowedIds.length);
@@ -644,8 +648,10 @@ function drinkFamilyPlan(name) {
   const grouped = new Map();
   roomPlans.forEach(rp => {
     const ids = rp.allowedIds.slice().sort();
-    const key = ids.join('|');
-    if (!grouped.has(key)) grouped.set(key, { key, allowedIds: ids, rooms: [], daily: 0 });
+    const prefIds = (rp.preferredIds || []).slice().sort();
+    const dislikeIds = (rp.dislikedIds || []).slice().sort();
+    const key = ids.join('|') + '::' + prefIds.join('|') + '::' + dislikeIds.join('|');
+    if (!grouped.has(key)) grouped.set(key, { key, allowedIds: ids, preferredIds: prefIds, dislikedIds: dislikeIds, rooms: [], daily: 0 });
     const g = grouped.get(key);
     g.rooms.push(rp.room);
     g.daily += rp.daily;
@@ -685,6 +691,11 @@ function drinkFamilyPlan(name) {
     g.allocated = allocated;
     g.shortage = Math.max(0, need - allocated);
     g.days = g.daily > 0 ? allocated / g.daily : null;
+    const prefStock = (g.preferredIds || []).reduce((sum,id) => sum + (remaining.get(id) || 0) + 0, 0);
+    // Waarschuw alleen als er nog voorkeurssmaak is, maar voor maximaal 7 dagen.
+    // Bij 0 voorkeurssmaak geven we geen aparte melding zolang alternatieven de totale minimumvoorraad dekken.
+    g.preferenceDays = g.daily > 0 ? prefStock / g.daily : null;
+    g.preferenceWarning = g.preferredIds.length > 0 && prefStock > 0 && g.preferenceDays <= 7 && g.shortage <= 0;
     const gp = g.allowedIds.map(id => data.products.find(p => p.id === id)).find(Boolean) || rep;
     const packSize = Number(gp?.contentPerOrderUnit || 1);
     g.orderUnits = packSize > 0 ? Math.ceil(g.shortage / packSize) : 0;
@@ -705,12 +716,14 @@ function renderDrinkOrders() {
 
     const prefSections = g.prefGroups.map(pg => {
       const names = pg.allowedIds.map(id => data.products.find(x => x.id === id)).filter(Boolean).map(x => variantLabel(x) || "Zonder smaak");
+      const preferredNames = (pg.preferredIds || []).map(id => data.products.find(x => x.id === id)).filter(Boolean).map(x => variantLabel(x) || "Zonder smaak");
+      const dislikedNames = (pg.dislikedIds || []).map(id => data.products.find(x => x.id === id)).filter(Boolean).map(x => variantLabel(x) || "Zonder smaak");
       const roomNames = pg.rooms.map(r => `Kamer ${r.room}`).join(" · ");
       const days = pg.days == null ? null : Math.floor(pg.days * 10) / 10;
       const choice = names.length === 1 ? names[0] : names.join(" of ");
       return `<div class="order-pref-group">
         <div class="order-room-pref"><strong>${esc(roomNames)}</strong></div>
-        <div class="order-pref-choice">Toegestaan: <strong>${esc(choice)}</strong></div>
+        <div class="order-pref-choice">Voorkeur: <strong>${esc(preferredNames.length ? preferredNames.join(" of ") : "geen")}</strong>${dislikedNames.length ? `<br>Lust absoluut niet: <strong>${esc(dislikedNames.join(" · "))}</strong>` : ""}<br>Alternatieven toegestaan: <strong>${esc(choice)}</strong></div>${pg.preferenceWarning ? `<div class="status-warn" style="margin-top:6px">Voorkeurssmaak nog ongeveer ${fmt(pg.preferenceDays)} dagen beschikbaar</div>` : ""}
         <div class="order-main">${pg.orderUnits > 0
           ? `<span class="status-order">Bestellen · ${pg.orderUnits} ${esc(plural(p.orderUnit, pg.orderUnits))}</span> <span>uit: ${esc(choice)}</span>`
           : `<span class="status-ok">Voldoende voorraad voor deze kamer${pg.rooms.length > 1 ? "s" : ""}</span>`}
@@ -726,7 +739,7 @@ function renderDrinkOrders() {
       <div class="order-variant-list">${stockRows}</div>
       <details class="order-details"><summary>Berekening bekijken</summary>
         <div class="order-pref-groups">${prefSections}</div>
-        <div class="order-rule-note">Voorraad van een smaak wordt eerst gereserveerd voor bewoners die minder keuze hebben. Een niet-toegestane smaak telt voor die bewoner niet mee.</div>
+        <div class="order-rule-note">Voorraad van een smaak wordt eerst gereserveerd voor bewoners die minder keuze hebben. Smaken bij “Lust absoluut niet” tellen nooit mee. Andere smaken mogen incidenteel als alternatief worden gebruikt. Bestellen gebeurt pas als de totale bruikbare voorraad onder het minimum komt.</div>
       </details>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
@@ -889,7 +902,7 @@ function editRoom(id) {
   editScheduleNote.value = r.scheduleNote || "";
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
-  renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, checked, !!r.allFlavors);
+  renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, checked, !!r.allFlavors, r.dislikedProductIds || []);
   roomEditModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -914,10 +927,6 @@ saveRoomEdit.onclick = () => {
     return;
   }
   const selection = selectionForRoom(productName, r.mode, editRoomFlavorChoices);
-  if (r.mode === "drink" && familyProducts(productName, r.mode).some(p => p.flavor) && selection.ids.length < 1) {
-    alert("Vink minimaal één voorkeurssmaak aan.");
-    return;
-  }
   if (r.mode === "sonde" && familyProducts(productName, r.mode).length > 1 && selection.ids.length < 1) {
     alert("Vink minimaal één inhoud/variant aan.");
     return;
@@ -928,6 +937,7 @@ saveRoomEdit.onclick = () => {
   r.productId = null;
   r.selectedProductIds = selection.ids;
   r.allFlavors = selection.allFlavors;
+  r.dislikedProductIds = selection.dislikedIds || [];
   r.dailyAmount = amount;
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   r.dailyUnit = editDailyUnit.value;
@@ -1095,10 +1105,6 @@ saveRoom.onclick = () => {
     return;
   }
   const selection = selectionForRoom(productName, currentMode, roomFlavorChoices);
-  if (currentMode === "drink" && familyProducts(productName, currentMode).some(p => p.flavor) && selection.ids.length < 1) {
-    alert("Vink minimaal één voorkeurssmaak aan.");
-    return;
-  }
   if (currentMode === "sonde" && familyProducts(productName, currentMode).length > 1 && selection.ids.length < 1) {
     alert("Vink minimaal één inhoud/variant aan.");
     return;
@@ -1107,7 +1113,7 @@ saveRoom.onclick = () => {
   data.rooms.push({
     id: crypto.randomUUID(), mode: currentMode, room: roomV, unit: unitV,
     productId: null, productName, allFlavors: selection.allFlavors,
-    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value
+    selectedProductIds: selection.ids, dislikedProductIds: selection.dislikedIds || [], dailyAmount: amount, dailyUnit: dailyUnit.value
   });
   room.value = "";
   dailyAmount.value = "";
@@ -1509,7 +1515,7 @@ saveRoom.onclick = () => {
   data.rooms.push({
     id: crypto.randomUUID(), mode, room: roomV, unit: unitV,
     productId: null, productName: productNameV, allFlavors: selection.allFlavors,
-    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value,
+    selectedProductIds: selection.ids, dislikedProductIds: selection.dislikedIds || [], dailyAmount: amount, dailyUnit: dailyUnit.value,
     scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
     scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim()
   });
@@ -1792,12 +1798,23 @@ async function createSchedulePdf(unit,dateValue){
         const wrapped=doc.splitTextToSize(text,detailW-3);
         wrapped.forEach(part=>{doc.text(part,isChoiceTitle?ml+roomW+detailW/2:ml+roomW+1.5,ty,isChoiceTitle?{align:"center"}:undefined);ty+=lineH;});
       });
-      for(let i=0;i<7;i++){const cx=ml+roomW+detailW+i*dayW+dayW/2,cy=y+rh/2;if(rowActiveOn(row,i)){const box=Math.min(4.2,rh-2.5);doc.setDrawColor(70,70,80);doc.rect(cx-box/2,cy-box/2,box,box);}else{doc.setTextColor(130,130,140);doc.setFont("helvetica","normal");doc.text("-",cx,cy+1.2,{align:"center"});}}
+      for(let i=0;i<7;i++){
+        // Het hele dagvak is het aftekenvak. Geen extra checkbox tekenen.
+        if(!rowActiveOn(row,i)){
+          // Geen bijvoeding op deze dag: groot, dik rood kruis door vrijwel het hele dagvak.
+          const left=ml+roomW+detailW+i*dayW;
+          const padX=1.7, padY=Math.max(1.5,Math.min(2.6,rh*0.18));
+          doc.setDrawColor(200,45,45);doc.setLineWidth(1.15);
+          doc.line(left+padX,y+padY,left+dayW-padX,y+rh-padY);
+          doc.line(left+dayW-padX,y+padY,left+padX,y+rh-padY);
+          doc.setLineWidth(0.2);
+        }
+      }
       y+=rh;
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.6",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.10",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1837,7 +1854,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.6",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.10",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){
@@ -1859,3 +1876,124 @@ async function makeSelectedSchedules(){
   }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
 }
 
+
+
+// V3.3.10 — volledige back-up maken en terugzetten.
+(function setupBackupTools(){
+  const makeBtn = document.getElementById("makeBackup");
+  const restoreBtn = document.getElementById("restoreBackup");
+  const fileInput = document.getElementById("backupFileInput");
+  if (!makeBtn || !restoreBtn || !fileInput) return;
+
+  function backupDateStamp(){
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+
+  makeBtn.addEventListener("click", () => {
+    try {
+      const payload = {
+        app: "Bij- & Sondevoeding",
+        version: "V3.3.10",
+        createdAt: new Date().toISOString(),
+        storageKey: STORAGE_KEY,
+        data: data
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Bij-en-Sondevoeding-backup-${backupDateStamp()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error(err);
+      alert("Back-up maken is niet gelukt.");
+    }
+  });
+
+  restoreBtn.addEventListener("click", () => {
+    fileInput.value = "";
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const restored = parsed && parsed.data ? parsed.data : parsed;
+      if (!restored || !Array.isArray(restored.products) || !Array.isArray(restored.rooms) || typeof restored.settings !== "object") {
+        throw new Error("Ongeldig back-upbestand");
+      }
+      const ok = confirm("Back-up terugzetten? De huidige gegevens op dit apparaat worden vervangen door de gegevens uit dit back-upbestand.");
+      if (!ok) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+      data = loadData();
+      renderAll();
+      alert("Back-up is teruggezet.");
+      document.querySelector('[data-tab="products"]')?.click();
+      window.scrollTo({top:0, behavior:"smooth"});
+    } catch (err) {
+      console.error(err);
+      alert("Dit back-upbestand kan niet worden teruggezet. Kies een geldig back-upbestand van deze app.");
+    } finally {
+      fileInput.value = "";
+    }
+  });
+})();
+
+
+// V3.3.10 — zoeken op product bij Voorraad en Bestellen.
+(function setupProductSearch(){
+  const countInput = document.getElementById("countSearch");
+  const orderInput = document.getElementById("orderSearch");
+  if (!countInput || !orderInput) return;
+
+  const normalize = value => String(value || "")
+    .toLocaleLowerCase("nl-NL")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  function filterRenderedList(container, selector, query){
+    const q = normalize(query);
+    const cards = [...container.querySelectorAll(selector)];
+    let shown = 0;
+    cards.forEach(card => {
+      const match = !q || normalize(card.textContent).includes(q);
+      card.style.display = match ? "" : "none";
+      if (match) shown++;
+    });
+    let empty = container.querySelector(".search-empty");
+    if (q && cards.length && shown === 0) {
+      if (!empty) {
+        empty = document.createElement("div");
+        empty.className = "empty search-empty";
+        empty.textContent = "Geen producten gevonden.";
+        container.appendChild(empty);
+      }
+      empty.style.display = "";
+    } else if (empty) {
+      empty.style.display = "none";
+    }
+  }
+
+  const baseRenderCounting = renderCounting;
+  renderCounting = function(){
+    baseRenderCounting();
+    filterRenderedList(countList, ".count-card", countInput.value);
+  };
+
+  const baseRenderOrders = renderOrders;
+  renderOrders = function(){
+    baseRenderOrders();
+    filterRenderedList(orderList, ".order-card", orderInput.value);
+  };
+
+  countInput.addEventListener("input", () => filterRenderedList(countList, ".count-card", countInput.value));
+  orderInput.addEventListener("input", () => filterRenderedList(orderList, ".order-card", orderInput.value));
+})();
