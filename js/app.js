@@ -1655,7 +1655,7 @@ function activeDaySet(r){return new Set(normalizeDays(r.scheduleDays).split(",")
 function rowActiveOn(row,idx){const key=["ma","di","wo","do","vr","za","zo"][idx];return row.items.some(r=>activeDaySet(r).has(key));}
 function rowDetailLines(row){
   if(row.choice){
-    const out=[`KIES 1 VAN DE ${row.items.length}`];
+    const out=[`<  KIES 1 VAN DE ${row.items.length}  >`];
     row.items.forEach((r,i)=>{
       out.push(`${i+1}. ${productWithFlavor(r)} - ${amountText(r)}`);
       if(r.scheduleNote) out.push(`   Extra info: ${r.scheduleNote}`);
@@ -1690,20 +1690,20 @@ async function makeDaySchedule(unit){
   doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.text(`Bijvoeding aftekenlijst - Unit ${unit}`,ml,y+4);y+=6;
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text(`Week ${week} - ${longDate(dates[0])} t/m ${longDate(dates[6])}`,ml,y+3);y+=7;
   const drawHeader=()=>{
-    doc.setFillColor(149,122,193);doc.rect(ml,y,tableW,headerH,"F");doc.setDrawColor(180,170,195);doc.rect(ml,y,tableW,headerH);
+    doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,headerH,"F");doc.setDrawColor(195,195,205);doc.rect(ml,y,tableW,headerH);
     let x=ml; const cells=[roomW,detailW,...Array(7).fill(dayW)]; cells.slice(0,-1).forEach(w=>{x+=w;doc.line(x,y,x,y+headerH);});
-    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(255,255,255);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Voeding / smaak / hoeveelheid / opmerking",ml+roomW+1.5,y+5.5);
-    dates.forEach((d,i)=>{doc.setTextColor(255,255,255);const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
+    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(45,45,55);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Voeding / smaak / hoeveelheid / opmerking",ml+roomW+1.5,y+5.5);
+    dates.forEach((d,i)=>{doc.setTextColor(45,45,55);const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
   };
   drawHeader();
   groups.forEach(g=>{
-    doc.setFillColor(245,241,250);doc.rect(ml,y,tableW,timeH,"F");doc.setDrawColor(190,180,205);doc.rect(ml,y,tableW,timeH);doc.setTextColor(95,63,142);doc.setFont("helvetica","bold");doc.setFontSize(fs+1);doc.text(`${g.time} uur`,ml+2,y+timeH-1.7);y+=timeH;
+    doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,timeH,"F");doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,timeH);doc.setTextColor(46,115,67);doc.setFont("helvetica","bold");doc.setFontSize(fs+1);doc.text(`${g.time} uur`,ml+2,y+timeH-1.7);y+=timeH;
     g.rows.forEach(row=>{
       const lines=rowDetailLines(row); const rh=Math.max(7,lines.length*lineH+2); let x=ml;
-      if(row.choice) doc.setFillColor(245,241,250); else doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,rh,"F");
+      doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,rh,"F");
       doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+rh/2+1,{align:"center"});
-      let ty=y+lineH; lines.forEach((line,i)=>{doc.setFont("helvetica",row.choice&&(i===0||line==="OF")?"bold":"normal");doc.setTextColor(row.choice&&(i===0||line==="OF")?95:45,row.choice&&(i===0||line==="OF")?63:45,row.choice&&(i===0||line==="OF")?142:55);const wrapped=doc.splitTextToSize(line,detailW-3);wrapped.forEach(part=>{doc.text(part,ml+roomW+1.5,ty);ty+=lineH;});});
+      let ty=y+lineH; lines.forEach((line,i)=>{doc.setFont("helvetica",row.choice&&(i===0||line==="OF")?"bold":"normal");doc.setTextColor(45,45,55);const wrapped=doc.splitTextToSize(line,detailW-3);wrapped.forEach(part=>{doc.text(part,ml+roomW+1.5,ty);ty+=lineH;});});
       for(let i=0;i<7;i++){const cx=ml+roomW+detailW+i*dayW+dayW/2,cy=y+rh/2;if(rowActiveOn(row,i)){const box=Math.min(4.2,rh-2.5);doc.setDrawColor(70,70,80);doc.rect(cx-box/2,cy-box/2,box,box);}else{doc.setTextColor(130,130,140);doc.setFont("helvetica","normal");doc.text("-",cx,cy+1.2,{align:"center"});}}
       y+=rh;
     });
