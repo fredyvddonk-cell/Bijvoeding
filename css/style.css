@@ -221,3 +221,5 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .pdf-week-option.selected .pdf-week-box{background:var(--purple);border-color:var(--purple)}
 
 .pdf-type-option{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid #e3e3e8;border-radius:12px;background:#fff;color:#2d2d37;text-align:left}.pdf-type-option small{color:#6f6f78}.pdf-type-option.selected{border:2px solid #957ac1;background:#f5f1fa}.pdf-type-option.selected small{color:#5f5077}
+
+.pdf-type-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e3e3e8;border-radius:12px;background:#fff;color:#2d2d37;cursor:pointer}.pdf-type-check input{margin-top:3px;accent-color:#957ac1}.pdf-type-check span{display:flex;flex-direction:column;gap:2px}.pdf-type-check small{color:#6f6f78}
