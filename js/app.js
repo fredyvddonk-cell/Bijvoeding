@@ -446,6 +446,10 @@ productList.addEventListener("pointerdown", e => {
 });
 productList.addEventListener("pointermove", e => {
   if (!draggedProductItem) return;
+  const edge = 90;
+  const speed = 14;
+  if (e.clientY < edge) window.scrollBy(0, -speed);
+  else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, speed);
   const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".product-sort-item");
   if (!target || target === draggedProductItem || target.parentElement !== productList) return;
   const rect = target.getBoundingClientRect();
@@ -639,13 +643,15 @@ function renderDrinkOrders() {
       </div>`;
     }).join("");
 
+    const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
-      <div class="order-preference-title">Voorraad per smaak</div>
+      <div class="order-summary">${totalOrder > 0 ? `<strong>${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</strong> bestellen` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
       <div class="order-variant-list">${stockRows}</div>
-      <div class="order-preference-title">Besteladvies per voorkeur</div>
-      <div class="order-pref-groups">${prefSections}</div>
-      <div class="order-rule-note">Voorraad van een smaak wordt eerst gereserveerd voor bewoners die minder keuze hebben. Een niet-toegestane smaak telt voor die bewoner niet mee.</div>
+      <details class="order-details"><summary>Berekening bekijken</summary>
+        <div class="order-pref-groups">${prefSections}</div>
+        <div class="order-rule-note">Voorraad van een smaak wordt eerst gereserveerd voor bewoners die minder keuze hebben. Een niet-toegestane smaak telt voor die bewoner niet mee.</div>
+      </details>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten in gebruik om te bestellen.</div>`;
 }
@@ -1124,10 +1130,19 @@ function renderUsage() {
   const rs = [...data.rooms]
     .filter(r => r.mode === "drink" || r.mode === "sonde")
     .sort((a, b) => Number(a.unit) - Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, { numeric: true }) || roomProductLabel(a).localeCompare(roomProductLabel(b)));
-  usageList.innerHTML = rs.length ? rs.map(r => `<div class="item room-use-row">
-    <div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${esc(roomProductLabel(r))}</span></div><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
-    <div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div>
-    <div class="actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+  const groups = [];
+  rs.forEach(r => {
+    const key = `${r.unit}::${r.room}`;
+    let g = groups.find(x => x.key === key);
+    if (!g) { g = {key, unit:r.unit, room:r.room, rows:[]}; groups.push(g); }
+    g.rows.push(r);
+  });
+  usageList.innerHTML = groups.length ? groups.map(g => `<div class="room-group-card">
+    <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
+    ${g.rows.map(r => `<div class="room-line">
+      <div class="room-line-main"><span class="room-line-text">${esc(roomProductLabel(r))} <span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</span></div>
+      <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+    </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
