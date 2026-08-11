@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3-test17</title>
+<title>Bij- &amp; Sondevoeding V3.3.1</title>
 <link rel="stylesheet" href="css/style.css?v=3.3-test17">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3-test17</span>
+    <span class="version">V3.3.1</span>
   </div>
 </header>
 
@@ -125,7 +125,7 @@
         <div class="field"><label for="stockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
         <div class="field" id="looseField"><label for="stockLoose">Losse eenheden</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
       </div>
-      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div>
+      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in Voorraad of Bestellen.</div></div><label class="switch"><input id="externalProduct" type="checkbox"><span class="switch-slider"></span></label></div>
       <div class="field" id="manualMinimumField"><label for="minimumStock">Minimumvoorraad (alleen Algemeen)</label><input id="minimumStock" type="number" min="0" step="1" value="0"><div class="field-help">Bij Bijvoeding en Sondevoeding berekent de app dit automatisch op basis van 10 dagen levertijd.</div></div>
       <div class="form-actions-inline">
         <button type="button" class="secondary" id="cancelProductAdd">Annuleren</button>
@@ -196,7 +196,7 @@
       <div class="field" id="editLooseField"><label for="editStockLoose">Losse eenheden</label><input id="editStockLoose" type="number" min="0" step="1"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div>
+      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel gebruiken bij Kamers en PDF-lijsten; niet tonen bij Voorraad en Bestellen.</div></div><label class="switch"><input id="editExternalProduct" type="checkbox"><span class="switch-slider"></span></label></div>
       <div class="field"><label for="editMinimumStock">Minimumvoorraad in bestelverpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
     </div>
 
@@ -258,7 +258,7 @@
   </div>
 </div>
 
-<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF aftekenlijsten</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Selecteer één of meer units en weken. Iedere unit/week-combinatie wordt een apart PDF-bestand.</p><div class="field-label">Units</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:7px 0 14px"><label><input type="checkbox" class="pdf-unit-check" value="1" checked> Unit 1</label><label><input type="checkbox" class="pdf-unit-check" value="2" checked> Unit 2</label><label><input type="checkbox" class="pdf-unit-check" value="3" checked> Unit 3</label></div><div class="field-label">Weken</div><div id="pdfWeekChoices" style="display:grid;gap:7px;margin:7px 0 14px"></div><button type="button" class="primary" style="width:100%" onclick="makeSelectedSchedules()">PDF bestanden maken / delen</button></div></div>
+<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF maken</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><div class="field-label">Soort PDF</div><div style="display:grid;gap:8px;margin:7px 0 14px"><button type="button" class="pdf-type-option selected" data-pdf-type="check" aria-pressed="true"><strong>Aftekenlijst</strong><small>Met dagen, datums en afvinkvakjes</small></button><button type="button" class="pdf-type-option" data-pdf-type="overview" aria-pressed="false"><strong>Overzichtslijst</strong><small>Zonder dagen, groter en ruimer</small></button></div><div class="field-label">Units</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:7px 0 14px"><label><input type="checkbox" class="pdf-unit-check" value="1" checked> Unit 1</label><label><input type="checkbox" class="pdf-unit-check" value="2" checked> Unit 2</label><label><input type="checkbox" class="pdf-unit-check" value="3" checked> Unit 3</label></div><div id="pdfWeekSection"><div class="field-label">Weken</div><div id="pdfWeekChoices" style="display:grid;gap:7px;margin:7px 0 14px"></div></div><button type="button" class="primary" style="width:100%" onclick="makeSelectedSchedules()">PDF bestanden maken / delen</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/defaults.js"></script>

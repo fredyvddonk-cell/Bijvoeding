@@ -49,6 +49,7 @@ function loadData() {
       if (p.expiryDate == null) p.expiryDate = "";
       if (p.lastExpiryCheck == null) p.lastExpiryCheck = "";
       if (p.active == null) p.active = true;
+      if (p.externalProduct == null) p.externalProduct = false;
       // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
       // Daarna kan dit per product op Ja/Nee worden gezet.
       if (p.looseUnitsAllowed == null) p.looseUnitsAllowed = Number(p.contentPerOrderUnit || 1) > 1;
@@ -146,7 +147,7 @@ function phaseOutProduct(p) {
   return p?.mode === "sonde" && p.phaseOut === true;
 }
 function orderableProduct(p) {
-  return activeProduct(p) && !phaseOutProduct(p);
+  return activeProduct(p) && !phaseOutProduct(p) && p.externalProduct !== true;
 }
 function hasLooseUnits(p) {
   return Number(p?.contentPerOrderUnit || 1) > 1 && p?.looseUnitsAllowed !== false;
@@ -980,6 +981,7 @@ function editStock(id) {
   editStockFull.value = p.stockFull || 0;
   editStockLoose.value = p.stockLoose || 0;
   editAlreadyOrdered.value = p.alreadyOrdered || 0;
+  editExternalProduct.checked = p.externalProduct === true;
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
   editProductActiveRow.classList.toggle("hidden", p.mode === "general");
@@ -1031,6 +1033,7 @@ saveProductEdit.onclick = () => {
   p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
   p.stockLoose = p.looseUnitsAllowed ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
+  p.externalProduct = editExternalProduct.checked;
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
@@ -1147,7 +1150,7 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked
   });
   productName.value = "";
   flavor.value = "";
@@ -1231,7 +1234,7 @@ function renderProductOptionsCombined() {
 }
 
 function renderCounting() {
-  const ps = allProductsOrdered();
+  const ps = allProductsOrdered().filter(p => p.externalProduct !== true);
   countList.innerHTML = ps.length ? ps.map(p => {
     const loose = hasLooseUnits(p);
     const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
@@ -1307,7 +1310,7 @@ function renderOrders() {
   currentMode = "drink";
   renderDrinkOrders();
   let drinkHtml = orderList.querySelector(".empty") ? "" : orderList.innerHTML;
-  const otherHtml = allProductsOrdered().filter(p => p.mode === "sonde" || p.mode === "general").map(sondeOrGeneralOrderCard).filter(Boolean).join("");
+  const otherHtml = allProductsOrdered().filter(p => p.externalProduct !== true).filter(p => p.mode === "sonde" || p.mode === "general").map(sondeOrGeneralOrderCard).filter(Boolean).join("");
   orderList.innerHTML = drinkHtml + otherHtml || `<div class="empty">Er zijn nog geen producten waarvoor een besteladvies nodig is.</div>`;
   currentMode = old;
 }
@@ -1511,11 +1514,11 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked
   });
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
-  alreadyOrdered.value = "0"; minimumStock.value = "0"; syncNewLooseField(); saveData();
+  alreadyOrdered.value = "0"; minimumStock.value = "0"; externalProduct.checked = false; syncNewLooseField(); saveData();
   if (productFormCardV316) productFormCardV316.classList.add("hidden");
   if (showProductFormBtn) showProductFormBtn.focus();
 };
@@ -1567,7 +1570,7 @@ if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(produc
 renderAll();
 
 
-// V3.3-test4 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
+// V3.3.1-test4 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
 const ALL_DAYS = "Ma,Di,Wo,Do,Vr,Za,Zo";
 function normalizeDays(v){
   if(!v || v==="Alle dagen") return ALL_DAYS;
@@ -1645,6 +1648,13 @@ function openPdfUnitModal(){
       box.appendChild(option);
     }
   }
+  const typeButtons=[...document.querySelectorAll(".pdf-type-option")];
+  const syncPdfType=()=>{
+    const type=document.querySelector(".pdf-type-option.selected")?.dataset.pdfType||"check";
+    document.getElementById("pdfWeekSection")?.classList.toggle("hidden",type==="overview");
+  };
+  typeButtons.forEach(btn=>{btn.onclick=()=>{typeButtons.forEach(b=>{b.classList.toggle("selected",b===btn);b.setAttribute("aria-pressed",b===btn?"true":"false");});syncPdfType();};});
+  syncPdfType();
   document.getElementById("pdfUnitModal")?.classList.remove("hidden");document.body.style.overflow="hidden";
 }
 document.getElementById("printDaySchedule")?.addEventListener("click",openPdfUnitModal);
@@ -1757,21 +1767,63 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test17",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.1",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
 
+
+async function createOverviewPdf(unit){
+  const rows=buildUnitRows(unit);
+  if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
+  if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),ml=11,mr=11,top=10,bottom=9,contentW=W-ml-mr;
+  doc.setFillColor(255,255,255);doc.rect(0,0,W,H,"F");
+  const groups=[];let last="";rows.forEach(row=>{if(row.time!==last){groups.push({time:row.time,rows:[]});last=row.time;}groups[groups.length-1].rows.push(row);});
+  let fs=10,lineH=4.3,timeH=8,gap=5,roomW=18;
+  const detailW=contentW-roomW;
+  const overviewLines=row=>rowDetailLines(row);
+  const rowHeight=row=>{doc.setFontSize(fs);let n=0;overviewLines(row).forEach(line=>{const txt=line.replace(/^__EXTRA__/,"").replace(/^__OF__$/,"OF");n+=Math.max(1,doc.splitTextToSize(txt,detailW-5).length);});return Math.max(10,n*lineH+4);};
+  const totalHeight=()=>top+12+groups.reduce((sum,g,gi)=>sum+(gi?gap:0)+timeH+g.rows.reduce((a,r)=>a+rowHeight(r),0),0)+bottom+5;
+  while(totalHeight()>H && fs>7){fs-=0.25;lineH=Math.max(3.2,lineH-.12);timeH=Math.max(6.2,timeH-.1);gap=Math.max(2.8,gap-.15);}
+  let y=top;doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(15);doc.text(`Bijvoeding overzicht - Unit ${unit}`,ml,y+5);y+=11;
+  groups.forEach((g,gi)=>{
+    if(gi){y+=gap/2;doc.setDrawColor(190,195,198);doc.setLineWidth(.5);doc.line(ml,y,ml+contentW,y);y+=gap/2;}
+    doc.setFont("helvetica","bold");doc.setFontSize(fs+1.5);doc.setTextColor(46,115,67);doc.text(`${g.time} uur`,ml,y+5.2);y+=timeH;
+    g.rows.forEach(row=>{
+      const rh=rowHeight(row);doc.setDrawColor(220,220,225);doc.setLineWidth(.2);doc.line(ml,y+rh,ml+contentW,y+rh);
+      doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+5,{align:"center"});
+      let ty=y+4.5;const x=ml+roomW+2.5;
+      overviewLines(row).forEach((line,i)=>{
+        if(line==="__OF__"){
+          const cy=ty-1.1,center=x+(detailW-5)/2;doc.setDrawColor(95,95,100);doc.setLineWidth(.25);doc.line(center-15,cy,center-5,cy);doc.line(center+5,cy,center+15,cy);doc.setFont("helvetica","bold");doc.text("OF",center,ty,{align:"center"});ty+=lineH;return;
+        }
+        const extra=line.startsWith("__EXTRA__"),text=extra?line.slice(9):line,choiceTitle=row.choice&&i===0;
+        doc.setFont("helvetica",extra?"italic":(choiceTitle?"bold":"normal"));
+        const wrapped=doc.splitTextToSize(text,detailW-5);wrapped.forEach(part=>{doc.text(part,choiceTitle?x+(detailW-5)/2:x,ty,choiceTitle?{align:"center"}:undefined);ty+=lineH;});
+      });
+      y+=rh;
+    });
+  });
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.1",W-mr,H-3.5,{align:"right"});
+  const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
+}
 async function makeSelectedSchedules(){
   const units=[...document.querySelectorAll(".pdf-unit-check:checked")].map(x=>x.value);
+  const type=document.querySelector(".pdf-type-option.selected")?.dataset.pdfType||"check";
   const weeks=[...document.querySelectorAll(".pdf-week-option.selected")].map(x=>x.dataset.value);
-  if(!units.length||!weeks.length){alert("Selecteer minimaal één unit en één week.");return;}
+  if(!units.length){alert("Selecteer minimaal één unit.");return;}
+  if(type==="check"&&!weeks.length){alert("Selecteer minimaal één week.");return;}
   closePdfUnitModal();
   const files=[];
-  for(const weekDate of weeks){for(const unit of units){const f=await createSchedulePdf(unit,weekDate);if(f)files.push(f);}}
+  if(type==="overview"){for(const unit of units){const f=await createOverviewPdf(unit);if(f)files.push(f);}}
+  else{for(const weekDate of weeks){for(const unit of units){const f=await createSchedulePdf(unit,weekDate);if(f)files.push(f);}}}
   if(!files.length){alert("Er konden geen PDF-bestanden worden gemaakt voor de gekozen selectie.");return;}
   try{
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title:"Bijvoeding aftekenlijsten",text:`Bijgevoegd ${files.length} aftekenlijst${files.length===1?"":"en"}.`,files});}
+    const title=type==="overview"?"Bijvoeding overzichten":"Bijvoeding aftekenlijsten";
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title,text:`Bijgevoegd ${files.length} PDF-bestand${files.length===1?"":"en"}.`,files});}
     else{for(const file of files){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}alert(`${files.length} PDF-bestand${files.length===1?"":"en"} gemaakt. Voeg ze samen als bijlagen toe aan één e-mail.`);}
   }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
 }
