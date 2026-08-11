@@ -1736,7 +1736,9 @@ async function makeDaySchedule(unit){
       y+=rh;
     });
   });
-  // Kleine versieaanduiding onderaan het printblad.\n  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test13",W-mr,H-3.5,{align:"right"});\n  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`; const file=new File([blob],filename,{type:"application/pdf"});
+  // Kleine versieaanduiding onderaan het printblad.
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test13",W-mr,H-3.5,{align:"right"});
+  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`; const file=new File([blob],filename,{type:"application/pdf"});
   try{
     if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){await navigator.share({title:`Bijvoeding aftekenlijst Unit ${unit}`,text:`Bijgevoegd de bijvoeding aftekenlijst van Unit ${unit}, week ${week}.`,files:[file]});}
     else{const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);alert("De PDF is gemaakt en gedownload. Je kunt hem nu als bijlage mailen.");}
