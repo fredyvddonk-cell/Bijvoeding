@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.2</title>
-<link rel="stylesheet" href="css/style.css?v=3.2">
+<title>Bij- &amp; Sondevoeding V3.2.1</title>
+<link rel="stylesheet" href="css/style.css?v=3.2.1">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.2</span>
+    <span class="version">V3.2.1</span>
   </div>
 </header>
 
@@ -231,8 +231,22 @@
   </div>
 </div>
 
+<div id="deleteRoomModal" class="delete-confirm hidden" role="dialog" aria-modal="true" aria-labelledby="deleteRoomTitle">
+  <div class="delete-confirm-backdrop" onclick="closeDeleteRoomModal()"></div>
+  <div class="delete-confirm-panel">
+    <div class="delete-icon" aria-hidden="true">⌫</div>
+    <h2 id="deleteRoomTitle">Kamerregel verwijderen?</h2>
+    <p>Weet je zeker dat je deze kamerregel wilt verwijderen?</p>
+    <div class="delete-info">Deze actie kan niet ongedaan worden gemaakt.</div>
+    <div class="delete-actions">
+      <button type="button" class="delete-cancel" onclick="closeDeleteRoomModal()">Annuleren</button>
+      <button type="button" class="delete-danger" id="confirmDeleteRoom">Verwijderen</button>
+    </div>
+  </div>
+</div>
+
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.2"></script>
+<script src="js/app.js?v=3.2.1"></script>
 
 <script>
 if ("serviceWorker" in navigator) {

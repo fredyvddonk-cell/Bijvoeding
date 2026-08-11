@@ -916,12 +916,21 @@ saveRoomEdit.onclick = () => {
   saveData();
 };
 
+let pendingDeleteRoomId = null;
 function deleteRoom(id) {
-  if (confirm("Deze kamerregel verwijderen?")) {
-    data.rooms = data.rooms.filter(r => r.id !== id);
-    saveData();
-  }
+  pendingDeleteRoomId = id;
+  document.getElementById("deleteRoomModal")?.classList.remove("hidden");
 }
+function closeDeleteRoomModal() {
+  pendingDeleteRoomId = null;
+  document.getElementById("deleteRoomModal")?.classList.add("hidden");
+}
+document.getElementById("confirmDeleteRoom")?.addEventListener("click", () => {
+  if (!pendingDeleteRoomId) return;
+  data.rooms = data.rooms.filter(r => r.id !== pendingDeleteRoomId);
+  closeDeleteRoomModal();
+  saveData();
+});
 function deleteProduct(id) {
   const linked = data.rooms.some(r => Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(id));
   if (linked) {

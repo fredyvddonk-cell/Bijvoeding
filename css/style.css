@@ -164,3 +164,18 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .phaseout-note,.phaseout-status{color:#6f568f;font-weight:700}
 .attention-unused.attention-action{display:flex;flex-direction:column;gap:3px;background:#f1f6fb;color:#35566d;border:1px solid #d9e6ef}
 .unused-hint{font-size:.82rem;font-weight:600;color:#647a89}
+
+
+/* V3.2.1 — eigen bevestigingsvenster voor verwijderen kamerregel */
+.delete-confirm{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:22px}
+.delete-confirm-backdrop{position:absolute;inset:0;background:rgba(26,30,38,.48)}
+.delete-confirm-panel{position:relative;width:min(100%,520px);background:#fff;border-radius:24px;padding:26px 24px 22px;box-shadow:0 18px 50px rgba(20,32,51,.22);text-align:center}
+.delete-icon{width:68px;height:68px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:#fdeaea;color:#c93434;font-size:34px;font-weight:800}
+.delete-confirm-panel h2{margin:0 0 8px;color:#18253a;font-size:25px}
+.delete-confirm-panel>p{margin:0 0 18px;color:#626a76;font-size:16px;line-height:1.45}
+.delete-info{text-align:left;padding:13px 15px;margin-bottom:20px;border-left:4px solid #3b9235;border-radius:10px;background:#f3f8f1;color:#39463b;font-weight:600}
+.delete-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.delete-actions button{margin:0;min-height:50px;border-radius:12px;font-weight:800;font-size:16px}
+.delete-cancel{background:#fff;color:#7849a5;border:2px solid #a77ac7}
+.delete-danger{background:#d83b3b;color:#fff;border:2px solid #d83b3b}
+@media(max-width:420px){.delete-confirm-panel{padding:22px 18px 18px;border-radius:20px}.delete-confirm-panel h2{font-size:22px}.delete-actions{gap:9px}}
