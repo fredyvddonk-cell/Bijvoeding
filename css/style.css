@@ -179,3 +179,19 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .delete-cancel{background:#fff;color:#7849a5;border:2px solid #a77ac7}
 .delete-danger{background:#d83b3b;color:#fff;border:2px solid #d83b3b}
 @media(max-width:420px){.delete-confirm-panel{padding:22px 18px 18px;border-radius:20px}.delete-confirm-panel h2{font-size:22px}.delete-actions{gap:9px}}
+
+/* V3.3-test — dagschema */
+.add-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.schedule-fields{margin-top:10px;padding:14px;border-radius:16px;background:#f8faf6;border:1px solid #e1eadc}
+.schedule-fields .field:last-child{margin-bottom:0}
+.schedule-meta{margin-top:6px;font-size:.9rem;color:#66706f}
+@media(max-width:420px){.add-toolbar{grid-template-columns:1fr}.schedule-fields{padding:12px}}
+@media print{
+  @page{size:A4 portrait;margin:8mm}
+  body>*{display:none!important}
+  #daySchedulePrint{display:block!important;position:static!important;width:auto!important;margin:0!important;padding:0!important;font-family:Arial,sans-serif;color:#111}
+  #daySchedulePrint h1{font-size:16pt;margin:0 0 5mm}
+  #daySchedulePrint .pdf-time{font-size:11pt;font-weight:800;background:#eaf6e5;padding:2mm 2.5mm;margin:2.2mm 0 1mm;break-after:avoid}
+  #daySchedulePrint .pdf-row{font-size:9pt;line-height:1.18;padding:1mm 2.5mm;border-bottom:.2mm solid #eee;break-inside:avoid}
+  #daySchedulePrint .pdf-note{font-style:italic;font-weight:600}
+}

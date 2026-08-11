@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.2.1</title>
-<link rel="stylesheet" href="css/style.css?v=3.2.1">
+<title>Bij- &amp; Sondevoeding V3.3-test</title>
+<link rel="stylesheet" href="css/style.css?v=3.3-test">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.2.1</span>
+    <span class="version">V3.3-test</span>
   </div>
 </header>
 
@@ -68,6 +68,7 @@
   <section id="usage" class="tab">
     <div class="add-toolbar">
       <button type="button" class="primary add-trigger" id="showRoomForm">+ Kamer / voeding toevoegen</button>
+      <button type="button" class="secondary add-trigger" id="printDaySchedule">PDF dagschema</button>
     </div>
     <div class="card hidden" id="roomFormCard">
       <h2>Voeding aan kamer toevoegen</h2>
@@ -82,6 +83,11 @@
       <div class="row">
         <div class="field"><label for="dailyAmount">Verbruik per dag</label><input id="dailyAmount" type="number" min="0" step="0.1"></div>
         <div class="field"><label for="dailyUnit">Eenheid</label><select id="dailyUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+      </div>
+      <div class="schedule-fields">
+        <div class="field"><label for="scheduleTimes">Tijdstip(pen)</label><input id="scheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"><div class="field-help">Meerdere tijden scheiden met een komma.</div></div>
+        <div class="row"><div class="field"><label for="scheduleAmount">Hoeveelheid per keer</label><input id="scheduleAmount" type="number" min="0" step="0.1" placeholder="Bijv. 1"></div><div class="field"><label for="scheduleDays">Dagen</label><select id="scheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+        <div class="field"><label for="scheduleNote">Extra informatie</label><input id="scheduleNote" placeholder="Bijv. na het eten geven"></div>
       </div>
       <div class="form-actions-inline">
         <button type="button" class="secondary" id="cancelRoomAdd">Annuleren</button>
@@ -151,6 +157,11 @@
     <div class="row">
       <div class="field"><label for="editDailyAmount">Verbruik per dag</label><input id="editDailyAmount" type="number" min="0" step="0.1"></div>
       <div class="field"><label for="editDailyUnit">Eenheid</label><select id="editDailyUnit" disabled><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
+    </div>
+    <div class="schedule-fields">
+      <div class="field"><label for="editScheduleTimes">Tijdstip(pen)</label><input id="editScheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"></div>
+      <div class="row"><div class="field"><label for="editScheduleAmount">Hoeveelheid per keer</label><input id="editScheduleAmount" type="number" min="0" step="0.1"></div><div class="field"><label for="editScheduleDays">Dagen</label><select id="editScheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+      <div class="field"><label for="editScheduleNote">Extra informatie</label><input id="editScheduleNote" placeholder="Bijv. na het eten geven"></div>
     </div>
     <div class="modal-info"><strong>Informatie</strong><br><span>Het verbruik per dag wordt gebruikt voor het overzicht en het besteladvies.</span></div>
     <div class="modal-actions">
@@ -246,7 +257,7 @@
 </div>
 
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.2.1"></script>
+<script src="js/app.js?v=3.3-test"></script>
 
 <script>
 if ("serviceWorker" in navigator) {

@@ -429,6 +429,7 @@ function renderUsage() {
   usageList.innerHTML = rs.length ? rs.map(r => `<div class="item">
     <div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${esc(roomProductLabel(r))}</span></div></div>
     <div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div>
+    ${(r.scheduleTimes||r.scheduleNote) ? `<div class="schedule-meta">${r.scheduleTimes ? `⏱ ${esc(r.scheduleTimes)}` : ""}${r.scheduleAmount ? ` · ${fmt(r.scheduleAmount)} ${esc(plural(r.dailyUnit, r.scheduleAmount))} per keer` : ""}${r.scheduleNote ? `<br>${esc(r.scheduleNote)}` : ""}</div>` : ""}
     <div class="actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
@@ -868,6 +869,10 @@ function editRoom(id) {
   editRoomProduct.innerHTML = roomOptions(r.mode);
   editRoomProduct.value = roomOptionValue(r.productName || "");
   editDailyAmount.value = r.dailyAmount;
+  editScheduleTimes.value = r.scheduleTimes || "";
+  editScheduleAmount.value = r.scheduleAmount || "";
+  editScheduleDays.value = r.scheduleDays || "Alle dagen";
+  editScheduleNote.value = r.scheduleNote || "";
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
   renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, checked, !!r.allFlavors);
@@ -912,6 +917,10 @@ saveRoomEdit.onclick = () => {
   r.dailyAmount = amount;
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   r.dailyUnit = editDailyUnit.value;
+  r.scheduleTimes = editScheduleTimes.value.trim();
+  r.scheduleAmount = Number(String(editScheduleAmount.value).replace(",", ".")) || 0;
+  r.scheduleDays = editScheduleDays.value;
+  r.scheduleNote = editScheduleNote.value.trim();
   closeRoomEdit();
   saveData();
 };
@@ -1452,8 +1461,11 @@ saveRoom.onclick = () => {
   data.rooms.push({
     id: crypto.randomUUID(), mode, room: roomV, unit: unitV,
     productId: null, productName: productNameV, allFlavors: selection.allFlavors,
-    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value
+    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value,
+    scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
+    scheduleDays: scheduleDays.value, scheduleNote: scheduleNote.value.trim()
   });
+  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = "Alle dagen"; scheduleNote.value = "";
   // Kamernummer en unit blijven staan, zodat een tweede product snel aan dezelfde kamer kan worden toegevoegd.
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
@@ -1535,3 +1547,38 @@ if (showProductFormBtn) showProductFormBtn.onclick = () => openAddForm(productFo
 if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(productFormCardV316);
 
 renderAll();
+
+
+// V3.3-test — één A4 dagschema via de afdruk/PDF-functie van de telefoon.
+function scheduleFlavorText(r){
+  if (r.mode !== "drink") return "";
+  if (r.allFlavors) return "Alle smaken";
+  const ids = r.selectedProductIds || [];
+  const names = ids.map(id => data.products.find(p => p.id === id)?.flavor).filter(Boolean);
+  return names.join("/");
+}
+function normalizedTimes(v){
+  return String(v||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean).map(x=>x.replace(".",":"));
+}
+function makeDaySchedule(){
+  const rows=[];
+  data.rooms.filter(r=>r.mode==="drink" && r.scheduleTimes).forEach(r=>{
+    normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r}));
+  });
+  rows.sort((a,b)=>a.time.localeCompare(b.time)||Number(a.r.unit)-Number(b.r.unit)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
+  if(!rows.length){ alert("Vul bij minimaal één kamervoeding een tijdstip in."); return; }
+  const old=document.getElementById("daySchedulePrint"); if(old) old.remove();
+  const box=document.createElement("section"); box.id="daySchedulePrint";
+  let last="";
+  box.innerHTML='<h1>Bijvoeding dagschema</h1>' + rows.map(({time,r})=>{
+    const head=time!==last ? `<div class="pdf-time">${esc(time)} uur</div>` : ""; last=time;
+    const flavor=scheduleFlavorText(r);
+    const amount=r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${esc(plural(r.dailyUnit,r.scheduleAmount))}` : `${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag`;
+    const extras=[flavor, amount, r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : ""].filter(Boolean).join(" · ");
+    return `${head}<div class="pdf-row"><strong>Kamer ${esc(r.room)}</strong> · ${esc(r.productName)}${extras?` · ${extras}`:""}${r.scheduleNote?` · <span class="pdf-note">${esc(r.scheduleNote)}</span>`:""}</div>`;
+  }).join("");
+  document.body.appendChild(box);
+  window.print();
+  setTimeout(()=>box.remove(),1000);
+}
+document.getElementById("printDaySchedule")?.addEventListener("click",makeDaySchedule);
