@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3-test16</title>
+<title>Bij- &amp; Sondevoeding V3.3-test15</title>
 <link rel="stylesheet" href="css/style.css?v=3.3-test7">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3-test16</span>
+    <span class="version">V3.3-test15</span>
   </div>
 </header>
 
@@ -258,7 +258,7 @@
   </div>
 </div>
 
-<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF aftekenlijsten</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Selecteer één of meer units en weken. Iedere unit/week-combinatie wordt een apart PDF-bestand.</p><div class="field-label">Units</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:7px 0 14px"><label><input type="checkbox" class="pdf-unit-check" value="1" checked> Unit 1</label><label><input type="checkbox" class="pdf-unit-check" value="2" checked> Unit 2</label><label><input type="checkbox" class="pdf-unit-check" value="3" checked> Unit 3</label></div><div class="field-label">Weken</div><div id="pdfWeekChoices" style="display:grid;gap:7px;margin:7px 0 14px"></div><button type="button" class="primary" style="width:100%" onclick="makeSelectedSchedules()">PDF bestanden maken / delen</button></div></div>
+<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF aftekenlijst</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Kies een datum in de gewenste week. De PDF loopt automatisch van maandag t/m zondag.</p><label class="field-label" for="pdfWeekDate">Week van</label><input id="pdfWeekDate" type="date" style="width:100%;margin:6px 0 14px"><p class="muted">Kies daarna de unit.</p><div class="unit-pdf-buttons"><button type="button" onclick="makeDaySchedule('1')">Unit 1</button><button type="button" onclick="makeDaySchedule('2')">Unit 2</button><button type="button" onclick="makeDaySchedule('3')">Unit 3</button></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/defaults.js"></script>
