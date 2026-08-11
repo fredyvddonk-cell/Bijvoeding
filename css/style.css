@@ -73,3 +73,11 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 /* V3.1.4 - compacte THT-regel */
 .expiry-compact{display:flex;align-items:center;gap:10px;margin-top:6px;}
 .expiry-date-text{font-size:14px;color:var(--text,#2d2d37);font-weight:500;}
+
+
+/* V3.1.6 — invoerformulieren pas tonen na toevoegen-knop */
+.add-toolbar{margin:0 0 10px;display:flex;justify-content:flex-end}
+.add-trigger{width:auto!important;min-width:190px;padding:10px 16px!important}
+.form-actions-inline{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(160px,1.3fr);gap:9px;margin-top:4px}
+.form-actions-inline button{margin:0}
+@media(max-width:520px){.add-toolbar{margin-bottom:8px}.add-trigger{width:100%!important}.form-actions-inline{grid-template-columns:1fr 1.3fr}}

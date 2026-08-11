@@ -1375,6 +1375,8 @@ saveRoom.onclick = () => {
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
   saveData();
+  if (roomFormCardV316) roomFormCardV316.classList.add("hidden");
+  if (showRoomFormBtn) showRoomFormBtn.focus();
 };
 
 saveProduct.onclick = () => {
@@ -1401,6 +1403,8 @@ saveProduct.onclick = () => {
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
   alreadyOrdered.value = "0"; minimumStock.value = "0"; syncNewLooseField(); saveData();
+  if (productFormCardV316) productFormCardV316.classList.add("hidden");
+  if (showProductFormBtn) showProductFormBtn.focus();
 };
 
 // Product wijzigen: alleen bij Algemeen is handmatige minimumvoorraad relevant.
@@ -1422,5 +1426,29 @@ deleteProductFromModal.onclick = () => {
 
 // Geen productgroep-knoppen meer nodig; de tabnavigatie blijft het dagelijkse werkproces volgen.
 usageTabBtn.innerHTML = '<span class="nav-icon">♙</span><span>Kamers</span>';
+
+// V3.1.6 — formulieren standaard dicht; openen via compacte toevoegen-knop.
+const showRoomFormBtn = document.getElementById("showRoomForm");
+const cancelRoomAddBtn = document.getElementById("cancelRoomAdd");
+const showProductFormBtn = document.getElementById("showProductForm");
+const cancelProductAddBtn = document.getElementById("cancelProductAdd");
+const roomFormCardV316 = document.getElementById("roomFormCard");
+const productFormCardV316 = document.getElementById("productFormCard");
+
+function openAddForm(card, firstField){
+  if (!card) return;
+  card.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    card.scrollIntoView({behavior:"smooth", block:"start"});
+    if (firstField && typeof firstField.focus === "function") firstField.focus({preventScroll:true});
+  });
+}
+function closeAddForm(card){
+  if (card) card.classList.add("hidden");
+}
+if (showRoomFormBtn) showRoomFormBtn.onclick = () => openAddForm(roomFormCardV316, room);
+if (cancelRoomAddBtn) cancelRoomAddBtn.onclick = () => closeAddForm(roomFormCardV316);
+if (showProductFormBtn) showProductFormBtn.onclick = () => openAddForm(productFormCardV316, productType);
+if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(productFormCardV316);
 
 renderAll();

@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.1.5</title>
-<link rel="stylesheet" href="css/style.css?v=3.1.1">
+<title>Bij- &amp; Sondevoeding V3.1.6</title>
+<link rel="stylesheet" href="css/style.css?v=3.1.6">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.1.5</span>
+    <span class="version">V3.1.6</span>
   </div>
 </header>
 
@@ -66,7 +66,10 @@
   </section>
 
   <section id="usage" class="tab">
-    <div class="card" id="roomFormCard">
+    <div class="add-toolbar">
+      <button type="button" class="primary add-trigger" id="showRoomForm">+ Kamer / voeding toevoegen</button>
+    </div>
+    <div class="card hidden" id="roomFormCard">
       <h2>Voeding aan kamer toevoegen</h2>
       <p class="muted">Een kamer kan meerdere voedingsproducten gebruiken. Voeg ieder product als aparte regel toe.</p>
       <div class="row">
@@ -80,7 +83,10 @@
         <div class="field"><label for="dailyAmount">Verbruik per dag</label><input id="dailyAmount" type="number" min="0" step="0.1"></div>
         <div class="field"><label for="dailyUnit">Eenheid</label><select id="dailyUnit"><option value="flesjes">flesjes</option><option value="bakjes">bakjes</option><option value="zakjes">zakjes</option><option value="ml">ml</option></select></div>
       </div>
-      <button class="primary" id="saveRoom">Voeding toevoegen</button>
+      <div class="form-actions-inline">
+        <button type="button" class="secondary" id="cancelRoomAdd">Annuleren</button>
+        <button class="primary" id="saveRoom">Voeding toevoegen</button>
+      </div>
     </div>
 
     <div class="card">
@@ -92,7 +98,10 @@
   <div id="generalTargetCard" class="hidden" aria-hidden="true"><select id="generalProduct"></select><input id="generalTarget" type="number"><button id="saveGeneralTarget" type="button"></button></div>
 
   <section id="products" class="tab">
-    <div class="card">
+    <div class="add-toolbar">
+      <button type="button" class="primary add-trigger" id="showProductForm">+ Product toevoegen</button>
+    </div>
+    <div class="card hidden" id="productFormCard">
       <h2>Product toevoegen</h2>
       <div class="field"><label for="productType">Soort product</label><select id="productType"><option value="drink">Bijvoeding</option><option value="sonde">Sondevoeding</option><option value="general">Algemeen</option></select></div>
       <div class="row">
@@ -111,7 +120,10 @@
       </div>
       <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div>
       <div class="field" id="manualMinimumField"><label for="minimumStock">Minimumvoorraad (alleen Algemeen)</label><input id="minimumStock" type="number" min="0" step="1" value="0"><div class="field-help">Bij Bijvoeding en Sondevoeding berekent de app dit automatisch op basis van 10 dagen levertijd.</div></div>
-      <button class="primary" id="saveProduct">Product opslaan</button>
+      <div class="form-actions-inline">
+        <button type="button" class="secondary" id="cancelProductAdd">Annuleren</button>
+        <button class="primary" id="saveProduct">Product opslaan</button>
+      </div>
     </div>
     <div class="card"><h3>Productvolgorde</h3><p class="muted">Alleen naam en smaak/soort. Houd het sleephandvat rechts vast om een product te verplaatsen. Tik op de naam om te wijzigen.</p><div id="productList" class="list compact-product-list"></div></div>
   </section>
@@ -213,7 +225,7 @@
 </div>
 
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.1"></script>
+<script src="js/app.js?v=3.1.6"></script>
 
 <script>
 if ("serviceWorker" in navigator) {
