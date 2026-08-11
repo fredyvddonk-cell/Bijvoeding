@@ -210,3 +210,12 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .unit-pdf-buttons button{background:#957AC1;color:#fff;border:0;border-radius:12px;padding:13px 8px;font-weight:800}
 .pdf-unit-panel{max-width:430px}
 .pdf-choice-label{font-weight:900;color:#7b4db2;letter-spacing:.02em}
+
+/* V3.3-test17: duidelijk selecteerbare weekknoppen voor PDF */
+#pdfWeekChoices{grid-template-columns:1fr}
+.pdf-week-option{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid #d8d8df;background:#fff;color:var(--text);border-radius:12px;padding:10px 12px;min-height:52px;font:inherit;cursor:pointer}
+.pdf-week-option strong{display:block;font-size:.95rem}
+.pdf-week-option small{display:block;margin-top:2px;color:#6d6d78;font-size:.78rem}
+.pdf-week-option.selected{border:2px solid var(--purple);background:#fff}
+.pdf-week-box{width:24px;height:24px;flex:0 0 24px;border:1.5px solid #aaaab4;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;background:#fff}
+.pdf-week-option.selected .pdf-week-box{background:var(--purple);border-color:var(--purple)}

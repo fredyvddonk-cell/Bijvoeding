@@ -1629,10 +1629,20 @@ function openPdfUnitModal(){
     for(let i=0;i<6;i++){
       const d=new Date(now);d.setDate(now.getDate()+i*7);
       const wi=weekInfo(localISODate(d));
-      const label=document.createElement("label");
-      label.style.cssText="display:flex;align-items:center;gap:8px";
-      label.innerHTML=`<input type="checkbox" class="pdf-week-check" value="${localISODate(wi.dates[0])}" ${i===0?"checked":""}> Week ${wi.week} · ${localISODate(wi.dates[0]).split('-').reverse().join('-')} t/m ${localISODate(wi.dates[6]).split('-').reverse().join('-')}`;
-      box.appendChild(label);
+      const monday=localISODate(wi.dates[0]);
+      const sunday=localISODate(wi.dates[6]);
+      const option=document.createElement("button");
+      option.type="button";
+      option.className="pdf-week-option"+(i===0?" selected":"");
+      option.dataset.value=monday;
+      option.setAttribute("aria-pressed",i===0?"true":"false");
+      option.innerHTML=`<span class="pdf-week-box" aria-hidden="true">${i===0?"✓":""}</span><span><strong>Week ${wi.week}</strong><small>${monday.split('-').reverse().join('-')} t/m ${sunday.split('-').reverse().join('-')}</small></span>`;
+      option.addEventListener("click",()=>{
+        const selected=option.classList.toggle("selected");
+        option.setAttribute("aria-pressed",selected?"true":"false");
+        option.querySelector(".pdf-week-box").textContent=selected?"✓":"";
+      });
+      box.appendChild(option);
     }
   }
   document.getElementById("pdfUnitModal")?.classList.remove("hidden");document.body.style.overflow="hidden";
@@ -1747,14 +1757,14 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test16",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test17",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
 
 async function makeSelectedSchedules(){
   const units=[...document.querySelectorAll(".pdf-unit-check:checked")].map(x=>x.value);
-  const weeks=[...document.querySelectorAll(".pdf-week-check:checked")].map(x=>x.value);
+  const weeks=[...document.querySelectorAll(".pdf-week-option.selected")].map(x=>x.dataset.value);
   if(!units.length||!weeks.length){alert("Selecteer minimaal één unit en één week.");return;}
   closePdfUnitModal();
   const files=[];
