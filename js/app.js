@@ -1562,7 +1562,7 @@ if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(produc
 renderAll();
 
 
-// V3.3-test4 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
+// V3.3-test5 — snelle tijd/dagkeuze + echte PDF per unit, direct deelbaar op telefoon.
 const ALL_DAYS = "Ma,Di,Wo,Do,Vr,Za,Zo";
 function normalizeDays(v){
   if(!v || v==="Alle dagen") return ALL_DAYS;
@@ -1635,15 +1635,14 @@ function buildUnitRows(unit){
   });
   return result;
 }
-function pdfLinesForRow(row){
-  if(row.choice){
-    const items=row.items.map(r=>`${productWithFlavor(r)} - ${amountText(r)}`);
-    const notes=[...new Set(row.items.map(r=>r.scheduleNote).filter(Boolean))];
-    const days=[...new Set(row.items.map(dayText).filter(Boolean))];
-    return [`Kamer ${row.room}  |  KIES 1 VAN DE ${items.length}`, items.join("  OF  "), ...days, ...notes];
-  }
-  const r=row.items[0];
-  return [`Kamer ${row.room}  |  ${productWithFlavor(r)}  |  ${amountText(r)}`, ...[dayText(r),r.scheduleNote].filter(Boolean)];
+function rowDays(row){
+  const sets=row.items.map(r=>new Set(normalizeDays(r.scheduleDays).split(",").filter(Boolean)));
+  return DAY_ORDER.map(d=>sets.some(set=>set.has(d)));
+}
+function compactItemText(r){
+  const flavor=scheduleFlavorText(r);
+  const main=`${r.productName}${flavor?` · ${flavor}`:""} · ${amountText(r)}`;
+  return r.scheduleNote ? `${main} · ${r.scheduleNote}` : main;
 }
 async function makeDaySchedule(unit){
   closePdfUnitModal();
@@ -1651,33 +1650,78 @@ async function makeDaySchedule(unit){
   if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
   if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
   const {jsPDF}=window.jspdf;
-  // Landscape geeft de meeste ruimte; lettergrootte schaalt zodat het schema één A4 blijft.
   const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
-  const W=297,H=210, margin=10, usable=H-20;
-  let logical=0,last=""; rows.forEach(row=>{if(row.time!==last){logical+=1.5;last=row.time;} logical+=pdfLinesForRow(row).length;});
-  const fs=Math.max(6.4,Math.min(10, usable/(logical*1.75)));
-  let y=12;
-  doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(15);doc.text(`Bijvoeding dagschema - Unit ${unit}`,margin,y);y+=7;
-  last="";
+  const W=297,H=210, margin=8, tableW=W-2*margin;
+  const roomW=20, dayW=12, infoW=tableW-roomW-(7*dayW);
+  const days=["Ma","Di","Wo","Do","Vr","Za","Zo"];
+
+  // Eerst berekenen hoeveel ruimte nodig is. Daarna schaalt de tekst zodat alles op één A4 blijft.
+  let estimated=0,lastTime="";
   rows.forEach(row=>{
-    if(row.time!==last){
-      y+=2;doc.setFillColor(233,226,244);doc.roundedRect(margin,y-4,W-2*margin,7,1.5,1.5,"F");doc.setTextColor(95,63,142);doc.setFont("helvetica","bold");doc.setFontSize(Math.max(fs+1,8));doc.text(`${row.time} uur`,margin+3,y+1);y+=6;last=row.time;
-    }
-    const lines=pdfLinesForRow(row);doc.setFontSize(fs);doc.setTextColor(45,45,55);
-    lines.forEach((line,k)=>{
-      doc.setFont("helvetica", row.choice && k===0 ? "bold" : (k===0?"bold":"normal"));
-      if(row.choice && k===0) doc.setTextColor(123,77,178); else doc.setTextColor(45,45,55);
-      const wrapped=doc.splitTextToSize(line,W-2*margin-6);
-      wrapped.forEach(part=>{doc.text(part,margin+3,y);y+=fs*0.42;});
-    }); y+=1.2;
+    if(row.time!==lastTime){estimated+=8;lastTime=row.time;}
+    const chars=row.choice ? row.items.map(compactItemText).join(" KIES OF ").length : compactItemText(row.items[0]).length;
+    estimated += row.choice ? Math.max(14,8+Math.ceil(chars/75)*4) : Math.max(8,Math.ceil(chars/90)*4+4);
   });
-  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}.pdf`; const file=new File([blob],filename,{type:"application/pdf"});
-  try{
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-      await navigator.share({title:`Bijvoeding dagschema Unit ${unit}`,text:`Bijgevoegd het bijvoedingsschema van Unit ${unit}.`,files:[file]});
-    }else{
-      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
-      alert("De PDF is gedownload. Je kunt hem nu als bijlage mailen.");
+  const available=H-27;
+  const scale=Math.min(1,available/Math.max(available,estimated));
+  const fs=Math.max(5.2,7.2*scale);
+  const lineH=Math.max(2.5,fs*0.40);
+
+  let y=10;
+  doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(14);
+  doc.text(`Bijvoeding aftekenlijst - Unit ${unit}`,margin,y);y+=6;
+  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(95,95,105);
+  doc.text("Per tijdstip: vink de betreffende dag af nadat de voeding is gegeven. — = niet van toepassing.",margin,y);y+=5;
+
+  function header(time){
+    doc.setFillColor(233,226,244);doc.roundedRect(margin,y,tableW,7,1.2,1.2,"F");
+    doc.setTextColor(95,63,142);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text(`${time} uur`,margin+3,y+4.8);y+=8;
+    doc.setFillColor(245,241,250);doc.rect(margin,y,tableW,6,"F");
+    doc.setDrawColor(210,205,218);doc.setLineWidth(.25);
+    const xs=[margin,margin+roomW,margin+roomW+infoW]; for(let i=1;i<=7;i++) xs.push(margin+roomW+infoW+i*dayW);
+    xs.forEach(x=>doc.line(x,y,x,y+6));doc.line(margin,y,margin+tableW,y);doc.line(margin,y+6,margin+tableW,y+6);
+    doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(6.8);
+    doc.text("Kamer",margin+2,y+4);doc.text("Voeding · smaak · hoeveelheid · opmerking",margin+roomW+2,y+4);
+    days.forEach((d,i)=>doc.text(d,margin+roomW+infoW+i*dayW+dayW/2,y+4,{align:"center"}));y+=6;
+  }
+
+  lastTime="";
+  rows.forEach(row=>{
+    if(row.time!==lastTime){header(row.time);lastTime=row.time;}
+    let infoLines=[];
+    if(row.choice){
+      infoLines.push("KIES 1 VAN DE 2");
+      row.items.forEach((r,i)=>{infoLines.push(`${i+1}. ${compactItemText(r)}`);if(i<row.items.length-1)infoLines.push("OF");});
+    }else infoLines=doc.splitTextToSize(compactItemText(row.items[0]),infoW-4);
+    if(row.choice){
+      infoLines=infoLines.flatMap((line,i)=>i===0||line==="OF"?[line]:doc.splitTextToSize(line,infoW-4));
     }
-  }catch(e){if(e?.name!=="AbortError"){doc.save(filename);}}
+    const rowH=Math.max(8,infoLines.length*lineH+3);
+    if(row.choice) doc.setFillColor(247,243,252); else doc.setFillColor(255,255,255);
+    doc.rect(margin,y,tableW,rowH,"F");
+    if(row.choice){doc.setFillColor(149,122,193);doc.rect(margin,y,1.4,rowH,"F");}
+    doc.setDrawColor(215,212,220);doc.setLineWidth(.22);
+    const xRoom=margin+roomW,xInfo=xRoom+infoW;doc.line(margin,y,margin+tableW,y);doc.line(margin,y+rowH,margin+tableW,y+rowH);doc.line(xRoom,y,xRoom,y+rowH);doc.line(xInfo,y,xInfo,y+rowH);
+    for(let i=1;i<=7;i++) doc.line(xInfo+i*dayW,y,xInfo+i*dayW,y+rowH);
+    doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),margin+roomW/2,y+rowH/2+1,{align:"center"});
+    let ty=y+lineH+1.3;
+    infoLines.forEach((line,i)=>{
+      const special=row.choice&&(i===0||line==="OF");
+      doc.setFont("helvetica",special?"bold":"normal");doc.setTextColor(special?95:45,special?63:45,special?142:55);doc.setFontSize(special?Math.min(7.4,fs+.5):fs);
+      doc.text(line,xRoom+2,ty);ty+=lineH;
+    });
+    const active=rowDays(row);
+    active.forEach((on,i)=>{
+      const cx=xInfo+i*dayW+dayW/2,cy=y+rowH/2;
+      doc.setTextColor(110,110,118);doc.setFont("helvetica","normal");doc.setFontSize(8);
+      if(on){doc.setDrawColor(70,70,78);doc.setLineWidth(.35);doc.rect(cx-2.1,cy-2.1,4.2,4.2);}else doc.text("—",cx,cy+1.2,{align:"center"});
+    });
+    y+=rowH;
+  });
+
+  const blob=doc.output("blob"),filename=`Bijvoeding-aftekenlijst-Unit-${unit}.pdf`,file=new File([blob],filename,{type:"application/pdf"});
+  try{
+    if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))) await navigator.share({title:`Bijvoeding aftekenlijst Unit ${unit}`,text:`Bijgevoegd de bijvoeding aftekenlijst van Unit ${unit}.`,files:[file]});
+    else{const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);alert("De PDF is gedownload. Je kunt hem nu als bijlage mailen.");}
+  }catch(e){if(e?.name!=="AbortError")doc.save(filename);}
 }
