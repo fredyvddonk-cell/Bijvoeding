@@ -1663,9 +1663,10 @@ async function makeDaySchedule(unit){
   if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
   if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
   const {dates,week}=weekInfo(dateValue), dayNames=["Ma","Di","Wo","Do","Vr","Za","Zo"];
-  const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
-  const W=297,H=210,ml=7,mr=7,top=8,bottom=7, tableW=W-ml-mr;
-  const roomW=18,dayW=16,detailW=tableW-roomW-7*dayW;
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const W=210,H=297,ml=7,mr=7,top=8,bottom=7, tableW=W-ml-mr;
+  // Portrait: compacte kamer- en dagkolommen, met zoveel mogelijk ruimte voor de voedingsinformatie.
+  const roomW=15,dayW=13,detailW=tableW-roomW-7*dayW;
   const fmtDate=d=>`${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
   const longDate=d=>`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
   // Bepaal compacte schaal zodat de volledige week altijd op één A4 blijft.
@@ -1677,10 +1678,10 @@ async function makeDaySchedule(unit){
   doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.text(`Bijvoeding aftekenlijst - Unit ${unit}`,ml,y+4);y+=6;
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text(`Week ${week} - ${longDate(dates[0])} t/m ${longDate(dates[6])}`,ml,y+3);y+=7;
   const drawHeader=()=>{
-    doc.setFillColor(233,226,244);doc.rect(ml,y,tableW,headerH,"F");doc.setDrawColor(180,170,195);doc.rect(ml,y,tableW,headerH);
+    doc.setFillColor(149,122,193);doc.rect(ml,y,tableW,headerH,"F");doc.setDrawColor(180,170,195);doc.rect(ml,y,tableW,headerH);
     let x=ml; const cells=[roomW,detailW,...Array(7).fill(dayW)]; cells.slice(0,-1).forEach(w=>{x+=w;doc.line(x,y,x,y+headerH);});
-    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(45,45,55);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Voeding / smaak / hoeveelheid / opmerking",ml+roomW+1.5,y+5.5);
-    dates.forEach((d,i)=>{const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
+    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(255,255,255);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Voeding / smaak / hoeveelheid / opmerking",ml+roomW+1.5,y+5.5);
+    dates.forEach((d,i)=>{doc.setTextColor(255,255,255);const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
   };
   drawHeader();
   groups.forEach(g=>{
