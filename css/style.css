@@ -85,3 +85,21 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 /* V3.1.7 */
 .hidden{display:none!important}
 .loose-counter-compact{margin-top:7px}
+
+/* V3.1.8 - acties op Overzicht duidelijker */
+.attention-card { border-left: 4px solid #e3e3e8; }
+.attention-action { margin-top: 7px; }
+.attention-order.attention-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fde8e8;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.attention-chips .danger-chip { font-weight: 800; }
+.attention-chips .warn-chip { font-weight: 800; }
+.overview-clear { font-weight: 700; }

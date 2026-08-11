@@ -1335,11 +1335,11 @@ function renderOverview() {
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       <div class="overview-minimum">${minimum}</div>
-      ${x.orderUnits > 0 ? `<div class="attention-order"><strong>${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))}</strong> <span>bestellen</span></div>` : `<div class="overview-ok">Voldoende voorraad</div>`}
-      ${x.unused ? `<div class="attention-unused">Voorraad aanwezig · niet in gebruik</div>` : ""}
-      ${x.tht ? `<div class="attention-chips">${x.tht}</div>` : ""}
+      ${x.orderUnits > 0 ? `<div class="attention-order attention-action"><strong>BESTELLEN</strong></div>` : ""}
+      ${x.unused ? `<div class="attention-unused attention-action">Voorraad aanwezig · niet in gebruik</div>` : ""}
+      ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
-  }).join("") : `<div class="empty">Geen directe aandachtspunten. Alles is voldoende op voorraad en er zijn geen THT-meldingen.</div>`;
+  }).join("") : `<div class="empty overview-clear">✓ Geen acties of aandachtspunten</div>`;
   renderRoomOverview();
 }
 
