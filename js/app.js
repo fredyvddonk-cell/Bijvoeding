@@ -1053,3 +1053,310 @@ saveProduct.onclick = () => {
 };
 
 renderAll();
+
+/* ===============================
+   V3.1 — één werkstroom
+   Bijvoeding, sondevoeding en Algemeen blijven intern producttypes,
+   maar staan niet meer in aparte hoofdmenu's.
+   =============================== */
+
+function targetWeeks(mode = currentMode) {
+  return mode === "sonde" ? Number(data.settings.sondeWeeks || 3) : Number(data.settings.drinkWeeks || 3);
+}
+
+function allProductsOrdered() {
+  return [...data.products].sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || labelProduct(a).localeCompare(labelProduct(b), "nl"));
+}
+function roomOnlyProducts() {
+  return allProductsOrdered().filter(p => p.mode === "drink" || p.mode === "sonde");
+}
+function typeName(mode) {
+  return mode === "drink" ? "Bijvoeding" : mode === "sonde" ? "Sondevoeding" : "Algemeen";
+}
+function adviceForProduct(p) {
+  const old = currentMode;
+  currentMode = p.mode;
+  const result = advice(p);
+  currentMode = old;
+  return result;
+}
+
+// Bij een nieuwe kamer bepaalt de gekozen voedingssoort welke producten zichtbaar zijn.
+selectedRoomMode = function(selectEl) {
+  if (selectEl === editRoomProduct && editingRoomId) {
+    return data.rooms.find(r => r.id === editingRoomId)?.mode || "drink";
+  }
+  if (selectEl === roomProduct && typeof roomType !== "undefined") return roomType.value;
+  return currentMode;
+};
+
+function renderProductOptionsCombined() {
+  const mode = roomType.value;
+  roomProduct.innerHTML = roomOptions(mode);
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+}
+
+function renderCounting() {
+  const ps = allProductsOrdered();
+  countList.innerHTML = ps.length ? ps.map(p => {
+    const loose = hasLooseUnits(p);
+    const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
+    return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
+      <div class="item-head">
+        <div><strong>${esc(labelProduct(p))}</strong><div class="count-meta">${p.mode === "general" ? "" : useBadge(p)}</div></div>
+        <div class="days-pill">${p.mode === "general" ? "" : esc(daysSupplyText(p))}</div>
+      </div>
+      ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
+      <span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span>
+      ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
+      <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
+      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
+      ${p.mode !== "general" ? `<div class="expiry-line">${thtStatusHtml(p) || `<span class="muted">THT nog niet vastgelegd</span>`}</div><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Nog geen producten.</div>`;
+}
+
+function renderUsage() {
+  roomFormCard.classList.remove("hidden");
+  generalTargetCard.classList.add("hidden");
+  usageListTitle.textContent = "Ingevoerde kamers";
+  const rs = [...data.rooms]
+    .filter(r => r.mode === "drink" || r.mode === "sonde")
+    .sort((a, b) => Number(a.unit) - Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, { numeric: true }) || roomProductLabel(a).localeCompare(roomProductLabel(b)));
+  usageList.innerHTML = rs.length ? rs.map(r => `<div class="item room-use-row">
+    <div class="item-head"><div><strong>Kamer ${esc(r.room)}</strong><br><span class="muted">Unit ${esc(r.unit)} · ${esc(roomProductLabel(r))}</span></div><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
+    <div style="margin-top:8px"><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag</strong></div>
+    <div class="actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+  </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+}
+
+function renderProducts() {
+  const ps = allProductsOrdered();
+  productList.innerHTML = ps.length ? ps.map(p => `<div class="compact-product-row product-sort-item ${!activeProduct(p) ? "inactive-product" : ""}" data-product-id="${p.id}">
+    <button type="button" class="product-row-main" onclick="editStock('${p.id}')" aria-label="${esc(labelProduct(p))} wijzigen">
+      <span class="product-row-name">${esc(p.name || "Product")}</span>
+      <span class="product-row-variant">${esc(variantLabel(p) || typeName(p.mode))}</span>
+    </button>
+    <button type="button" class="drag-handle compact-drag" aria-label="Sleep ${esc(labelProduct(p))}" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span></button>
+  </div>`).join("") : `<div class="empty">Nog geen producten.</div>`;
+}
+
+function sondeOrGeneralOrderCard(p) {
+  const a = adviceForProduct(p);
+  if (p.mode !== "general" && (!activeProduct(p) || a.daily <= 0)) return "";
+  const tht = p.mode === "general" ? "" : thtBadgeHtml(p);
+  const meta = p.mode === "general"
+    ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}${Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${esc(minimumText(p))}` : ""}`
+    : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks(p.mode)} weken<br>Minimum: ${esc(minimumText(p))}`;
+  return `<div class="item order-card">
+    <div class="order-product">${esc(labelProduct(p))}</div>
+    <div class="order-main">${a.orderUnits > 0 ? `<strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+    <div class="order-meta">${meta}</div>
+    ${tht ? `<div class="order-chips">${tht}</div>` : ""}
+  </div>`;
+}
+
+function renderOrders() {
+  const old = currentMode;
+  currentMode = "drink";
+  renderDrinkOrders();
+  let drinkHtml = orderList.querySelector(".empty") ? "" : orderList.innerHTML;
+  const otherHtml = allProductsOrdered().filter(p => p.mode === "sonde" || p.mode === "general").map(sondeOrGeneralOrderCard).filter(Boolean).join("");
+  orderList.innerHTML = drinkHtml + otherHtml || `<div class="empty">Er zijn nog geen producten waarvoor een besteladvies nodig is.</div>`;
+  currentMode = old;
+}
+
+function overviewAttentionItems() {
+  const items = [];
+  const old = currentMode;
+
+  currentMode = "drink";
+  familyNames("drink").forEach(name => {
+    const products = familyProducts(name, "drink", true);
+    const p = products.find(activeProduct) || products[0];
+    if (!p) return;
+    const plan = drinkFamilyPlan(name);
+    const stock = familyStockUnits(name, "drink");
+    const unused = familyDailyUsage(name, "drink") <= 0 && stock > 0;
+    const tht = products.map(x => thtBadgeHtml(x)).filter(Boolean).join("");
+    const thtAttention = products.some(x => { const e = expiryInfo(x); return e.expired || e.soon || e.quarterlyDue; });
+    if (plan.orderUnits > 0 || unused || thtAttention) {
+      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused, tht, mode:"drink"});
+    }
+  });
+
+  allProductsOrdered().filter(p => p.mode === "sonde").forEach(p => {
+    const a = adviceForProduct(p);
+    const e = expiryInfo(p);
+    const unused = !isInUse(p) && stockUnits(p) > 0;
+    if (a.orderUnits > 0 || unused || e.expired || e.soon || e.quarterlyDue) {
+      items.push({p, name:labelProduct(p), orderUnits:a.orderUnits, stock:stockUnits(p), days:daysSupply(p), unused, tht:thtBadgeHtml(p), mode:"sonde"});
+    }
+  });
+
+  allProductsOrdered().filter(p => p.mode === "general").forEach(p => {
+    const a = adviceForProduct(p);
+    if (a.orderUnits > 0) items.push({p, name:labelProduct(p), orderUnits:a.orderUnits, stock:stockUnits(p), days:null, unused:false, tht:"", mode:"general"});
+  });
+  currentMode = old;
+  return items;
+}
+
+function renderRoomOverview() {
+  if (typeof roomOverviewList === "undefined") return;
+  const groups = new Map();
+  data.rooms.filter(r => r.mode === "drink" || r.mode === "sonde").forEach(r => {
+    const key = `${r.unit}|${r.room}`;
+    if (!groups.has(key)) groups.set(key, {unit:r.unit, room:r.room, rows:[]});
+    groups.get(key).rows.push(r);
+  });
+  const rooms = [...groups.values()].sort((a,b) => Number(a.unit)-Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, {numeric:true}));
+  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}</span><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+}
+
+function renderOverview() {
+  overviewTitle.textContent = "Alles in één overzicht";
+  statUsageLabel.textContent = "Kamers";
+  statUsage.textContent = new Set(data.rooms.filter(r => r.mode === "drink" || r.mode === "sonde").map(r => `${r.unit}|${r.room}`)).size;
+  statProducts.textContent = data.products.length;
+  const attention = overviewAttentionItems();
+  statOrders.textContent = attention.filter(x => x.orderUnits > 0).length;
+  statWeeks.textContent = `${targetWeeks("drink")} / ${targetWeeks("sonde")} weken`;
+  weeksCard.classList.remove("hidden");
+
+  document.querySelectorAll(".week-picker button").forEach(b => {
+    const m = b.dataset.mode;
+    b.classList.toggle("active", Number(b.dataset.weeks) === targetWeeks(m));
+    b.onclick = () => {
+      if (m === "drink") data.settings.drinkWeeks = Number(b.dataset.weeks);
+      else data.settings.sondeWeeks = Number(b.dataset.weeks);
+      saveData();
+    };
+  });
+
+  attentionList.innerHTML = attention.length ? attention.map(x => {
+    const p = x.p;
+    const unit = p.consumptionUnit || looseUnitLabel(p, x.stock);
+    const daysText = x.mode === "general" || x.days == null ? "" : ` · <strong>± ${fmt(Math.floor(x.days * 10) / 10)} dagen voorraad</strong>`;
+    const minimum = x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`;
+    return `<div class="item attention-card">
+      <div class="attention-product">${esc(x.name)}</div>
+      <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
+      <div class="overview-minimum">${minimum}</div>
+      ${x.orderUnits > 0 ? `<div class="attention-order"><strong>${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))}</strong> <span>bestellen</span></div>` : `<div class="overview-ok">Voldoende voorraad</div>`}
+      ${x.unused ? `<div class="attention-unused">Voorraad aanwezig · niet in gebruik</div>` : ""}
+      ${x.tht ? `<div class="attention-chips">${x.tht}</div>` : ""}
+    </div>`;
+  }).join("") : `<div class="empty">Geen directe aandachtspunten. Alles is voldoende op voorraad en er zijn geen THT-meldingen.</div>`;
+  renderRoomOverview();
+}
+
+function syncProductTypeFields() {
+  const mode = productType.value;
+  currentMode = mode;
+  flavorField.classList.toggle("hidden", mode === "sonde");
+  flavorLabel.textContent = mode === "general" ? "Soort" : "Smaak / soort";
+  manualMinimumField.classList.toggle("hidden", mode !== "general");
+  syncNewLooseField();
+}
+
+function renderAll() {
+  syncProductTypeFields();
+  renderProductOptionsCombined();
+  renderCounting();
+  renderUsage();
+  renderProducts();
+  renderOrders();
+  renderOverview();
+  currentMode = "drink";
+}
+
+roomType.onchange = () => {
+  currentMode = roomType.value;
+  renderProductOptionsCombined();
+};
+roomProduct.onchange = () => {
+  currentMode = roomType.value;
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+};
+productType.onchange = syncProductTypeFields;
+
+saveRoom.onclick = () => {
+  const mode = roomType.value;
+  currentMode = mode;
+  const roomV = room.value.trim();
+  const unitV = unit.value;
+  const amount = Number(String(dailyAmount.value).replace(",", "."));
+  const productNameV = parseRoomProductName(roomProduct.value);
+  if (!roomV || amount <= 0 || !productNameV) {
+    alert("Vul kamernummer, product en verbruik in.");
+    return;
+  }
+  const selection = selectionForRoom(productNameV, mode, roomFlavorChoices);
+  if (mode === "drink" && familyProducts(productNameV, mode).some(p => p.flavor) && selection.ids.length < 1) {
+    alert("Vink minimaal één voorkeurssmaak aan."); return;
+  }
+  if (mode === "sonde" && familyProducts(productNameV, mode).length > 1 && selection.ids.length < 1) {
+    alert("Vink minimaal één inhoud/variant aan."); return;
+  }
+  setRoomUnitFromProduct(roomProduct, dailyUnit);
+  data.rooms.push({
+    id: crypto.randomUUID(), mode, room: roomV, unit: unitV,
+    productId: null, productName: productNameV, allFlavors: selection.allFlavors,
+    selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value
+  });
+  // Kamernummer en unit blijven staan, zodat een tweede product snel aan dezelfde kamer kan worden toegevoegd.
+  dailyAmount.value = "";
+  renderFlavorChoices(roomProduct, roomFlavorChoices, []);
+  saveData();
+};
+
+saveProduct.onclick = () => {
+  const mode = productType.value;
+  currentMode = mode;
+  const name = canonicalName(productName.value.trim());
+  const fl = mode === "sonde" ? "" : flavor.value.trim();
+  const cu = consumptionUnit.value;
+  const ou = orderUnit.value;
+  const content = Number(contentPerOrderUnit.value);
+  const allowLoose = content > 1 && looseUnitsAllowed.value === "yes";
+  const sf = Number(stockFull.value || 0);
+  const sl = allowLoose ? Number(stockLoose.value || 0) : 0;
+  const ao = Number(alreadyOrdered.value || 0);
+  const min = Number(minimumStock.value || 0);
+  if (!name || content <= 0) { alert("Vul productnaam en inhoud per besteleenheid in."); return; }
+  const maxOrder = Math.max(0, ...data.products.map(p => Number(p.order || 0)));
+  data.products.push({
+    id: crypto.randomUUID(), mode, name, flavor: fl,
+    consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
+    stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true
+  });
+  productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
+  looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
+  alreadyOrdered.value = "0"; minimumStock.value = "0"; syncNewLooseField(); saveData();
+};
+
+// Product wijzigen: alleen bij Algemeen is handmatige minimumvoorraad relevant.
+const editStockV304 = editStock;
+editStock = function(id) {
+  editStockV304(id);
+  const p = data.products.find(x => x.id === id);
+  if (!p) return;
+  editMinimumStock.closest(".field").classList.toggle("hidden", p.mode !== "general");
+  productEditTitle.textContent = `${labelProduct(p)} wijzigen`;
+};
+
+deleteProductFromModal.onclick = () => {
+  if (!editingProductId) return;
+  const id = editingProductId;
+  closeProductEdit();
+  deleteProduct(id);
+};
+
+// Geen productgroep-knoppen meer nodig; de tabnavigatie blijft het dagelijkse werkproces volgen.
+usageTabBtn.innerHTML = '<span class="nav-icon">♙</span><span>Kamers</span>';
+
+renderAll();
