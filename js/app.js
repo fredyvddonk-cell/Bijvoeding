@@ -1622,7 +1622,19 @@ function productWithFlavor(r){const f=scheduleFlavorText(r);return `${r.productN
 function closePdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.add("hidden");document.body.style.overflow="";}
 function localISODate(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;}
 function openPdfUnitModal(){
-  const el=document.getElementById("pdfWeekDate"); if(el&&!el.value) el.value=localISODate(new Date());
+  const box=document.getElementById("pdfWeekChoices");
+  if(box){
+    box.innerHTML="";
+    const now=new Date();
+    for(let i=0;i<6;i++){
+      const d=new Date(now);d.setDate(now.getDate()+i*7);
+      const wi=weekInfo(localISODate(d));
+      const label=document.createElement("label");
+      label.style.cssText="display:flex;align-items:center;gap:8px";
+      label.innerHTML=`<input type="checkbox" class="pdf-week-check" value="${localISODate(wi.dates[0])}" ${i===0?"checked":""}> Week ${wi.week} · ${localISODate(wi.dates[0]).split('-').reverse().join('-')} t/m ${localISODate(wi.dates[6]).split('-').reverse().join('-')}`;
+      box.appendChild(label);
+    }
+  }
   document.getElementById("pdfUnitModal")?.classList.remove("hidden");document.body.style.overflow="hidden";
 }
 document.getElementById("printDaySchedule")?.addEventListener("click",openPdfUnitModal);
@@ -1666,9 +1678,7 @@ function rowDetailLines(row){
   const r=row.items[0];
   return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[`__EXTRA__${r.scheduleNote}`]:[]);
 }
-async function makeDaySchedule(unit){
-  const dateValue=document.getElementById("pdfWeekDate")?.value||localISODate(new Date());
-  closePdfUnitModal();
+async function createSchedulePdf(unit,dateValue){
   const rows=buildUnitRows(unit);
   if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
   if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
@@ -1737,11 +1747,22 @@ async function makeDaySchedule(unit){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test13",W-mr,H-3.5,{align:"right"});
-  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`; const file=new File([blob],filename,{type:"application/pdf"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3-test16",W-mr,H-3.5,{align:"right"});
+  const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
+  return new File([blob],filename,{type:"application/pdf"});
+}
+
+async function makeSelectedSchedules(){
+  const units=[...document.querySelectorAll(".pdf-unit-check:checked")].map(x=>x.value);
+  const weeks=[...document.querySelectorAll(".pdf-week-check:checked")].map(x=>x.value);
+  if(!units.length||!weeks.length){alert("Selecteer minimaal één unit en één week.");return;}
+  closePdfUnitModal();
+  const files=[];
+  for(const weekDate of weeks){for(const unit of units){const f=await createSchedulePdf(unit,weekDate);if(f)files.push(f);}}
+  if(!files.length){alert("Er konden geen PDF-bestanden worden gemaakt voor de gekozen selectie.");return;}
   try{
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){await navigator.share({title:`Bijvoeding aftekenlijst Unit ${unit}`,text:`Bijgevoegd de bijvoeding aftekenlijst van Unit ${unit}, week ${week}.`,files:[file]});}
-    else{const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);alert("De PDF is gemaakt en gedownload. Je kunt hem nu als bijlage mailen.");}
-  }catch(e){if(e?.name!=="AbortError") doc.save(filename);}
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title:"Bijvoeding aftekenlijsten",text:`Bijgevoegd ${files.length} aftekenlijst${files.length===1?"":"en"}.`,files});}
+    else{for(const file of files){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}alert(`${files.length} PDF-bestand${files.length===1?"":"en"} gemaakt. Voeg ze samen als bijlagen toe aan één e-mail.`);}
+  }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
 }
 
