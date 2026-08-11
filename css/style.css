@@ -27,3 +27,9 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .brand-mark img{display:block;width:58px;height:58px;object-fit:contain;border:0}
 .counter-value{font-size:.88rem!important;font-weight:700!important;line-height:1.2}
 @media(max-width:520px){.brand-mark{width:48px;height:48px;flex-basis:48px}.brand-mark img{width:48px;height:48px}.counter-value{font-size:.88rem!important;font-weight:700!important}}
+
+/* V3.0.4 — compact transparent header logo */
+.brand-mark{width:64px;height:64px;flex:0 0 64px;overflow:visible}
+.brand-mark img{width:64px!important;height:64px!important;object-fit:contain;background:transparent!important}
+.counter-value{font-size:.88rem!important;font-weight:700!important;line-height:1.2!important}
+@media(max-width:520px){.brand-mark{width:58px;height:58px;flex-basis:58px}.brand-mark img{width:58px!important;height:58px!important}.counter-value{font-size:.88rem!important}}
