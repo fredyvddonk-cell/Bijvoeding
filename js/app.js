@@ -1267,6 +1267,7 @@ function renderUsage() {
     ${g.rows.map(r => `<div class="room-line">
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</span></div>
+      ${r.scheduleNote ? `<div class="schedule-meta"><strong>Extra info:</strong> ${esc(r.scheduleNote)}</div>` : ""}
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
@@ -1655,10 +1656,15 @@ function rowActiveOn(row,idx){const key=["ma","di","wo","do","vr","za","zo"][idx
 function rowDetailLines(row){
   if(row.choice){
     const out=[`KIES 1 VAN DE ${row.items.length}`];
-    row.items.forEach((r,i)=>{out.push(`${i+1}. ${productWithFlavor(r)} - ${amountText(r)}`); if(i<row.items.length-1) out.push("OF");});
-    const notes=[...new Set(row.items.map(r=>r.scheduleNote).filter(Boolean))]; return out.concat(notes);
+    row.items.forEach((r,i)=>{
+      out.push(`${i+1}. ${productWithFlavor(r)} - ${amountText(r)}`);
+      if(r.scheduleNote) out.push(`   Extra info: ${r.scheduleNote}`);
+      if(i<row.items.length-1) out.push("OF");
+    });
+    return out;
   }
-  const r=row.items[0]; return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[r.scheduleNote]:[]);
+  const r=row.items[0];
+  return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[`Extra info: ${r.scheduleNote}`]:[]);
 }
 async function makeDaySchedule(unit){
   const dateValue=document.getElementById("pdfWeekDate")?.value||localISODate(new Date());
