@@ -1,4 +1,4 @@
-const CACHE_NAME = "voorraad-bestellen-V3.0-pwa-v13-0-2";
+const CACHE_NAME = "bij-sondevoeding-V3.0.3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,7 +7,8 @@ const APP_SHELL = [
   "./js/app.js",
   "./manifest.webmanifest",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./logo-header.png"
 ];
 
 self.addEventListener("install", (event) => {

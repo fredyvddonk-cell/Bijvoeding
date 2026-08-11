@@ -1,13 +1,13 @@
 {
-  "name": "Voorraad & Bestellen",
-  "short_name": "Voorraad",
+  "name": "Bij- & Sondevoeding",
+  "short_name": "Bij- & Sondevoeding",
   "description": "Voorraad tellen en bestellen van bijvoeding, sondevoeding en algemene voedingsproducten.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#eef4f6",
-  "theme_color": "#245f73",
+  "background_color": "#ffffff",
+  "theme_color": "#957AC1",
   "icons": [
     {
       "src": "icon-192.png",
