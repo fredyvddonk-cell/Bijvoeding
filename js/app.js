@@ -1657,7 +1657,13 @@ function scheduleFlavorText(r){
 function normalizedTimes(v){return String(v||"").split(/[,;]+/).map(x=>x.trim().replace(".",":")).filter(Boolean);}
 function dayText(r){const d=normalizeDays(r.scheduleDays); return d===ALL_DAYS ? "" : d.split(",").join(" ");}
 function amountText(r){return r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${plural(r.dailyUnit,r.scheduleAmount)}` : `${fmt(r.dailyAmount)} ${plural(r.dailyUnit,r.dailyAmount)} per dag`;}
-function productWithFlavor(r){const f=scheduleFlavorText(r);return `${r.productName}${f?` (${f})`:""}`;}
+function productWithFlavor(r){
+  const f=scheduleFlavorText(r);
+  // Bij bijvoeding zijn selectedProductIds de voorkeurssmaken van deze kamer.
+  // Maak dat op beide PDF-lijsten expliciet zichtbaar.
+  const pref = r.mode === "drink" && !r.allFlavors && (r.selectedProductIds || []).length ? " · VOORKEUR" : "";
+  return `${r.productName}${f?` (${f}${pref})`:""}`;
+}
 function closePdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.add("hidden");document.body.style.overflow="";}
 function localISODate(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;}
 function openPdfUnitModal(){
@@ -1817,7 +1823,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.12",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.13",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1857,7 +1863,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.12",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.13",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){
@@ -1881,7 +1887,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.12 — volledige back-up maken en terugzetten.
+// V3.3.13 — volledige back-up maken en terugzetten.
 (function setupBackupTools(){
   const makeBtn = document.getElementById("makeBackup");
   const restoreBtn = document.getElementById("restoreBackup");
@@ -1897,7 +1903,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.12",
+        version: "V3.3.13",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -1950,7 +1956,7 @@ async function makeSelectedSchedules(){
 })();
 
 
-// V3.3.12 — zoeken op product bij Voorraad en Bestellen.
+// V3.3.13 — zoeken op product bij Voorraad en Bestellen.
 (function setupProductSearch(){
   const countInput = document.getElementById("countSearch");
   const orderInput = document.getElementById("orderSearch");
