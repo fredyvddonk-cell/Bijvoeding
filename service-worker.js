@@ -1,4 +1,4 @@
-const CACHE_NAME = "voorraad-bestellen-V3.0-pwa-v1";
+const CACHE_NAME = "voorraad-bestellen-V3.0-pwa-v13-0-2";
 const APP_SHELL = [
   "./",
   "./index.html",
