@@ -386,7 +386,7 @@ function renderCounting() {
       ${currentMode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
       ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${currentMode !== "general" ? `<div class="expiry-line">${thtStatusHtml(p) || `<span class="muted">THT nog niet vastgelegd</span>`}</div><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>` : ""}
+      ${currentMode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -654,7 +654,7 @@ function renderDrinkOrders() {
         <div class="order-room-pref"><strong>${esc(roomNames)}</strong></div>
         <div class="order-pref-choice">Toegestaan: <strong>${esc(choice)}</strong></div>
         <div class="order-main">${pg.orderUnits > 0
-          ? `<strong>${pg.orderUnits} ${esc(plural(p.orderUnit, pg.orderUnits))}</strong> <span>bestellen uit: ${esc(choice)}</span>`
+          ? `<span class="status-order">Bestellen · ${pg.orderUnits} ${esc(plural(p.orderUnit, pg.orderUnits))}</span> <span>uit: ${esc(choice)}</span>`
           : `<span class="status-ok">Voldoende voorraad voor deze kamer${pg.rooms.length > 1 ? "s" : ""}</span>`}
         </div>
         <div class="order-meta">Verbruik: ${fmt(pg.daily)} ${esc(p.consumptionUnit)} per dag · doel ${g.targetDays} dagen${days != null ? `<br>Toegewezen voorraad: ${fmt(pg.allocated)} ${esc(looseUnitLabel(p, pg.allocated))} · ± ${fmt(days)} dagen` : ""}</div>
@@ -664,7 +664,7 @@ function renderDrinkOrders() {
     const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
-      <div class="order-summary">${totalOrder > 0 ? `<strong>${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</strong> bestellen` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+      <div class="order-summary">${totalOrder > 0 ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
       <div class="order-variant-list">${stockRows}</div>
       <details class="order-details"><summary>Berekening bekijken</summary>
         <div class="order-pref-groups">${prefSections}</div>
@@ -681,7 +681,7 @@ function renderOrders() {
     const tht = currentMode === "general" ? "" : thtBadgeHtml(p);
     return `<div class="item order-card">
       <div class="order-product">${esc(labelProduct(p))}</div>
-      <div class="order-main">${a.orderUnits > 0 ? `<strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+      <div class="order-main">${a.orderUnits > 0 ? `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
       <div class="order-meta">${currentMode === "general" ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}` : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks()} weken`}${currentMode !== "general" ? `<br>Minimum: ${esc(minimumText(p))}` : (Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${esc(minimumText(p))}` : "")}</div>
       ${tht ? `<div class="order-chips">${tht}</div>` : ""}
     </div>`;
@@ -1136,7 +1136,7 @@ function renderCounting() {
       ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
       ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${p.mode !== "general" ? `<div class="expiry-line">${thtStatusHtml(p) || `<span class="muted">THT nog niet vastgelegd</span>`}</div><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>` : ""}
+      ${p.mode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -1185,7 +1185,7 @@ function sondeOrGeneralOrderCard(p) {
     : `${esc(daysSupplyText(p))} · verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks(p.mode)} weken<br>Minimum: ${esc(minimumText(p))}`;
   return `<div class="item order-card">
     <div class="order-product">${esc(labelProduct(p))}</div>
-    <div class="order-main">${a.orderUnits > 0 ? `<strong>${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</strong> <span>bestellen</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+    <div class="order-main">${a.orderUnits > 0 ? `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
     <div class="order-meta">${meta}</div>
     ${tht ? `<div class="order-chips">${tht}</div>` : ""}
   </div>`;
@@ -1213,7 +1213,7 @@ function overviewAttentionItems() {
     const plan = drinkFamilyPlan(name);
     const stock = familyStockUnits(name, "drink");
     const unused = familyDailyUsage(name, "drink") <= 0 && stock > 0;
-    const tht = products.map(x => thtBadgeHtml(x)).filter(Boolean).join("");
+    const tht = [...new Set(products.map(x => thtBadgeHtml(x)).filter(Boolean))].join("");
     const thtAttention = products.some(x => { const e = expiryInfo(x); return e.expired || e.soon || e.quarterlyDue; });
     if (plan.orderUnits > 0 || unused || thtAttention) {
       items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused, tht, mode:"drink"});
