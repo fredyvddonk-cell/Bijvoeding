@@ -1062,6 +1062,10 @@ document.querySelectorAll(".tab-btn").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
   b.classList.add("active");
   document.getElementById(b.dataset.tab).classList.add("active");
+  // Elke pagina begint bovenaan, ook op mobiel/PWA.
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 });
 document.querySelectorAll(".week-picker button").forEach(b => b.onclick = () => {
   if (currentMode === "drink") data.settings.drinkWeeks = Number(b.dataset.weeks);
@@ -1663,8 +1667,10 @@ async function makeDaySchedule(unit){
   if(!rows.length){alert(`Voor Unit ${unit} zijn nog geen bijvoedingen met tijdstip ingevuld.`);return;}
   if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
   const {dates,week}=weekInfo(dateValue), dayNames=["Ma","Di","Wo","Do","Vr","Za","Zo"];
-  const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-  const W=210,H=297,ml=7,mr=7,top=8,bottom=7, tableW=W-ml-mr;
+  const {jsPDF}=window.jspdf;
+  // PDF altijd expliciet A4 PORTRAIT maken.
+  const doc=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),ml=7,mr=7,top=8,bottom=7, tableW=W-ml-mr;
   // Portrait: compacte kamer- en dagkolommen, met zoveel mogelijk ruimte voor de voedingsinformatie.
   const roomW=15,dayW=13,detailW=tableW-roomW-7*dayW;
   const fmtDate=d=>`${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
