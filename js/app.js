@@ -152,9 +152,17 @@ function looseUnitLabel(p, n = 2) {
   }
   return u;
 }
+function quantityUnitLabel(unit, n = 2) {
+  const u = unit || "stuks";
+  if (u === "ml") return "ml";
+  const singular = { flesjes:"flesje", bakjes:"bakje", zakjes:"zakje", stuks:"stuk" };
+  const pluralMap = { flesje:"flesjes", bakje:"bakjes", zakje:"zakjes", stuk:"stuks" };
+  if (Number(n) === 1) return singular[u] || u;
+  return pluralMap[u] || u;
+}
 function packageCountLabel(p, n) {
   const unit = plural(p.orderUnit, n);
-  return `${fmt(n)} ${unit} van ${fmt(p.contentPerOrderUnit || 1)}`;
+  return `${fmt(n)} ${unit}`;
 }
 function familyProducts(name, mode, includeInactive = false) {
   return data.products
@@ -382,10 +390,9 @@ function renderCounting() {
         <div class="days-pill">${currentMode === "general" ? "" : esc(daysSupplyText(p))}</div>
       </div>
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
-      <span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span>
       ${currentMode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
-      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
+      ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
       ${currentMode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
@@ -1162,17 +1169,15 @@ function renderCounting() {
       </div>
       ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
-      <span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span>
       ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
-      ${loose ? `<div style="margin-top:12px"><span class="muted">Losse ${esc(looseUnitLabel(p, 2))}</span><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${p.mode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
+      ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
+      <div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
 
 function renderUsage() {
-  roomFormCard.classList.remove("hidden");
   generalTargetCard.classList.add("hidden");
   usageListTitle.textContent = "Ingevoerde kamers";
   const rs = [...data.rooms]
@@ -1189,7 +1194,7 @@ function renderUsage() {
     <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
     ${g.rows.map(r => `<div class="room-line">
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
-      <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</span></div>
+      <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</span></div>
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
@@ -1231,6 +1236,16 @@ function renderOrders() {
   currentMode = old;
 }
 
+function familyThtSummary(products) {
+  const rows = (products || []).map(p => ({p, e: expiryInfo(p)}));
+  const expired = rows.filter(x => x.e.expired && x.p.expiryDate).sort((a,b) => String(a.p.expiryDate).localeCompare(String(b.p.expiryDate)));
+  if (expired.length) return {attention:true, html:`<span class="attention-chip danger-chip">THT verlopen · ${esc(formatDate(expired[0].p.expiryDate))}</span>`};
+  const soon = rows.filter(x => x.e.soon && x.p.expiryDate).sort((a,b) => String(a.p.expiryDate).localeCompare(String(b.p.expiryDate)));
+  if (soon.length) return {attention:true, html:`<span class="attention-chip warn-chip">THT binnenkort · ${esc(formatDate(soon[0].p.expiryDate))}</span>`};
+  if (rows.some(x => x.e.quarterlyDue)) return {attention:true, html:`<span class="attention-chip neutral-chip">THT controleren</span>`};
+  return {attention:false, html:""};
+}
+
 function overviewAttentionItems() {
   const items = [];
   const old = currentMode;
@@ -1243,25 +1258,37 @@ function overviewAttentionItems() {
     const plan = drinkFamilyPlan(name);
     const stock = familyStockUnits(name, "drink");
     const unused = familyDailyUsage(name, "drink") <= 0 && stock > 0;
-    const tht = [...new Set(products.map(x => thtBadgeHtml(x)).filter(Boolean))].join("");
-    const thtAttention = products.some(x => { const e = expiryInfo(x); return e.expired || e.soon || e.quarterlyDue; });
-    if (plan.orderUnits > 0 || unused || thtAttention) {
-      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused, tht, mode:"drink"});
+    const thtSummary = familyThtSummary(products);
+    if (plan.orderUnits > 0 || unused || thtSummary.attention) {
+      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused, tht:thtSummary.html, mode:"drink"});
     }
   });
 
-  allProductsOrdered().filter(p => p.mode === "sonde").forEach(p => {
+  const sondeNames = [...new Set(allProductsOrdered().filter(p => p.mode === "sonde").map(p => p.name))];
+  sondeNames.forEach(name => {
+    const products = familyProducts(name, "sonde", true);
+    const p = products.find(activeProduct) || products[0];
+    if (!p) return;
     const a = adviceForProduct(p);
-    const e = expiryInfo(p);
-    const unused = !isInUse(p) && stockUnits(p) > 0;
-    if (a.orderUnits > 0 || unused || e.expired || e.soon || e.quarterlyDue) {
-      items.push({p, name:labelProduct(p), orderUnits:a.orderUnits, stock:stockUnits(p), days:daysSupply(p), unused, tht:thtBadgeHtml(p), mode:"sonde"});
+    const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
+    const unused = products.every(x => !isInUse(x)) && stock > 0;
+    const thtSummary = familyThtSummary(products);
+    if (a.orderUnits > 0 || unused || thtSummary.attention) {
+      items.push({p, name, orderUnits:a.orderUnits, stock, days:daysSupply(p), unused, tht:thtSummary.html, mode:"sonde"});
     }
   });
 
-  allProductsOrdered().filter(p => p.mode === "general").forEach(p => {
-    const a = adviceForProduct(p);
-    if (a.orderUnits > 0) items.push({p, name:labelProduct(p), orderUnits:a.orderUnits, stock:stockUnits(p), days:null, unused:false, tht:"", mode:"general"});
+  const generalNames = [...new Set(allProductsOrdered().filter(p => p.mode === "general").map(p => p.name))];
+  generalNames.forEach(name => {
+    const products = familyProducts(name, "general", true);
+    const p = products[0];
+    if (!p) return;
+    const orderUnits = products.reduce((sum, x) => sum + adviceForProduct(x).orderUnits, 0);
+    const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
+    const thtSummary = familyThtSummary(products);
+    if (orderUnits > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits, stock, days:null, unused:false, tht:thtSummary.html, mode:"general"});
+    }
   });
   currentMode = old;
   return items;
@@ -1276,7 +1303,7 @@ function renderRoomOverview() {
     groups.get(key).rows.push(r);
   });
   const rooms = [...groups.values()].sort((a,b) => Number(a.unit)-Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, {numeric:true}));
-  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}</span><strong>${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}</span><strong>${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
 function renderOverview() {

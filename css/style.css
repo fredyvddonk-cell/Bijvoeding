@@ -81,3 +81,7 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .form-actions-inline{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(160px,1.3fr);gap:9px;margin-top:4px}
 .form-actions-inline button{margin:0}
 @media(max-width:520px){.add-toolbar{margin-bottom:8px}.add-trigger{width:100%!important}.form-actions-inline{grid-template-columns:1fr 1.3fr}}
+
+/* V3.1.7 */
+.hidden{display:none!important}
+.loose-counter-compact{margin-top:7px}
