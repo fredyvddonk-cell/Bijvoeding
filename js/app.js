@@ -1144,7 +1144,6 @@ const syncExternalNewForm = () => {
   if (ext) { productType.value = "drink"; currentMode = "drink"; }
   productType.disabled = ext;
   externalQuantityField.classList.toggle("hidden", !ext);
-  externalDaysField.classList.toggle("hidden", !ext);
   [consumptionUnit, orderUnit, contentPerOrderUnit, looseUnitsAllowed, stockFull, stockLoose, alreadyOrdered, minimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
   flavorField.classList.remove("hidden");
 };
@@ -1153,7 +1152,6 @@ externalProduct.onchange = syncExternalNewForm;
 const syncExternalEditForm = () => {
   const ext = editExternalProduct.checked;
   editExternalQuantityField.classList.toggle("hidden", !ext);
-  editExternalDaysField.classList.toggle("hidden", !ext);
   [editConsumptionUnit, editOrderUnit, editContentPerOrderUnit, editLooseUnitsAllowed, editStockFull, editStockLoose, editAlreadyOrdered, editMinimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
   editProductActiveRow.classList.toggle("hidden", ext || (data.products.find(x => x.id === editingProductId)?.mode === "general"));
   editProductPhaseOutRow.classList.add("hidden");
@@ -1491,11 +1489,6 @@ roomProduct.onchange = () => {
   currentMode = roomType.value;
   setRoomUnitFromProduct(roomProduct, dailyUnit);
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
-  const extDefault = familyProducts(parseRoomProductName(roomProduct.value), currentMode, true).find(p => p.externalProduct === true);
-  if (extDefault) {
-    scheduleDays.value = extDefault.externalDays || ALL_DAYS;
-    syncChipPicker("add", scheduleTimes.value, scheduleDays.value);
-  }
 };
 productType.onchange = syncProductTypeFields;
 
@@ -1634,7 +1627,7 @@ function syncExternalSimpleDays(prefix, days){
   input.value = selected.join(",");
   box.querySelectorAll("[data-day]").forEach(b => b.classList.toggle("selected", selected.includes(b.dataset.day)));
 }
-setupExternalSimpleDays("add"); setupExternalSimpleDays("edit");
+
 function normalizeDays(v){
   if(!v || v==="Alle dagen") return ALL_DAYS;
   if(v==="Maandag t/m vrijdag") return "Ma,Di,Wo,Do,Vr";
@@ -1830,7 +1823,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.5",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.6",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1870,7 +1863,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.5",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.6",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){

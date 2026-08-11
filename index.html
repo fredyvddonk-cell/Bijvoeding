@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3.5</title>
+<title>Bij- &amp; Sondevoeding V3.3.6</title>
 <link rel="stylesheet" href="css/style.css?v=3.3.5">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3.5</span>
+    <span class="version">V3.3.6</span>
   </div>
 </header>
 
@@ -125,7 +125,7 @@
         <div class="field"><label for="stockFull">Aantal hele bestelverpakkingen op voorraad</label><input id="stockFull" type="number" min="0" step="1" value="0"></div>
         <div class="field" id="looseField"><label for="stockLoose">Losse eenheden</label><input id="stockLoose" type="number" min="0" step="1" value="0"></div>
       </div>
-      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in Voorraad of Bestellen.</div></div><label class="switch"><input id="externalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="externalQuantityField"><label for="externalQuantity">Aantal</label><input id="externalQuantity" type="number" min="0" step="1" value="0"><div class="field-help">Alleen ter registratie; dit aantal wordt niet meegenomen in Voorraad of Bestellen.</div></div><div class="field hidden" id="externalDaysField"><label>Dagen</label><div class="chip-picker day-picker" id="externalDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="externalDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"><div class="field-help">Standaard alle dagen. Tik een dag uit als deze bijvoeding die dag niet nodig is.</div></div>
+      <div class="field"><label for="alreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="alreadyOrdered" type="number" min="0" step="1" value="0"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in Voorraad of Bestellen.</div></div><label class="switch"><input id="externalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="externalQuantityField"><label for="externalQuantity">Aantal</label><input id="externalQuantity" type="number" min="0" step="1" value="0"><div class="field-help">Alleen ter registratie; dit aantal wordt niet meegenomen in Voorraad of Bestellen.</div></div>
       <div class="field" id="manualMinimumField"><label for="minimumStock">Minimumvoorraad (alleen Algemeen)</label><input id="minimumStock" type="number" min="0" step="1" value="0"><div class="field-help">Bij Bijvoeding en Sondevoeding berekent de app dit automatisch op basis van 10 dagen levertijd.</div></div>
       <div class="form-actions-inline">
         <button type="button" class="secondary" id="cancelProductAdd">Annuleren</button>
@@ -196,69 +196,7 @@
       <div class="field" id="editLooseField"><label for="editStockLoose">Losse eenheden</label><input id="editStockLoose" type="number" min="0" step="1"></div>
     </div>
     <div class="row">
-      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel gebruiken bij Kamers en PDF-lijsten; niet tonen bij Voorraad en Bestellen.</div></div><label class="switch"><input id="editExternalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="editExternalQuantityField"><label for="editExternalQuantity">Aantal</label><input id="editExternalQuantity" type="number" min="0" step="1" value="0"></div><div class="field hidden" id="editExternalDaysField"><label>Dagen</label><div class="chip-picker day-picker" id="editExternalDayChips"><button type="button" data-day="Ma" class="selected">Ma</button><button type="button" data-day="Di" class="selected">Di</button><button type="button" data-day="Wo" class="selected">Wo</button><button type="button" data-day="Do" class="selected">Do</button><button type="button" data-day="Vr" class="selected">Vr</button><button type="button" data-day="Za" class="selected">Za</button><button type="button" data-day="Zo" class="selected">Zo</button></div><input id="editExternalDays" type="hidden" value="Ma,Di,Wo,Do,Vr,Za,Zo"></div>
-      <div class="field"><label for="editMinimumStock">Minimumvoorraad in bestelverpakkingen</label><input id="editMinimumStock" type="number" min="0" step="1"></div>
-    </div>
-
-    <div class="toggle-row" id="editProductActiveRow">
-      <div>
-        <strong>Smaak actief in assortiment</strong>
-        <div class="field-help">Zet uit als deze smaak niet meer leverbaar is. Bestaande voorraad blijft zichtbaar bij Voorraad tellen.</div>
-      </div>
-      <label class="switch" aria-label="Smaak actief"><input id="editProductActive" type="checkbox"><span class="switch-slider"></span></label>
-    </div>
-    <div class="toggle-row hidden" id="editProductPhaseOutRow">
-      <div>
-        <strong>Uitlopend product</strong>
-        <div class="field-help">Voorraad blijft meetellen bij dezelfde sondevoeding, maar deze verpakking wordt niet meer geadviseerd om te bestellen.</div>
-      </div>
-      <label class="switch" aria-label="Uitlopend product"><input id="editProductPhaseOut" type="checkbox"><span class="switch-slider"></span></label>
-    </div>
-    <div class="modal-info"><strong>Informatie</strong><br><span>Wijzigingen gelden direct overal waar dit product aan een kamer is gekoppeld.</span></div>
-    <button type="button" class="modal-delete-product" id="deleteProductFromModal">Product verwijderen</button>
-    <div class="modal-actions">
-      <button type="button" class="secondary" onclick="closeProductEdit()">Annuleren</button>
-      <button type="button" class="primary" id="saveProductEdit">Wijzigingen opslaan</button>
-    </div>
-  </div>
-</div>
-
-<div id="expiryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="expiryTitle">
-  <div class="modal-backdrop" onclick="closeExpiryModal()"></div>
-  <div class="modal-panel">
-    <div class="modal-head">
-      <h2 id="expiryTitle">THT controleren</h2>
-      <button type="button" class="modal-close" onclick="closeExpiryModal()" aria-label="Sluiten">×</button>
-    </div>
-    <div id="expiryProductLabel" class="modal-product-name"></div>
-    <div class="field">
-      <label for="expiryDateInput">Eerstvolgende THT</label>
-      <input id="expiryDateInput" type="date">
-      <div class="field-help">Vul de vroegste THT in die je in de kast ziet. Controleer ook achteraan in de kast.</div>
-    </div>
-    <div id="lastExpiryCheckInfo" class="modal-info"></div>
-    <div class="modal-actions">
-      <button type="button" class="secondary" onclick="closeExpiryModal()">Annuleren</button>
-      <button type="button" class="primary" id="saveExpiryCheck">Controle uitgevoerd</button>
-    </div>
-  </div>
-</div>
-
-<div id="deleteRoomModal" class="delete-confirm hidden" role="dialog" aria-modal="true" aria-labelledby="deleteRoomTitle">
-  <div class="delete-confirm-backdrop" onclick="closeDeleteRoomModal()"></div>
-  <div class="delete-confirm-panel">
-    <div class="delete-icon" aria-hidden="true">⌫</div>
-    <h2 id="deleteRoomTitle">Kamerregel verwijderen?</h2>
-    <p>Weet je zeker dat je deze kamerregel wilt verwijderen?</p>
-    <div class="delete-info">Deze actie kan niet ongedaan worden gemaakt.</div>
-    <div class="delete-actions">
-      <button type="button" class="delete-cancel" onclick="closeDeleteRoomModal()">Annuleren</button>
-      <button type="button" class="delete-danger" id="confirmDeleteRoom">Verwijderen</button>
-    </div>
-  </div>
-</div>
-
-<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF maken</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><div class="field-label">Soort PDF</div><div class="pdf-type-grid"><label class="pdf-type-check"><input type="checkbox" class="pdf-type-input" value="check" checked><span><strong>Aftekenlijst</strong><small>Met dagen, datums en afvinkvakjes</small></span></label><label class="pdf-type-check"><input type="checkbox" class="pdf-type-input" value="overview"><span><strong>Overzichtslijst</strong><small>Zonder dagen, groter en ruimer</small></span></label></div><div class="field-label">Units</div><div class="pdf-unit-grid"><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="1" checked><span>Unit 1</span></label><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="2" checked><span>Unit 2</span></label><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="3" checked><span>Unit 3</span></label></div><div id="pdfWeekSection"><div class="field-label">Weken</div><div id="pdfWeekChoices" style="display:grid;gap:7px;margin:7px 0 14px"></div></div><button type="button" class="primary" style="width:100%" onclick="makeSelectedSchedules()">PDF bestanden maken / delen</button></div></div>
+      <div class="field"><label for="editAlreadyOrdered">Reeds besteld in bestelverpakkingen</label><input id="editAlreadyOrdered" type="number" min="0" step="1"></div><div class="toggle-row"><div><strong>Niet door ons besteld</strong><div class="field-help">Wel gebruiken bij Kamers en PDF-lijsten; niet tonen bij Voorraad en Bestellen.</div></div><label class="switch"><input id="editExternalProduct" type="checkbox"><span class="switch-slider"></span></label></div><div class="field hidden" id="editExternalQuantityField"><label for="editExternalQuantity">Aantal</label><input id="editExternalQuantity" type="number" min="0" step="1" value="0"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/defaults.js"></script>
