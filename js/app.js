@@ -359,7 +359,7 @@ function thtStatusHtml(p) {
   if (e.expired) bits.push(`<span class="status-danger">THT verstreken</span>`);
   else if (e.soon) bits.push(`<span class="status-warn">THT ${esc(formatDate(p.expiryDate))} · Let op</span>`);
   else if (p.expiryDate) bits.push(`<span class="muted">THT ${esc(formatDate(p.expiryDate))}</span>`);
-  if (e.quarterlyDue) bits.push(`<span class="status-warn">THT controleren</span>`);
+  // Periodieke controle wordt via de THT-knop uitgevoerd; geen herhaalde tekst in de voorraadkaart.
   return bits.join("<br>");
 }
 function thtBadgeHtml(p) {
@@ -434,22 +434,37 @@ function renderProducts() {
 }
 
 let draggedProductItem = null;
+let dragPointerY = null;
+let dragScrollFrame = null;
+function dragAutoScrollStep() {
+  if (!draggedProductItem || dragPointerY == null) { dragScrollFrame = null; return; }
+  const edge = Math.max(95, Math.min(150, window.innerHeight * 0.16));
+  let delta = 0;
+  if (dragPointerY < edge) {
+    const strength = (edge - dragPointerY) / edge;
+    delta = -Math.max(5, Math.round(22 * strength));
+  } else if (dragPointerY > window.innerHeight - edge) {
+    const strength = (dragPointerY - (window.innerHeight - edge)) / edge;
+    delta = Math.max(5, Math.round(22 * strength));
+  }
+  if (delta) window.scrollBy(0, delta);
+  dragScrollFrame = requestAnimationFrame(dragAutoScrollStep);
+}
 productList.addEventListener("pointerdown", e => {
   const handle = e.target.closest(".drag-handle");
   if (!handle) return;
   const item = handle.closest(".product-sort-item");
   if (!item) return;
   draggedProductItem = item;
+  dragPointerY = e.clientY;
   item.classList.add("dragging");
   handle.setPointerCapture?.(e.pointerId);
+  if (!dragScrollFrame) dragScrollFrame = requestAnimationFrame(dragAutoScrollStep);
   e.preventDefault();
 });
 productList.addEventListener("pointermove", e => {
   if (!draggedProductItem) return;
-  const edge = 90;
-  const speed = 14;
-  if (e.clientY < edge) window.scrollBy(0, -speed);
-  else if (e.clientY > window.innerHeight - edge) window.scrollBy(0, speed);
+  dragPointerY = e.clientY;
   const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".product-sort-item");
   if (!target || target === draggedProductItem || target.parentElement !== productList) return;
   const rect = target.getBoundingClientRect();
@@ -459,6 +474,9 @@ function finishProductDrag() {
   if (!draggedProductItem) return;
   draggedProductItem.classList.remove("dragging");
   draggedProductItem = null;
+  dragPointerY = null;
+  if (dragScrollFrame) cancelAnimationFrame(dragScrollFrame);
+  dragScrollFrame = null;
   [...productList.querySelectorAll(".product-sort-item")].forEach((el, i) => {
     const p = data.products.find(x => x.id === el.dataset.productId);
     if (p) p.order = i + 1;
@@ -1110,9 +1128,9 @@ function renderCounting() {
     const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
     return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
       <div class="item-head">
-        <div><strong>${esc(labelProduct(p))}</strong><div class="count-meta">${p.mode === "general" ? "" : useBadge(p)}</div></div>
-        <div class="days-pill">${p.mode === "general" ? "" : esc(daysSupplyText(p))}</div>
+        <div><strong>${esc(labelProduct(p))}</strong></div>
       </div>
+      ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
       <span class="muted">${hasLooseUnits(p) ? `Bestelverpakking: ${esc(plural(p.orderUnit, 2))} van ${fmt(p.contentPerOrderUnit)} ${esc(looseUnitLabel(p, 2))}` : `Voorraad in ${esc(plural(p.orderUnit, 2))}`}</span>
       ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
@@ -1140,7 +1158,8 @@ function renderUsage() {
   usageList.innerHTML = groups.length ? groups.map(g => `<div class="room-group-card">
     <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
     ${g.rows.map(r => `<div class="room-line">
-      <div class="room-line-main"><span class="room-line-text">${esc(roomProductLabel(r))} <span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</span></div>
+      <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
+      <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(r.dailyUnit)}/dag</span></div>
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
