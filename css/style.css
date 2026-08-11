@@ -223,3 +223,25 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .pdf-type-option{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid #e3e3e8;border-radius:12px;background:#fff;color:#2d2d37;text-align:left}.pdf-type-option small{color:#6f6f78}.pdf-type-option.selected{border:2px solid #957ac1;background:#f5f1fa}.pdf-type-option.selected small{color:#5f5077}
 
 .pdf-type-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e3e3e8;border-radius:12px;background:#fff;color:#2d2d37;cursor:pointer}.pdf-type-check input{margin-top:3px;accent-color:#957ac1}.pdf-type-check span{display:flex;flex-direction:column;gap:2px}.pdf-type-check small{color:#6f6f78}
+\n/* V3.3.4 PDF-keuze compact en in appkleuren */
+.pdf-unit-panel{max-width:430px;max-height:calc(100dvh - 32px);overflow-y:auto;padding-bottom:18px}
+.pdf-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:7px 0 14px}
+.pdf-type-check{position:relative;display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;min-width:0}
+.pdf-type-check input{appearance:none;-webkit-appearance:none;width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;flex:0 0 22px;margin:0;border:2px solid #a9adb2;border-radius:6px;background:#fff;display:grid;place-items:center}
+.pdf-type-check input:checked{background:var(--green);border-color:var(--green)}
+.pdf-type-check input:checked::after{content:"✓";color:#fff;font-size:15px;font-weight:900;line-height:1}
+.pdf-type-check:has(input:checked){border-color:var(--purple);box-shadow:inset 0 0 0 1px var(--purple);background:#fff}
+.pdf-type-check span{min-width:0}.pdf-type-check strong{font-size:.9rem}.pdf-type-check small{font-size:.72rem;line-height:1.2;color:#6f6f78}
+.pdf-unit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:7px 0 14px}
+.pdf-unit-check-label{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border);border-radius:10px;padding:8px 5px;background:#fff;font-weight:800;font-size:.84rem;cursor:pointer}
+.pdf-unit-check-label input{appearance:none;-webkit-appearance:none;width:20px!important;height:20px!important;min-width:20px!important;max-width:20px!important;margin:0;border:2px solid #a9adb2;border-radius:5px;background:#fff;display:grid;place-items:center}
+.pdf-unit-check-label input:checked{background:var(--green);border-color:var(--green)}
+.pdf-unit-check-label input:checked::after{content:"✓";color:#fff;font-size:14px;font-weight:900;line-height:1}
+.pdf-unit-check-label:has(input:checked){border-color:#b8d5bc;background:#f7fbf7}
+#pdfWeekChoices{gap:6px!important;margin:7px 0 12px!important}
+.pdf-week-option{padding:7px 10px;min-height:43px;border-radius:10px}
+.pdf-week-option strong{font-size:.88rem}.pdf-week-option small{font-size:.7rem;margin-top:1px}
+.pdf-week-box{width:21px;height:21px;flex-basis:21px;border-radius:5px}
+.pdf-week-option.selected{border:1.5px solid var(--purple);background:#fff}
+.pdf-week-option.selected .pdf-week-box{background:var(--green);border-color:var(--green)}
+@media(max-width:380px){.pdf-type-grid{grid-template-columns:1fr}.pdf-type-check{padding:8px 10px}.pdf-unit-grid{gap:5px}.pdf-unit-check-label{font-size:.78rem}}
