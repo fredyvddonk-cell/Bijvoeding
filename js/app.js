@@ -50,6 +50,7 @@ function loadData() {
       if (p.lastExpiryCheck == null) p.lastExpiryCheck = "";
       if (p.active == null) p.active = true;
       if (p.externalProduct == null) p.externalProduct = false;
+      if (p.externalQuantity == null) p.externalQuantity = 0;
       // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
       // Daarna kan dit per product op Ja/Nee worden gezet.
       if (p.looseUnitsAllowed == null) p.looseUnitsAllowed = Number(p.contentPerOrderUnit || 1) > 1;
@@ -982,6 +983,8 @@ function editStock(id) {
   editStockLoose.value = p.stockLoose || 0;
   editAlreadyOrdered.value = p.alreadyOrdered || 0;
   editExternalProduct.checked = p.externalProduct === true;
+  editExternalQuantity.value = p.externalQuantity || 0;
+  syncExternalEditForm();
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
   editProductActiveRow.classList.toggle("hidden", p.mode === "general");
@@ -1010,7 +1013,8 @@ saveProductEdit.onclick = () => {
   const oldName = p.name;
   const name = canonicalName(editProductName.value.trim());
   const flavor = p.mode === "sonde" ? "" : editFlavor.value.trim();
-  const content = Number(String(editContentPerOrderUnit.value).replace(",", "."));
+  const isExternal = editExternalProduct.checked;
+  const content = isExternal ? 1 : Number(String(editContentPerOrderUnit.value).replace(",", "."));
   if (!name || !Number.isFinite(content) || content <= 0) {
     alert("Vul productnaam en inhoud per besteleenheid in.");
     return;
@@ -1033,7 +1037,8 @@ saveProductEdit.onclick = () => {
   p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
   p.stockLoose = p.looseUnitsAllowed ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
-  p.externalProduct = editExternalProduct.checked;
+  p.externalProduct = isExternal;
+  p.externalQuantity = isExternal ? Math.max(0, Number(editExternalQuantity.value) || 0) : 0;
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
@@ -1130,12 +1135,34 @@ orderUnit.onchange = syncNewLooseField;
 looseUnitsAllowed.onchange = syncNewLooseField;
 syncNewLooseField();
 
+const syncExternalNewForm = () => {
+  const ext = externalProduct.checked;
+  if (ext) { productType.value = "drink"; currentMode = "drink"; }
+  productType.disabled = ext;
+  externalQuantityField.classList.toggle("hidden", !ext);
+  [consumptionUnit, orderUnit, contentPerOrderUnit, looseUnitsAllowed, stockFull, stockLoose, alreadyOrdered, minimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
+  flavorField.classList.remove("hidden");
+};
+externalProduct.onchange = syncExternalNewForm;
+
+const syncExternalEditForm = () => {
+  const ext = editExternalProduct.checked;
+  editExternalQuantityField.classList.toggle("hidden", !ext);
+  [editConsumptionUnit, editOrderUnit, editContentPerOrderUnit, editLooseUnitsAllowed, editStockFull, editStockLoose, editAlreadyOrdered, editMinimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
+  editProductActiveRow.classList.toggle("hidden", ext || (data.products.find(x => x.id === editingProductId)?.mode === "general"));
+  editProductPhaseOutRow.classList.add("hidden");
+  editFlavorField.classList.remove("hidden");
+};
+editExternalProduct.onchange = syncExternalEditForm;
+
 saveProduct.onclick = () => {
   const name = canonicalName(productName.value.trim());
   const fl = currentMode === "sonde" ? "" : flavor.value.trim();
   const cu = consumptionUnit.value;
   const ou = orderUnit.value;
-  const content = Number(contentPerOrderUnit.value);
+  const isExternal = externalProduct.checked;
+  if (isExternal) currentMode = "drink";
+  const content = isExternal ? 1 : Number(contentPerOrderUnit.value);
   const allowLoose = content > 1 && looseUnitsAllowed.value === "yes";
   const sf = Number(stockFull.value || 0);
   const sl = allowLoose ? Number(stockLoose.value || 0) : 0;
@@ -1150,7 +1177,7 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode: currentMode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: isExternal, externalQuantity: isExternal ? Math.max(0, Number(externalQuantity.value) || 0) : 0
   });
   productName.value = "";
   flavor.value = "";
@@ -1159,8 +1186,8 @@ saveProduct.onclick = () => {
   stockFull.value = "0";
   stockLoose.value = "0";
   alreadyOrdered.value = "0";
-  minimumStock.value = "0";
-  syncNewLooseField();
+  minimumStock.value = "0"; externalQuantity.value = "0"; externalProduct.checked = false; productType.disabled = false;
+  syncExternalNewForm(); syncNewLooseField();
   saveData();
 };
 
@@ -1502,7 +1529,9 @@ saveProduct.onclick = () => {
   const fl = mode === "sonde" ? "" : flavor.value.trim();
   const cu = consumptionUnit.value;
   const ou = orderUnit.value;
-  const content = Number(contentPerOrderUnit.value);
+  const isExternal = externalProduct.checked;
+  if (isExternal) currentMode = "drink";
+  const content = isExternal ? 1 : Number(contentPerOrderUnit.value);
   const allowLoose = content > 1 && looseUnitsAllowed.value === "yes";
   const sf = Number(stockFull.value || 0);
   const sl = allowLoose ? Number(stockLoose.value || 0) : 0;
@@ -1767,7 +1796,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.1",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.2",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1807,7 +1836,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.1",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.2",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){
