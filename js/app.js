@@ -872,6 +872,7 @@ function editRoom(id) {
   editScheduleTimes.value = r.scheduleTimes || "";
   editScheduleAmount.value = r.scheduleAmount || "";
   editScheduleDays.value = r.scheduleDays || "Alle dagen";
+  editScheduleChoice.value = r.scheduleChoice || "fixed";
   editScheduleNote.value = r.scheduleNote || "";
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
@@ -920,6 +921,7 @@ saveRoomEdit.onclick = () => {
   r.scheduleTimes = editScheduleTimes.value.trim();
   r.scheduleAmount = Number(String(editScheduleAmount.value).replace(",", ".")) || 0;
   r.scheduleDays = editScheduleDays.value;
+  r.scheduleChoice = editScheduleChoice.value || "fixed";
   r.scheduleNote = editScheduleNote.value.trim();
   closeRoomEdit();
   saveData();
@@ -1248,7 +1250,7 @@ function renderUsage() {
   usageList.innerHTML = groups.length ? groups.map(g => `<div class="room-group-card">
     <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
     ${g.rows.map(r => `<div class="room-line">
-      <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
+      <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</span></div>
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
@@ -1365,7 +1367,7 @@ function renderRoomOverview() {
     groups.get(key).rows.push(r);
   });
   const rooms = [...groups.values()].sort((a,b) => Number(a.unit)-Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, {numeric:true}));
-  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}</span><strong>${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
 function renderOverview() {
@@ -1463,9 +1465,9 @@ saveRoom.onclick = () => {
     productId: null, productName: productNameV, allFlavors: selection.allFlavors,
     selectedProductIds: selection.ids, dailyAmount: amount, dailyUnit: dailyUnit.value,
     scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
-    scheduleDays: scheduleDays.value, scheduleNote: scheduleNote.value.trim()
+    scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim()
   });
-  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = "Alle dagen"; scheduleNote.value = "";
+  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = "Alle dagen"; scheduleChoice.value = "fixed"; scheduleNote.value = "";
   // Kamernummer en unit blijven staan, zodat een tweede product snel aan dezelfde kamer kan worden toegevoegd.
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
@@ -1549,7 +1551,7 @@ if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(produc
 renderAll();
 
 
-// V3.3-test — één A4 dagschema via de afdruk/PDF-functie van de telefoon.
+// V3.3-test2 — één A4 dagschema via de afdruk/PDF-functie van de telefoon.
 function scheduleFlavorText(r){
   if (r.mode !== "drink") return "";
   if (r.allFlavors) return "Alle smaken";
@@ -1567,16 +1569,50 @@ function makeDaySchedule(){
   });
   rows.sort((a,b)=>a.time.localeCompare(b.time)||Number(a.r.unit)-Number(b.r.unit)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
   if(!rows.length){ alert("Vul bij minimaal één kamervoeding een tijdstip in."); return; }
+
   const old=document.getElementById("daySchedulePrint"); if(old) old.remove();
   const box=document.createElement("section"); box.id="daySchedulePrint";
   let last="";
-  box.innerHTML='<h1>Bijvoeding dagschema</h1>' + rows.map(({time,r})=>{
-    const head=time!==last ? `<div class="pdf-time">${esc(time)} uur</div>` : ""; last=time;
+  const consumed=new Set();
+  const out=[];
+
+  function productWithFlavor(r){
     const flavor=scheduleFlavorText(r);
-    const amount=r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${esc(plural(r.dailyUnit,r.scheduleAmount))}` : `${fmt(r.dailyAmount)} ${esc(r.dailyUnit)} per dag`;
-    const extras=[flavor, amount, r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : ""].filter(Boolean).join(" · ");
-    return `${head}<div class="pdf-row"><strong>Kamer ${esc(r.room)}</strong> · ${esc(r.productName)}${extras?` · ${extras}`:""}${r.scheduleNote?` · <span class="pdf-note">${esc(r.scheduleNote)}</span>`:""}</div>`;
-  }).join("");
+    return `${r.productName}${flavor ? ` (${flavor})` : ""}`;
+  }
+  function amountText(r){
+    return r.scheduleAmount ? `${fmt(r.scheduleAmount)} ${plural(r.dailyUnit,r.scheduleAmount)}` : `${fmt(r.dailyAmount)} ${r.dailyUnit} per dag`;
+  }
+
+  rows.forEach((entry,idx)=>{
+    if(consumed.has(idx)) return;
+    const {time,r}=entry;
+    let group=[{entry,idx}];
+    if(r.scheduleChoice === "or"){
+      group=rows.map((x,i)=>({entry:x,idx:i})).filter(x=>
+        !consumed.has(x.idx) && x.entry.time===time && x.entry.r.scheduleChoice==="or" &&
+        String(x.entry.r.room)===String(r.room) && String(x.entry.r.unit)===String(r.unit)
+      );
+    }
+    group.forEach(x=>consumed.add(x.idx));
+    if(time!==last){ out.push(`<div class="pdf-time">${esc(time)} uur</div>`); last=time; }
+
+    if(group.length>1){
+      const products=group.map(x=>productWithFlavor(x.entry.r)).join(" óf ");
+      const amount=amountText(r);
+      const day= r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : "";
+      const notes=[...new Set(group.map(x=>x.entry.r.scheduleNote).filter(Boolean))].join(" / ");
+      const extras=[amount,day].filter(Boolean).join(" · ");
+      out.push(`<div class="pdf-row pdf-choice-row"><strong>Kamer ${esc(r.room)}</strong> · <span class="pdf-choice">${esc(products)}</span>${extras?` · ${esc(extras)}`:""}${notes?` · <span class="pdf-note">${esc(notes)}</span>`:""}</div>`);
+    } else {
+      const flavor=scheduleFlavorText(r);
+      const amount=amountText(r);
+      const extras=[flavor, amount, r.scheduleDays && r.scheduleDays!=="Alle dagen" ? r.scheduleDays : ""].filter(Boolean).join(" · ");
+      out.push(`<div class="pdf-row"><strong>Kamer ${esc(r.room)}</strong> · ${esc(r.productName)}${extras?` · ${esc(extras)}`:""}${r.scheduleNote?` · <span class="pdf-note">${esc(r.scheduleNote)}</span>`:""}</div>`);
+    }
+  });
+
+  box.innerHTML='<h1>Bijvoeding dagschema</h1>'+out.join("");
   document.body.appendChild(box);
   window.print();
   setTimeout(()=>box.remove(),1000);

@@ -195,3 +195,7 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
   #daySchedulePrint .pdf-row{font-size:9pt;line-height:1.18;padding:1mm 2.5mm;border-bottom:.2mm solid #eee;break-inside:avoid}
   #daySchedulePrint .pdf-note{font-style:italic;font-weight:600}
 }
+
+/* V3.3-test2 — OF-keuzes */
+.choice-chip{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;background:#f1e9fb;color:#7b4db2;font-size:.68rem;font-weight:800;vertical-align:middle}
+@media print{#daySchedulePrint .pdf-choice{font-weight:800;color:#5f3f8e}#daySchedulePrint .pdf-choice-row{background:#fbf8ff}}

@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3-test</title>
+<title>Bij- &amp; Sondevoeding V3.3-test2</title>
 <link rel="stylesheet" href="css/style.css?v=3.3-test">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3-test</span>
+    <span class="version">V3.3-test2</span>
   </div>
 </header>
 
@@ -87,6 +87,7 @@
       <div class="schedule-fields">
         <div class="field"><label for="scheduleTimes">Tijdstip(pen)</label><input id="scheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"><div class="field-help">Meerdere tijden scheiden met een komma.</div></div>
         <div class="row"><div class="field"><label for="scheduleAmount">Hoeveelheid per keer</label><input id="scheduleAmount" type="number" min="0" step="0.1" placeholder="Bijv. 1"></div><div class="field"><label for="scheduleDays">Dagen</label><select id="scheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+        <div class="field"><label for="scheduleChoice">Gebruik op dit tijdstip</label><select id="scheduleChoice"><option value="fixed">Deze voeding geven</option><option value="or">OF-keuze met andere bijvoeding</option></select><div class="field-help">Kies OF wanneer op hetzelfde tijdstip één van meerdere bijvoedingen gegeven mag worden. Voeg ieder alternatief als aparte voedingsregel toe met hetzelfde tijdstip.</div></div>
         <div class="field"><label for="scheduleNote">Extra informatie</label><input id="scheduleNote" placeholder="Bijv. na het eten geven"></div>
       </div>
       <div class="form-actions-inline">
@@ -161,6 +162,7 @@
     <div class="schedule-fields">
       <div class="field"><label for="editScheduleTimes">Tijdstip(pen)</label><input id="editScheduleTimes" placeholder="Bijv. 10:00, 12:30, 17:00"></div>
       <div class="row"><div class="field"><label for="editScheduleAmount">Hoeveelheid per keer</label><input id="editScheduleAmount" type="number" min="0" step="0.1"></div><div class="field"><label for="editScheduleDays">Dagen</label><select id="editScheduleDays"><option>Alle dagen</option><option>Maandag t/m vrijdag</option><option>Weekend</option></select></div></div>
+      <div class="field"><label for="editScheduleChoice">Gebruik op dit tijdstip</label><select id="editScheduleChoice"><option value="fixed">Deze voeding geven</option><option value="or">OF-keuze met andere bijvoeding</option></select><div class="field-help">OF-keuzes met hetzelfde kamer- en tijdstip worden samen weergegeven in het dagschema.</div></div>
       <div class="field"><label for="editScheduleNote">Extra informatie</label><input id="editScheduleNote" placeholder="Bijv. na het eten geven"></div>
     </div>
     <div class="modal-info"><strong>Informatie</strong><br><span>Het verbruik per dag wordt gebruikt voor het overzicht en het besteladvies.</span></div>
