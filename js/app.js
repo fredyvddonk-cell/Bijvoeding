@@ -1655,16 +1655,16 @@ function activeDaySet(r){return new Set(normalizeDays(r.scheduleDays).split(",")
 function rowActiveOn(row,idx){const key=["ma","di","wo","do","vr","za","zo"][idx];return row.items.some(r=>activeDaySet(r).has(key));}
 function rowDetailLines(row){
   if(row.choice){
-    const out=[`<  KIES 1 VAN DE ${row.items.length}  >`];
+    const out=[`KIES 1 VAN DE ${row.items.length}`];
     row.items.forEach((r,i)=>{
-      out.push(`${i+1}. ${productWithFlavor(r)} - ${amountText(r)}`);
-      if(r.scheduleNote) out.push(`   Extra info: ${r.scheduleNote}`);
-      if(i<row.items.length-1) out.push("OF");
+      out.push(`${productWithFlavor(r)} - ${amountText(r)}`);
+      if(r.scheduleNote) out.push(`__EXTRA__${r.scheduleNote}`);
+      if(i<row.items.length-1) out.push("__OF__");
     });
     return out;
   }
   const r=row.items[0];
-  return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[`Extra info: ${r.scheduleNote}`]:[]);
+  return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[`__EXTRA__${r.scheduleNote}`]:[]);
 }
 async function makeDaySchedule(unit){
   const dateValue=document.getElementById("pdfWeekDate")?.value||localISODate(new Date());
@@ -1688,7 +1688,7 @@ async function makeDaySchedule(unit){
   let fs=7.2, lineH=3.15, headerH=9, timeH=6, groupGap=2.4;
   const wrappedLineCount=(row)=>{
     doc.setFontSize(fs);
-    return rowDetailLines(row).reduce((count,line)=>count+Math.max(1,doc.splitTextToSize(line,detailW-3).length),0);
+    return rowDetailLines(row).reduce((count,line)=>count+Math.max(1,doc.splitTextToSize(line.replace(/^__EXTRA__/,"").replace(/^__OF__$/,"OF"),detailW-3).length),0);
   };
   const rowHeight=(row)=>Math.max(7,wrappedLineCount(row)*lineH+2.8);
   const calcHeight=()=>top+13+headerH+groups.reduce((sum,g,gi)=>sum+(gi?groupGap:0)+timeH+g.rows.reduce((s2,r)=>s2+rowHeight(r),0),0)+bottom;
@@ -1715,7 +1715,23 @@ async function makeDaySchedule(unit){
       doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,rh,"F");
       doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+rh/2+1,{align:"center"});
-      let ty=y+lineH; lines.forEach((line,i)=>{doc.setFont("helvetica",row.choice&&(i===0||line==="OF")?"bold":"normal");doc.setTextColor(45,45,55);const wrapped=doc.splitTextToSize(line,detailW-3);wrapped.forEach(part=>{doc.text(part,ml+roomW+1.5,ty);ty+=lineH;});});
+      let ty=y+lineH; lines.forEach((line,i)=>{
+        doc.setTextColor(45,45,55);
+        if(line==="__OF__"){
+          doc.setFont("helvetica","bold");
+          const cy=ty-lineH*0.15, center=ml+roomW+detailW/2;
+          doc.setDrawColor(90,90,100);doc.setLineWidth(0.25);
+          doc.line(center-18,cy,center-6,cy);doc.line(center+6,cy,center+18,cy);
+          doc.text("OF",center,ty,{align:"center"});ty+=lineH;
+          return;
+        }
+        const isExtra=line.startsWith("__EXTRA__");
+        const text=isExtra?line.slice(9):line;
+        const isChoiceTitle=row.choice&&i===0;
+        doc.setFont("helvetica",isExtra?"italic":(isChoiceTitle?"bold":"normal"));
+        const wrapped=doc.splitTextToSize(text,detailW-3);
+        wrapped.forEach(part=>{doc.text(part,isChoiceTitle?ml+roomW+detailW/2:ml+roomW+1.5,ty,isChoiceTitle?{align:"center"}:undefined);ty+=lineH;});
+      });
       for(let i=0;i<7;i++){const cx=ml+roomW+detailW+i*dayW+dayW/2,cy=y+rh/2;if(rowActiveOn(row,i)){const box=Math.min(4.2,rh-2.5);doc.setDrawColor(70,70,80);doc.rect(cx-box/2,cy-box/2,box,box);}else{doc.setTextColor(130,130,140);doc.setFont("helvetica","normal");doc.text("-",cx,cy+1.2,{align:"center"});}}
       y+=rh;
     });
