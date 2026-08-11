@@ -9,8 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3-test6</title>
-<link rel="stylesheet" href="css/style.css?v=3.3-test4">
+<title>Bij- &amp; Sondevoeding V3.3-test7</title>
+<link rel="stylesheet" href="css/style.css?v=3.3-test7">
 </head>
 <body>
 <header>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3-test6</span>
+    <span class="version">V3.3-test7</span>
   </div>
 </header>
 
@@ -258,11 +258,11 @@
   </div>
 </div>
 
-<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF dagschema</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Kies de week en de unit waarvoor je de aftekenlijst wilt maken en delen.</p><div class="field" style="margin-bottom:12px"><label for="pdfWeekDate">Week van</label><input id="pdfWeekDate" type="date"><small class="muted">Kies een datum in de gewenste week. De PDF gebruikt automatisch maandag t/m zondag.</small></div><div class="unit-pdf-buttons"><button type="button" onclick="makeDaySchedule('1')">Unit 1</button><button type="button" onclick="makeDaySchedule('2')">Unit 2</button><button type="button" onclick="makeDaySchedule('3')">Unit 3</button></div></div></div>
+<div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF aftekenlijst</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><p class="muted">Kies een datum in de gewenste week. De PDF loopt automatisch van maandag t/m zondag.</p><label class="field-label" for="pdfWeekDate">Week van</label><input id="pdfWeekDate" type="date" style="width:100%;margin:6px 0 14px"><p class="muted">Kies daarna de unit.</p><div class="unit-pdf-buttons"><button type="button" onclick="makeDaySchedule('1')">Unit 1</button><button type="button" onclick="makeDaySchedule('2')">Unit 2</button><button type="button" onclick="makeDaySchedule('3')">Unit 3</button></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="data/defaults.js"></script>
-<script src="js/app.js?v=3.3-test4"></script>
+<script src="js/app.js?v=3.3-test7"></script>
 
 <script>
 if ("serviceWorker" in navigator) {
