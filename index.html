@@ -14,12 +14,16 @@
 </head>
 <body>
 <header>
-  <h1>Bij- &amp; Sondevoeding</h1>
-  <p>Voorraad • Verbruik • Bestellen <span class="version">V3.0</span></p>
+  <div class="brand-mark" aria-hidden="true"><span class="bag-icon">▯</span><span class="bottle-icon">▯</span></div>
+  <div class="brand-copy">
+    <h1>Bij- &amp; Sondevoeding</h1>
+    <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
+    <span class="version">V3.0</span>
+  </div>
 </header>
 
 <main>
-  <div class="mode-caption">Weergave</div>
+  <div class="mode-caption">Productgroep</div>
   <div class="mode-switch">
     <button class="mode-btn active" data-mode="drink">Bijvoeding</button>
     <button class="mode-btn" data-mode="sonde">Sondevoeding</button>
@@ -27,11 +31,11 @@
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="overview">Overzicht</button>
-    <button class="tab-btn" data-tab="counting">Voorraad</button>
-    <button class="tab-btn" data-tab="usage" id="usageTabBtn">Kamers</button>
-    <button class="tab-btn" data-tab="products">Beheer</button>
-    <button class="tab-btn" data-tab="orders">Bestellen</button>
+    <button class="tab-btn active" data-tab="overview"><span class="nav-icon">⌂</span><span>Overzicht</span></button>
+    <button class="tab-btn" data-tab="counting"><span class="nav-icon">◇</span><span>Voorraad</span></button>
+    <button class="tab-btn" data-tab="usage" id="usageTabBtn"><span class="nav-icon">♙</span><span>Kamers</span></button>
+    <button class="tab-btn" data-tab="orders"><span class="nav-icon">⌑</span><span>Bestellen</span></button>
+    <button class="tab-btn" data-tab="products"><span class="nav-icon">⚙</span><span>Beheer</span></button>
   </div>
 
   <section id="overview" class="tab active">
