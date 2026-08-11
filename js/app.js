@@ -372,10 +372,10 @@ function thtStatusHtml(p) {
 }
 function thtBadgeHtml(p) {
   const e = expiryInfo(p);
-  if (e.expired) return `<span class="attention-chip danger-chip">THT verstreken</span>`;
-  if (e.soon) return `<span class="attention-chip warn-chip">THT ${esc(formatDate(p.expiryDate))}</span>`;
+  const date = p.expiryDate ? esc(formatDate(p.expiryDate)) : "";
+  if (e.expired) return `<span class="attention-chip danger-chip tht-chip"><strong>THT verlopen</strong>${date ? `<span class="tht-date">${date}</span>` : ""}</span>`;
+  if (e.soon) return `<span class="attention-chip warn-chip tht-chip"><strong>THT binnenkort</strong>${date ? `<span class="tht-date">${date}</span>` : ""}</span>`;
   if (e.quarterlyDue) return `<span class="attention-chip neutral-chip">THT controleren</span>`;
-  if (p.expiryDate) return `<span class="attention-chip neutral-chip">THT ${esc(formatDate(p.expiryDate))}</span>`;
   return "";
 }
 
@@ -1331,7 +1331,10 @@ function renderOverview() {
     const unit = p.consumptionUnit || looseUnitLabel(p, x.stock);
     const daysText = x.mode === "general" || x.days == null ? "" : ` · <strong>± ${fmt(Math.floor(x.days * 10) / 10)} dagen voorraad</strong>`;
     const minimum = x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`;
-    return `<div class="item attention-card">
+    const expiredTht = x.tht && x.tht.includes("danger-chip");
+    const soonTht = x.tht && x.tht.includes("warn-chip");
+    const attentionClass = x.orderUnits > 0 ? "attention-card order-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
+    return `<div class="item ${attentionClass}">
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       <div class="overview-minimum">${minimum}</div>
