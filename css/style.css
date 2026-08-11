@@ -105,7 +105,7 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .overview-clear { font-weight: 700; }
 
 
-/* V3.1.9 - Acties & aandachtspunten visueel beter onderscheiden */
+/* V3.1.10 - Acties & aandachtspunten visueel beter onderscheiden */
 .attention-card{
   border-left:4px solid #dfe3df;
   background:#fff;
@@ -153,3 +153,6 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .tht-chip{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tht-chip strong{font-weight:800}
 .tht-date{font-weight:800;letter-spacing:.01em}
+
+/* V3.1.10 — minder gevoelig slepen */
+.drag-handle.drag-pending{opacity:.72;transform:scale(.97)}

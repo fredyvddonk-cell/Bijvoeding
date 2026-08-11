@@ -248,6 +248,7 @@ function daysSupply(p) {
   return d > 0 ? stockUnits(p) / d : null;
 }
 function expiryInfo(p) {
+  if (stockUnits(p) <= 0) return { quarterlyDue:false, expiryDays:null, expired:false, soon:false };
   const today = parseLocalDate(isoToday());
   const last = parseLocalDate(p.lastExpiryCheck);
   const quarterlyDue = !last || daysBetween(last, today) >= 90;
@@ -443,6 +444,9 @@ function renderProducts() {
 let draggedProductItem = null;
 let dragPointerY = null;
 let dragScrollFrame = null;
+let pendingDrag = null;
+const DRAG_HOLD_MS = 500;
+const DRAG_CANCEL_DISTANCE = 10;
 function dragAutoScrollStep() {
   if (!draggedProductItem || dragPointerY == null) { dragScrollFrame = null; return; }
   const edge = Math.max(95, Math.min(150, window.innerHeight * 0.16));
@@ -457,20 +461,46 @@ function dragAutoScrollStep() {
   if (delta) window.scrollBy(0, delta);
   dragScrollFrame = requestAnimationFrame(dragAutoScrollStep);
 }
+function cancelPendingDrag() {
+  if (!pendingDrag) return;
+  clearTimeout(pendingDrag.timer);
+  pendingDrag.handle.classList.remove("drag-pending");
+  pendingDrag = null;
+}
 productList.addEventListener("pointerdown", e => {
   const handle = e.target.closest(".drag-handle");
   if (!handle) return;
   const item = handle.closest(".product-sort-item");
   if (!item) return;
-  draggedProductItem = item;
-  dragPointerY = e.clientY;
-  item.classList.add("dragging");
-  handle.setPointerCapture?.(e.pointerId);
-  if (!dragScrollFrame) dragScrollFrame = requestAnimationFrame(dragAutoScrollStep);
-  e.preventDefault();
+  cancelPendingDrag();
+  const pointerId = e.pointerId;
+  pendingDrag = {
+    item, handle, pointerId,
+    startX:e.clientX, startY:e.clientY,
+    lastY:e.clientY,
+    timer:setTimeout(() => {
+      if (!pendingDrag || pendingDrag.pointerId !== pointerId) return;
+      draggedProductItem = pendingDrag.item;
+      dragPointerY = pendingDrag.lastY;
+      draggedProductItem.classList.add("dragging");
+      pendingDrag.handle.classList.remove("drag-pending");
+      pendingDrag.handle.setPointerCapture?.(pointerId);
+      pendingDrag = null;
+      if (!dragScrollFrame) dragScrollFrame = requestAnimationFrame(dragAutoScrollStep);
+    }, DRAG_HOLD_MS)
+  };
+  handle.classList.add("drag-pending");
 });
 productList.addEventListener("pointermove", e => {
+  if (pendingDrag && e.pointerId === pendingDrag.pointerId) {
+    pendingDrag.lastY = e.clientY;
+    const dx = e.clientX - pendingDrag.startX;
+    const dy = e.clientY - pendingDrag.startY;
+    if (Math.hypot(dx, dy) > DRAG_CANCEL_DISTANCE) cancelPendingDrag();
+    return;
+  }
   if (!draggedProductItem) return;
+  e.preventDefault();
   dragPointerY = e.clientY;
   const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".product-sort-item");
   if (!target || target === draggedProductItem || target.parentElement !== productList) return;
@@ -478,6 +508,7 @@ productList.addEventListener("pointermove", e => {
   productList.insertBefore(draggedProductItem, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
 });
 function finishProductDrag() {
+  cancelPendingDrag();
   if (!draggedProductItem) return;
   draggedProductItem.classList.remove("dragging");
   draggedProductItem = null;
@@ -492,6 +523,9 @@ function finishProductDrag() {
 }
 productList.addEventListener("pointerup", finishProductDrag);
 productList.addEventListener("pointercancel", finishProductDrag);
+productList.addEventListener("pointerleave", e => {
+  if (pendingDrag && e.pointerId === pendingDrag.pointerId) cancelPendingDrag();
+});
 
 function drinkFamilyPlan(name) {
   const products = familyProducts(name, "drink", true);
@@ -782,12 +816,14 @@ function changeStock(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockFull = Math.max(0, Number(p.stockFull || 0) + delta);
+  if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
 function changeLoose(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockLoose = Math.max(0, Number(p.stockLoose || 0) + delta);
+  if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
 
@@ -1172,7 +1208,7 @@ function renderCounting() {
       ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
       ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      <div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>
+      ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
