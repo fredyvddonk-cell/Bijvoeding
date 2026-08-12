@@ -1742,14 +1742,27 @@ function rowDetailLines(row){
   if(row.choice){
     const out=[`KIES 1 VAN DE ${row.items.length}`];
     row.items.forEach((r,i)=>{
-      out.push(`${productWithFlavor(r)} - ${amountText(r)}`);
+      out.push(productWithFlavor(r));
       if(r.scheduleNote) out.push(`__EXTRA__${r.scheduleNote}`);
       if(i<row.items.length-1) out.push("__OF__");
     });
     return out;
   }
   const r=row.items[0];
-  return [`${productWithFlavor(r)} - ${amountText(r)}`].concat(r.scheduleNote?[`__EXTRA__${r.scheduleNote}`]:[]);
+  return [productWithFlavor(r)].concat(r.scheduleNote?[`__EXTRA__${r.scheduleNote}`]:[]);
+}
+function rowAmountLines(row){
+  if(row.choice){
+    const out=[""];
+    row.items.forEach((r,i)=>{
+      out.push(amountText(r));
+      if(r.scheduleNote) out.push("");
+      if(i<row.items.length-1) out.push("");
+    });
+    return out;
+  }
+  const r=row.items[0];
+  return [amountText(r)].concat(r.scheduleNote?[""]:[]);
 }
 async function createSchedulePdf(unit,dateValue){
   const rows=buildUnitRows(unit);
@@ -1763,7 +1776,7 @@ async function createSchedulePdf(unit,dateValue){
   // Printervriendelijk: de hele PDF heeft een volledig witte achtergrond.
   doc.setFillColor(255,255,255);doc.rect(0,0,W,H,"F");
   // Portrait: compacte kamer- en dagkolommen, met zoveel mogelijk ruimte voor de voedingsinformatie.
-  const roomW=15,dayW=13,detailW=tableW-roomW-7*dayW;
+  const roomW=15,amountW=19,dayW=13,detailW=tableW-roomW-amountW-7*dayW;
   const fmtDate=d=>`${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
   const longDate=d=>`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
   // Bepaal compacte schaal zodat de volledige week altijd op één A4 blijft.
@@ -1781,9 +1794,9 @@ async function createSchedulePdf(unit,dateValue){
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text(`Week ${week} - ${longDate(dates[0])} t/m ${longDate(dates[6])}`,ml,y+3);y+=7;
   const drawHeader=()=>{
     doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,headerH,"F");doc.setDrawColor(195,195,205);doc.rect(ml,y,tableW,headerH);
-    let x=ml; const cells=[roomW,detailW,...Array(7).fill(dayW)]; cells.slice(0,-1).forEach(w=>{x+=w;doc.line(x,y,x,y+headerH);});
-    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(45,45,55);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Voeding / smaak / hoeveelheid / opmerking",ml+roomW+1.5,y+5.5);
-    dates.forEach((d,i)=>{doc.setTextColor(45,45,55);const cx=ml+roomW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
+    let x=ml; const cells=[roomW,amountW,detailW,...Array(7).fill(dayW)]; cells.slice(0,-1).forEach(w=>{x+=w;doc.line(x,y,x,y+headerH);});
+    doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(45,45,55);doc.text("Kamer",ml+1.5,y+5.5);doc.text("Hoeveelheid",ml+roomW+amountW/2,y+5.5,{align:"center"});doc.text("Voeding / smaak / opmerking",ml+roomW+amountW+1.5,y+5.5);
+    dates.forEach((d,i)=>{doc.setTextColor(45,45,55);const cx=ml+roomW+amountW+detailW+i*dayW+dayW/2;doc.text(dayNames[i],cx,y+3.2,{align:"center"});doc.setFont("helvetica","normal");doc.text(fmtDate(d),cx,y+6.5,{align:"center"});doc.setFont("helvetica","bold");}); y+=headerH;
   };
   drawHeader();
   groups.forEach((g,gi)=>{
@@ -1796,13 +1809,19 @@ async function createSchedulePdf(unit,dateValue){
     g.rows.forEach(row=>{
       const lines=rowDetailLines(row); const rh=rowHeight(row); let x=ml;
       doc.setFillColor(255,255,255);doc.rect(ml,y,tableW,rh,"F");
-      doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
+      doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,amountW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+rh/2+1,{align:"center"});
+      const amountLines=rowAmountLines(row);
+      let aty=y+lineH;
+      amountLines.forEach((line)=>{
+        if(line){doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.text(line,ml+roomW+amountW/2,aty,{align:"center"});}
+        aty+=lineH;
+      });
       let ty=y+lineH; lines.forEach((line,i)=>{
         doc.setTextColor(45,45,55);
         if(line==="__OF__"){
           doc.setFont("helvetica","bold");
-          const cy=ty-lineH*0.15, center=ml+roomW+detailW/2;
+          const cy=ty-lineH*0.15, center=ml+roomW+amountW+detailW/2;
           doc.setDrawColor(90,90,100);doc.setLineWidth(0.25);
           doc.line(center-18,cy,center-6,cy);doc.line(center+6,cy,center+18,cy);
           doc.text("OF",center,ty,{align:"center"});ty+=lineH;
@@ -1813,13 +1832,13 @@ async function createSchedulePdf(unit,dateValue){
         const isChoiceTitle=row.choice&&i===0;
         doc.setFont("helvetica",isExtra?"italic":(isChoiceTitle?"bold":"normal"));
         const wrapped=doc.splitTextToSize(text,detailW-3);
-        wrapped.forEach(part=>{doc.text(part,isChoiceTitle?ml+roomW+detailW/2:ml+roomW+1.5,ty,isChoiceTitle?{align:"center"}:undefined);ty+=lineH;});
+        wrapped.forEach(part=>{doc.text(part,isChoiceTitle?ml+roomW+amountW+detailW/2:ml+roomW+amountW+1.5,ty,isChoiceTitle?{align:"center"}:undefined);ty+=lineH;});
       });
       for(let i=0;i<7;i++){
         // Het hele dagvak is het aftekenvak. Geen extra checkbox tekenen.
         if(!rowActiveOn(row,i)){
           // Geen bijvoeding op deze dag: groot, dik rood kruis door vrijwel het hele dagvak.
-          const left=ml+roomW+detailW+i*dayW;
+          const left=ml+roomW+amountW+detailW+i*dayW;
           const padX=dayW*0.15, padY=rh*0.15;
           doc.setDrawColor(200,45,45);doc.setLineWidth(1.0);
           doc.line(left+padX,y+padY,left+dayW-padX,y+rh-padY);
@@ -1831,7 +1850,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.14",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.15",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1871,7 +1890,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.14",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.15",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function makeSelectedSchedules(){
@@ -1895,7 +1914,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.14 — volledige back-up maken en terugzetten.
+// V3.3.15 — volledige back-up maken en terugzetten.
 (function setupBackupTools(){
   const makeBtn = document.getElementById("makeBackup");
   const restoreBtn = document.getElementById("restoreBackup");
@@ -1911,7 +1930,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.14",
+        version: "V3.3.15",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -1964,7 +1983,7 @@ async function makeSelectedSchedules(){
 })();
 
 
-// V3.3.14 — zoeken op product bij Voorraad en Bestellen.
+// V3.3.15 — zoeken op product bij Voorraad en Bestellen.
 (function setupProductSearch(){
   const countInput = document.getElementById("countSearch");
   const orderInput = document.getElementById("orderSearch");
