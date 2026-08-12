@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Bij- &amp; Sondevoeding V3.3.14</title>
+<title>Bij- &amp; Sondevoeding V3.3.16</title>
 <link rel="stylesheet" href="css/style.css?v=3.3.7">
 </head>
 <body>
@@ -18,7 +18,7 @@
   <div class="brand-copy">
     <h1>Bij- &amp; Sondevoeding</h1>
     <p class="brand-subtitle">Voorraad <b>•</b> Verbruik <b>•</b> Bestellen</p>
-    <span class="version">V3.3.14</span>
+    <span class="version">V3.3.16</span>
   </div>
 </header>
 
@@ -271,6 +271,7 @@
 <div id="pdfUnitModal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop" onclick="closePdfUnitModal()"></div><div class="modal-panel pdf-unit-panel"><div class="modal-head"><h2>PDF maken</h2><button type="button" class="modal-close" onclick="closePdfUnitModal()">×</button></div><div class="field-label">Soort PDF</div><div class="pdf-type-grid"><label class="pdf-type-check"><input type="checkbox" class="pdf-type-input" value="check" checked><span><strong>Aftekenlijst</strong><small>Met dagen, datums en ruime aftekenvakken</small></span></label><label class="pdf-type-check"><input type="checkbox" class="pdf-type-input" value="overview"><span><strong>Overzichtslijst</strong><small>Zonder dagen, groter en ruimer</small></span></label></div><div class="field-label">Units</div><div class="pdf-unit-grid"><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="1" checked><span>Unit 1</span></label><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="2" checked><span>Unit 2</span></label><label class="pdf-unit-check-label"><input type="checkbox" class="pdf-unit-check" value="3" checked><span>Unit 3</span></label></div><div id="pdfWeekSection"><div class="field-label">Weken</div><div id="pdfWeekChoices" style="display:grid;gap:7px;margin:7px 0 14px"></div></div><button type="button" class="primary" style="width:100%" onclick="makeSelectedSchedules()">PDF bestanden maken / delen</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="data/defaults.js"></script>
 <script src="js/app.js?v=3.3.7"></script>
 
