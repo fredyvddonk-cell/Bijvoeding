@@ -299,5 +299,5 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
   outline-offset: 3px;
 }
 
-/* V3.3.26 - bestelde aantallen vastleggen */
-.order-entry{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 10px;border:1px solid var(--border);border-radius:12px;background:#fafafa}.order-entry label{font-weight:800}.order-entry input{width:72px;min-height:38px;padding:7px 8px;border:1px solid #cfd3d8;border-radius:9px;font:inherit}.order-entry span{font-size:.9rem;color:var(--muted)}.status-ordered{display:inline-block;font-weight:850;color:#2e7343;background:#edf7ef;border-radius:10px;padding:5px 8px}.ordered-priority{border-left:5px solid #6fa87d}.attention-ordered.attention-action{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:#edf7ef;color:#2e7343;border:0;border-radius:10px;padding:10px 12px;width:max-content;max-width:100%;font:inherit;cursor:pointer}.attention-ordered strong{text-transform:none}.ordered-remaining{font-size:.82rem;color:#c43b32;font-weight:800}
+/* V3.3.26 - werkelijk bestelde aantallen invullen en opslaan */
+.order-entry{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 10px;border:1px solid var(--border);border-radius:12px;background:#fafafa}.order-entry label{font-weight:800}.order-entry input{width:72px;min-height:38px;padding:7px 8px;border:1px solid #cfd3d8;border-radius:9px;font:inherit}.order-entry span{font-size:.9rem;color:var(--muted)}
