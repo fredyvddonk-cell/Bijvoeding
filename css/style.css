@@ -277,3 +277,17 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
   outline-offset: 3px;
   transition: outline-color 0.4s ease;
 }
+.back-to-overview {
+  border: 0;
+  background: transparent;
+  color: var(--purple);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 4px 0 12px;
+  cursor: pointer;
+}
+.back-to-overview:focus-visible {
+  outline: 3px solid rgba(149, 122, 193, 0.25);
+  outline-offset: 3px;
+}

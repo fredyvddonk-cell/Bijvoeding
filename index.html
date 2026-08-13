@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.23</title>
+    <title>Bij- &amp; Sondevoeding V3.3.24</title>
     <link rel="stylesheet" href="css/style.css?v=3.3.7" />
   </head>
   <body>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.23</span>
+        <span class="version">V3.3.24</span>
       </div>
     </header>
 
@@ -472,6 +472,9 @@
 
       <section id="orders" class="tab">
         <div class="card">
+          <button type="button" class="back-to-overview hidden" id="backToOverview" onclick="returnToOverview()">
+            ← TERUG NAAR OVERZICHT
+          </button>
           <h2>Besteladvies</h2>
           <div class="product-search">
             <input
@@ -979,7 +982,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.23"></script>
+    <script src="js/app.js?v=3.3.24"></script>
 
     <script>
       if ("serviceWorker" in navigator) {
