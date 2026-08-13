@@ -13,6 +13,10 @@ const CUPBOARD_ORDER = [
 function canonicalName(name) {
   return name === "Glucerna" ? "Glucerna Advance" : name;
 }
+function isStandardExternalProductName(name) {
+  const value = String(name || "").trim().toLocaleLowerCase("nl-NL");
+  return value === "drinkyoghurt" || value === "bouwsteentje" || value.includes("vruchtenkwark") || value === "vla";
+}
 function isoToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -51,6 +55,8 @@ function loadData() {
       if (p.active == null) p.active = true;
       if (p.externalProduct == null) p.externalProduct = false;
       if (p.externalQuantity == null) p.externalQuantity = 0;
+      // V3.3.22: deze producten worden door de afdeling gebruikt, maar niet door ons besteld.
+      if (isStandardExternalProductName(p.name)) p.externalProduct = true;
       // V3.3.20: bestaande producten blijven standaard op de weeklijst staan.
       if (p.showOnWeeklyList == null) p.showOnWeeklyList = true;
       // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
@@ -709,7 +715,7 @@ function drinkFamilyPlan(name) {
 }
 
 function renderDrinkOrders() {
-  const groups = familyNames("drink").map(drinkFamilyPlan).filter(g => g.daily > 0 && g.rep);
+  const groups = familyNames("drink").map(drinkFamilyPlan).filter(g => g.daily > 0 && g.rep && g.products.some(p => p.externalProduct !== true));
   orderList.innerHTML = groups.length ? groups.map(g => {
     const p = g.rep;
 
@@ -1373,6 +1379,7 @@ function overviewAttentionItems() {
   currentMode = "drink";
   familyNames("drink").forEach(name => {
     const products = familyProducts(name, "drink", true);
+    if (products.length && products.every(p => p.externalProduct === true)) return;
     const p = products.find(activeProduct) || products[0];
     if (!p) return;
     const plan = drinkFamilyPlan(name);
@@ -1896,7 +1903,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1942,7 +1949,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2036,7 +2043,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2092,7 +2099,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.21",
+        version: "V3.3.22",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
