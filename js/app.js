@@ -213,7 +213,10 @@ function stockUnits(p) {
   return Number(p.stockFull || 0) * Number(p.contentPerOrderUnit || 1) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) : 0);
 }
 function orderedUnits(p) {
-  return Number(p.alreadyOrdered || 0) * Number(p.contentPerOrderUnit || 1);
+  // V3.3.26 fix: een geregistreerde bestelling is nog geen fysieke voorraad.
+  // Het aantal bij "Werkelijk besteld" blijft opgeslagen, maar telt pas mee
+  // nadat de levering daadwerkelijk bij Voorraad is toegevoegd.
+  return 0;
 }
 function familyOrderedPackages(name, mode) {
   return familyProducts(name, mode, true).reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
