@@ -137,9 +137,10 @@ function labelProduct(p) {
   return variant ? `${p.name} · ${variant}` : (p?.name || "Product");
 }
 function plural(unit, n) {
-  const singular = {flesjes:"flesje",bakjes:"bakje",zakjes:"zakje",flessen:"fles",kartons:"karton",dozen:"doos",potten:"pot",pakken:"pak"};
+  if (!unit) return "";
+  const singular = {flesjes:"flesje",bakjes:"bakje",zakjes:"zakje",glazen:"glas",bekers:"beker",schaaltjes:"schaaltje",stuks:"stuk",flessen:"fles",kartons:"karton",dozen:"doos",potten:"pot",pakken:"pak"};
   const base = singular[unit] || unit;
-  const m = { flesje:"flesjes", bakje:"bakjes", zakje:"zakjes", fles:"flessen", karton:"kartons", doos:"dozen", pot:"potten", pak:"pakken", ml:"ml" };
+  const m = { flesje:"flesjes", bakje:"bakjes", zakje:"zakjes", glas:"glazen", beker:"bekers", schaaltje:"schaaltjes", stuk:"stuks", fles:"flessen", karton:"kartons", doos:"dozen", pot:"potten", pak:"pakken", ml:"ml" };
   return Number(n) === 1 ? base : (m[base] || base);
 }
 function activeProduct(p) {
@@ -155,21 +156,15 @@ function hasLooseUnits(p) {
   return Number(p?.contentPerOrderUnit || 1) > 1 && p?.looseUnitsAllowed !== false;
 }
 function looseUnitLabel(p, n = 2) {
-  const u = p?.consumptionUnit || "stuks";
-  if (u === "ml") return "ml";
-  if (Number(n) === 1) {
-    const singular = { flesjes:"flesje", bakjes:"bakje", zakjes:"zakje", stuks:"stuk" };
-    return singular[u] || u;
-  }
-  return u;
+  const u = p?.consumptionUnit || "";
+  return plural(u, n);
 }
 function quantityUnitLabel(unit, n = 2) {
-  const u = unit || "stuks";
-  if (u === "ml") return "ml";
-  const singular = { flesjes:"flesje", bakjes:"bakje", zakjes:"zakje", stuks:"stuk" };
-  const pluralMap = { flesje:"flesjes", bakje:"bakjes", zakje:"zakjes", stuk:"stuks" };
-  if (Number(n) === 1) return singular[u] || u;
-  return pluralMap[u] || u;
+  return plural(unit || "", n);
+}
+function withUnit(n, unit) {
+  const label = quantityUnitLabel(unit, n);
+  return label ? `${fmt(n)} ${label}` : fmt(n);
 }
 function packageCountLabel(p, n) {
   const unit = plural(p.orderUnit, n);
@@ -900,6 +895,7 @@ function editRoom(id) {
   syncChipPicker("edit", editScheduleTimes.value, editScheduleDays.value);
   editScheduleChoice.value = r.scheduleChoice || "fixed";
   editScheduleNote.value = r.scheduleNote || "";
+  editScheduleShowOnPdf.checked = r.showOnPdf !== false;
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
   renderFlavorChoices(editRoomProduct, editRoomFlavorChoices, checked, !!r.allFlavors, r.dislikedProductIds || []);
@@ -946,6 +942,7 @@ saveRoomEdit.onclick = () => {
   r.scheduleDays = editScheduleDays.value;
   r.scheduleChoice = editScheduleChoice.value || "fixed";
   r.scheduleNote = editScheduleNote.value.trim();
+  r.showOnPdf = editScheduleShowOnPdf.checked;
   closeRoomEdit();
   saveData();
 };
@@ -1302,7 +1299,7 @@ function renderUsage() {
     <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
     ${g.rows.map(r => `<div class="room-line">
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
-      <div class="room-line-main"><span></span><span class="room-line-use">${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</span></div>
+      <div class="room-line-main"><span></span><span class="room-line-use">${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</span></div>
       ${r.scheduleNote ? `<div class="schedule-meta"><strong>Extra info:</strong> ${esc(r.scheduleNote)}</div>` : ""}
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
@@ -1419,7 +1416,7 @@ function renderRoomOverview() {
     groups.get(key).rows.push(r);
   });
   const rooms = [...groups.values()].sort((a,b) => Number(a.unit)-Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, {numeric:true}));
-  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${fmt(r.dailyAmount)} ${esc(quantityUnitLabel(r.dailyUnit, r.dailyAmount))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
 function renderOverview() {
@@ -1500,8 +1497,8 @@ saveRoom.onclick = () => {
   const unitV = unit.value;
   const amount = Number(String(dailyAmount.value).replace(",", "."));
   const productNameV = parseRoomProductName(roomProduct.value);
-  if (!roomV || amount <= 0 || !productNameV) {
-    alert("Vul kamernummer, product en verbruik in.");
+  if (!roomV || !unitV || !mode || amount <= 0 || !productNameV) {
+    alert("Vul kamernummer, unit, soort voeding, product en verbruik in.");
     return;
   }
   const selection = selectionForRoom(productNameV, mode, roomFlavorChoices);
@@ -1517,10 +1514,10 @@ saveRoom.onclick = () => {
     productId: null, productName: productNameV, allFlavors: selection.allFlavors,
     selectedProductIds: selection.ids, dislikedProductIds: selection.dislikedIds || [], dailyAmount: amount, dailyUnit: dailyUnit.value,
     scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
-    scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim()
+    scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim(),
+    showOnPdf: scheduleShowOnPdf.checked
   });
-  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = ALL_DAYS; scheduleChoice.value = "fixed"; scheduleNote.value = ""; syncChipPicker("add", "", ALL_DAYS);
-  // Kamernummer en unit blijven staan, zodat een tweede product snel aan dezelfde kamer kan worden toegevoegd.
+  scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = ALL_DAYS; scheduleChoice.value = "fixed"; scheduleNote.value = ""; scheduleShowOnPdf.checked = true; syncChipPicker("add", "", ALL_DAYS);
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
   saveData();
@@ -1598,9 +1595,38 @@ function openAddForm(card, firstField){
 function closeAddForm(card){
   if (card) card.classList.add("hidden");
 }
-if (showRoomFormBtn) showRoomFormBtn.onclick = () => openAddForm(roomFormCardV316, room);
+function resetRoomAddForm(){
+  room.value = "";
+  unit.value = "";
+  roomType.value = "";
+  roomProduct.innerHTML = '<option value="">Kies eerst soort voeding</option>';
+  dailyAmount.value = "";
+  dailyUnit.value = "";
+  scheduleTimes.value = "";
+  scheduleAmount.value = "";
+  scheduleDays.value = ALL_DAYS;
+  scheduleChoice.value = "fixed";
+  scheduleNote.value = "";
+  scheduleShowOnPdf.checked = true;
+  roomFlavorChoices.innerHTML = "";
+  roomFlavorChoices.classList.add("hidden");
+  syncChipPicker("add", "", ALL_DAYS);
+}
+function resetProductAddForm(){
+  productType.value = "drink";
+  productName.value = "";
+  flavor.value = "";
+  consumptionUnit.value = "";
+  orderUnit.selectedIndex = 0;
+  contentPerOrderUnit.value = "";
+  looseUnitsAllowed.value = "yes";
+  if (typeof externalProduct !== "undefined") externalProduct.checked = false;
+  if (typeof productMemo !== "undefined") productMemo.value = "";
+  syncProductTypeFields();
+}
+if (showRoomFormBtn) showRoomFormBtn.onclick = () => { resetRoomAddForm(); openAddForm(roomFormCardV316, room); };
 if (cancelRoomAddBtn) cancelRoomAddBtn.onclick = () => closeAddForm(roomFormCardV316);
-if (showProductFormBtn) showProductFormBtn.onclick = () => openAddForm(productFormCardV316, productType);
+if (showProductFormBtn) showProductFormBtn.onclick = () => { resetProductAddForm(); openAddForm(productFormCardV316, productName); };
 if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(productFormCardV316);
 
 renderAll();
@@ -1663,14 +1689,14 @@ function amountText(r){
   const explicitPerTime = Number(r.scheduleAmount || 0);
   const timesCount = Math.max(1, normalizedTimes(r.scheduleTimes).length);
   const amountPerTime = explicitPerTime > 0 ? explicitPerTime : Number(r.dailyAmount || 0) / timesCount;
-  return `${fmt(amountPerTime)} ${plural(r.dailyUnit,amountPerTime)}`;
+  return withUnit(amountPerTime, r.dailyUnit);
 }
 function productWithFlavor(r){
   const f=scheduleFlavorText(r);
-  // Bij bijvoeding zijn selectedProductIds de voorkeurssmaken van deze kamer.
-  // Maak dat op beide PDF-lijsten expliciet zichtbaar.
-  const pref = r.mode === "drink" && !r.allFlavors && (r.selectedProductIds || []).length ? " · VOORKEUR" : "";
-  return `${r.productName}${f?` (${f}${pref})`:""}`;
+  if(r.mode === "drink" && !r.allFlavors && (r.selectedProductIds || []).length && f){
+    return `${r.productName} · Voorkeur: ${f}`;
+  }
+  return `${r.productName}${f?` (${f})`:""}`;
 }
 function closePdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.add("hidden");document.body.style.overflow="";}
 function localISODate(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;}
@@ -1711,7 +1737,7 @@ document.getElementById("printDaySchedule")?.addEventListener("click",openPdfUni
 
 function buildUnitRows(unit){
   const rows=[];
-  data.rooms.filter(r=>String(r.unit)===String(unit) && r.mode==="drink" && r.scheduleTimes).forEach(r=>normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r})));
+  data.rooms.filter(r=>String(r.unit)===String(unit) && r.mode==="drink" && r.scheduleTimes && r.showOnPdf !== false).forEach(r=>normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r})));
   rows.sort((a,b)=>a.time.localeCompare(b.time)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
   const result=[],used=new Set();
   rows.forEach((x,i)=>{
@@ -1812,12 +1838,19 @@ async function createSchedulePdf(unit,dateValue){
       doc.setDrawColor(205,205,215);doc.rect(ml,y,tableW,rh);[roomW,amountW,detailW,...Array(6).fill(dayW)].forEach(w=>{x+=w;doc.line(x,y,x,y+rh);});
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+rh/2+1,{align:"center"});
       const amountLines=rowAmountLines(row);
-      let aty=y+lineH;
+      const amountTextHeight=Math.max(1,amountLines.length)*lineH;
+      let aty=y+(rh-amountTextHeight)/2+lineH*0.78;
       amountLines.forEach((line)=>{
         if(line){doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.text(line,ml+roomW+amountW/2,aty,{align:"center"});}
         aty+=lineH;
       });
-      let ty=y+lineH; lines.forEach((line,i)=>{
+      const detailWrappedCount=lines.reduce((count,line)=>{
+        if(line==="__OF__") return count+1;
+        const text=line.startsWith("__EXTRA__")?line.slice(9):line;
+        return count+Math.max(1,doc.splitTextToSize(text,detailW-3).length);
+      },0);
+      const detailTextHeight=Math.max(1,detailWrappedCount)*lineH;
+      let ty=y+(rh-detailTextHeight)/2+lineH*0.78; lines.forEach((line,i)=>{
         doc.setTextColor(45,45,55);
         if(line==="__OF__"){
           doc.setFont("helvetica","bold");
@@ -1850,7 +1883,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.16",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1890,7 +1923,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.16",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -1915,6 +1948,71 @@ async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
   return new File([bytes],`Bijvoeding-Unit-${unit}-${range}.pdf`,{type:"application/pdf"});
 }
 
+function weeklyQuantityRows(unit){
+  const rooms = data.rooms.filter(r => String(r.unit) === String(unit) && r.mode === "drink" && r.scheduleTimes);
+  const normal = new Map();
+  const orGroups = new Map();
+  for (const r of rooms){
+    const days = normalizeDays(r.scheduleDays).split(",").filter(Boolean).length || 7;
+    const times = Math.max(1, normalizedTimes(r.scheduleTimes).length);
+    const perTime = Number(r.scheduleAmount || 0) > 0 ? Number(r.scheduleAmount) : Number(r.dailyAmount || 0) / times;
+    const weekly = perTime * times * days;
+    if (!(weekly > 0)) continue;
+    const unitLabel = r.dailyUnit || "";
+    if (r.scheduleChoice === "or"){
+      const gkey = `${r.room}|${normalizeDays(r.scheduleDays)}|${normalizedTimes(r.scheduleTimes).join(",")}|${unitLabel}`;
+      if (!orGroups.has(gkey)) orGroups.set(gkey, {room:r.room, amount:weekly, unit:unitLabel, options:[]});
+      const g = orGroups.get(gkey);
+      const lbl = productWithFlavor(r);
+      if (!g.options.includes(lbl)) g.options.push(lbl);
+      continue;
+    }
+    const label = productWithFlavor(r);
+    const key = `${label}|${unitLabel}`;
+    const cur = normal.get(key) || {label, amount:0, unit:unitLabel};
+    cur.amount += weekly;
+    normal.set(key, cur);
+  }
+  const rows = [...normal.values()].sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true}));
+  for (const g of orGroups.values()){
+    rows.push({label:`Kamer ${g.room} – OF-keuze: ${g.options.join(" / ")}`, amount:g.amount, unit:g.unit, choice:true});
+  }
+  return rows;
+}
+
+async function createWeeklyQuantitiesPdf(unit){
+  const rows = weeklyQuantityRows(unit);
+  if(!rows.length){alert(`Voor Unit ${unit} zijn geen weekhoeveelheden te berekenen.`);return;}
+  if(!window.jspdf?.jsPDF){alert("De PDF-module kon niet worden geladen. Controleer de internetverbinding en probeer opnieuw.");return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
+  const W=210,H=297,ml=16,mr=16,tableW=W-ml-mr;
+  let y=18;
+  doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(15);
+  doc.text(`Weekhoeveelheden bijvoeding - Unit ${unit}`,ml,y); y+=7;
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(100,100,110);
+  doc.text("Benodigd voor één volledige week volgens het ingestelde kamerschema.",ml,y); y+=8;
+  const qtyW=38, nameW=tableW-qtyW;
+  doc.setFillColor(245,245,248);doc.rect(ml,y,tableW,8,"F");doc.setDrawColor(210,210,218);doc.rect(ml,y,tableW,8);
+  doc.line(ml+nameW,y,ml+nameW,y+8);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(45,45,55);
+  doc.text("Voeding / smaak",ml+2,y+5.3);doc.text("Per week",ml+nameW+qtyW/2,y+5.3,{align:"center"});y+=8;
+  doc.setFontSize(8.5);
+  for(const row of rows){
+    const lines=doc.splitTextToSize(row.label,nameW-4);
+    const rh=Math.max(9,lines.length*4.2+4);
+    if(y+rh>H-16){doc.addPage();y=18;}
+    doc.setDrawColor(220,220,226);doc.rect(ml,y,tableW,rh);doc.line(ml+nameW,y,ml+nameW,y+rh);
+    doc.setFont("helvetica",row.choice?"italic":"normal");doc.setTextColor(45,45,55);
+    lines.forEach((line,i)=>doc.text(line,ml+2,y+5+i*4.2));
+    doc.setFont("helvetica","bold");doc.text(withUnit(row.amount,row.unit),ml+nameW+qtyW/2,y+rh/2+1.5,{align:"center"});
+    y+=rh;
+  }
+  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
+  doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
+  const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
+}
+
 async function makeSelectedSchedules(){
   const units=[...document.querySelectorAll(".pdf-unit-check:checked")].map(x=>x.value);
   const types=[...document.querySelectorAll(".pdf-type-input:checked")].map(x=>x.value);
@@ -1925,6 +2023,7 @@ async function makeSelectedSchedules(){
   closePdfUnitModal();
   const files=[];
   if(types.includes("overview")){for(const unit of units){const f=await createOverviewPdf(unit);if(f)files.push(f);}}
+  if(types.includes("weekly")){for(const unit of units){const f=await createWeeklyQuantitiesPdf(unit);if(f)files.push(f);}}
   if(types.includes("check")){
     // Aftekenlijsten per unit bundelen: alle geselecteerde weken komen als pagina's
     // achter elkaar in één PDF. Zo hoeft per unit maar één bestand geprint te worden.
@@ -1942,7 +2041,7 @@ async function makeSelectedSchedules(){
   }
   if(!files.length){alert("Er konden geen PDF-bestanden worden gemaakt voor de gekozen selectie.");return;}
   try{
-    const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":"Bijvoeding aftekenlijsten");
+    const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":types[0]==="weekly"?"Bijvoeding weekhoeveelheden":"Bijvoeding aftekenlijsten");
     if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title,text:`Bijgevoegd ${files.length} PDF-bestand${files.length===1?"":"en"}.`,files});}
     else{for(const file of files){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}alert(`${files.length} PDF-bestand${files.length===1?"":"en"} gemaakt. Voeg ze samen als bijlagen toe aan één e-mail.`);}
   }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
@@ -1950,7 +2049,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.16 — volledige back-up maken en terugzetten.
+// V3.3.18 — volledige back-up maken en terugzetten.
 (function setupBackupTools(){
   const makeBtn = document.getElementById("makeBackup");
   const restoreBtn = document.getElementById("restoreBackup");
@@ -1966,7 +2065,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.16",
+        version: "V3.3.18",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -2019,7 +2118,7 @@ async function makeSelectedSchedules(){
 })();
 
 
-// V3.3.16 — zoeken op product bij Voorraad en Bestellen.
+// V3.3.18 — zoeken op product bij Voorraad en Bestellen.
 (function setupProductSearch(){
   const countInput = document.getElementById("countSearch");
   const orderInput = document.getElementById("orderSearch");
