@@ -1427,7 +1427,7 @@ function renderRoomOverview() {
     groups.get(key).rows.push(r);
   });
   const rooms = [...groups.values()].sort((a,b) => Number(a.unit)-Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, {numeric:true}));
-  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+  roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${esc(amountText(r))} per keer</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
 function renderOverview() {
@@ -1896,7 +1896,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1911,20 +1911,26 @@ async function createOverviewPdf(unit){
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),ml=11,mr=11,top=10,bottom=9,contentW=W-ml-mr;
   doc.setFillColor(255,255,255);doc.rect(0,0,W,H,"F");
   const groups=[];let last="";rows.forEach(row=>{if(row.time!==last){groups.push({time:row.time,rows:[]});last=row.time;}groups[groups.length-1].rows.push(row);});
-  let fs=10,lineH=4.3,timeH=8,gap=5,roomW=18;
-  const detailW=contentW-roomW;
+  let fs=10,lineH=4.3,timeH=8,gap=5,roomW=18,amountW=25,headerH=7;
+  const detailW=contentW-roomW-amountW;
   const overviewLines=row=>rowDetailLines(row);
-  const rowHeight=row=>{doc.setFontSize(fs);let n=0;overviewLines(row).forEach(line=>{const txt=line.replace(/^__EXTRA__/,"").replace(/^__OF__$/,"OF");n+=Math.max(1,doc.splitTextToSize(txt,detailW-5).length);});return Math.max(10,n*lineH+4);};
-  const totalHeight=()=>top+12+groups.reduce((sum,g,gi)=>sum+(gi?gap:0)+timeH+g.rows.reduce((a,r)=>a+rowHeight(r),0),0)+bottom+5;
+  const rowHeight=row=>{doc.setFontSize(fs);let n=0;overviewLines(row).forEach(line=>{const txt=line.replace(/^__EXTRA__/,"").replace(/^__OF__$/,"OF");n+=Math.max(1,doc.splitTextToSize(txt,detailW-5).length);});return Math.max(10,Math.max(n,rowAmountLines(row).length)*lineH+4);};
+  const totalHeight=()=>top+12+headerH+groups.reduce((sum,g,gi)=>sum+(gi?gap:0)+timeH+g.rows.reduce((a,r)=>a+rowHeight(r),0),0)+bottom+5;
   while(totalHeight()>H && fs>7){fs-=0.25;lineH=Math.max(3.2,lineH-.12);timeH=Math.max(6.2,timeH-.1);gap=Math.max(2.8,gap-.15);}
   let y=top;doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(15);doc.text(`Bijvoeding overzicht - Unit ${unit}`,ml,y+5);y+=11;
+  doc.setDrawColor(205,205,215);doc.setLineWidth(.2);doc.rect(ml,y,contentW,headerH);
+  doc.line(ml+roomW,y,ml+roomW,y+headerH);doc.line(ml+roomW+amountW,y,ml+roomW+amountW,y+headerH);
+  doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.setTextColor(45,45,55);
+  doc.text("Kamer",ml+roomW/2,y+4.8,{align:"center"});doc.text("Hoeveelheid",ml+roomW+amountW/2,y+4.8,{align:"center"});doc.text("Voeding / smaak / opmerking",ml+roomW+amountW+2,y+4.8);y+=headerH;
   groups.forEach((g,gi)=>{
     if(gi){y+=gap/2;doc.setDrawColor(190,195,198);doc.setLineWidth(.5);doc.line(ml,y,ml+contentW,y);y+=gap/2;}
     doc.setFont("helvetica","bold");doc.setFontSize(fs+1.5);doc.setTextColor(46,115,67);doc.text(`${g.time} uur`,ml,y+5.2);y+=timeH;
     g.rows.forEach(row=>{
-      const rh=rowHeight(row);doc.setDrawColor(220,220,225);doc.setLineWidth(.2);doc.line(ml,y+rh,ml+contentW,y+rh);
+      const rh=rowHeight(row);doc.setDrawColor(220,220,225);doc.setLineWidth(.2);doc.line(ml,y+rh,ml+contentW,y+rh);doc.line(ml+roomW,y,ml+roomW,y+rh);doc.line(ml+roomW+amountW,y,ml+roomW+amountW,y+rh);
       doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(fs);doc.text(String(row.room),ml+roomW/2,y+5,{align:"center"});
-      let ty=y+4.5;const x=ml+roomW+2.5;
+      const amountLines=rowAmountLines(row);let aty=y+4.5;
+      amountLines.forEach(line=>{if(line){doc.setFont("helvetica","bold");doc.text(line,ml+roomW+amountW/2,aty,{align:"center"});}aty+=lineH;});
+      let ty=y+4.5;const x=ml+roomW+amountW+2.5;
       overviewLines(row).forEach((line,i)=>{
         if(line==="__OF__"){
           const cy=ty-1.1,center=x+(detailW-5)/2;doc.setDrawColor(95,95,100);doc.setLineWidth(.25);doc.line(center-15,cy,center-5,cy);doc.line(center+5,cy,center+15,cy);doc.setFont("helvetica","bold");doc.text("OF",center,ty,{align:"center"});ty+=lineH;return;
@@ -1936,7 +1942,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2030,7 +2036,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.21",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2086,7 +2092,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.20",
+        version: "V3.3.21",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
