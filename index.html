@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.24</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.7" />
+    <title>Bij- &amp; Sondevoeding V3.3.25</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.25" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.24</span>
+        <span class="version">V3.3.25</span>
       </div>
     </header>
 
@@ -174,7 +174,12 @@
             <label for="dailyAmount">Verbruik per dag</label
             ><input id="dailyAmount" type="number" min="0" step="0.1" />
           </div>
-          <select id="dailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
+          <select
+            id="dailyUnit"
+            class="hidden"
+            aria-hidden="true"
+            tabindex="-1"
+          >
             <option value=""></option>
           </select>
           <div class="schedule-fields">
@@ -247,9 +252,14 @@
               <label for="scheduleNote">Extra informatie</label
               ><input id="scheduleNote" placeholder="Bijv. na het eten geven" />
             </div>
-            <label class="flavor-check" style="margin-top:8px">
+            <label class="flavor-check" style="margin-top: 8px">
               <input id="scheduleShowOnPdf" type="checkbox" checked />
-              <span><strong>Op bijvoedingslijst tonen</strong><br><small>Uitzetten als deze voeding al op de sondevoedingslijst staat.</small></span>
+              <span
+                ><strong>Op bijvoedingslijst tonen</strong><br /><small
+                  >Uitzetten als deze voeding al op de sondevoedingslijst
+                  staat.</small
+                ></span
+              >
             </label>
           </div>
           <div class="form-actions-inline">
@@ -472,8 +482,13 @@
 
       <section id="orders" class="tab">
         <div class="card">
-          <button type="button" class="back-to-overview hidden" id="backToOverview" onclick="returnToOverview()">
-            ← TERUG NAAR OVERZICHT
+          <button
+            type="button"
+            class="back-to-overview hidden"
+            id="backToOverview"
+            onclick="returnToOverview()"
+          >
+            ‹ Terug naar overzicht
           </button>
           <h2>Besteladvies</h2>
           <div class="product-search">
@@ -540,7 +555,12 @@
           <label for="editDailyAmount">Verbruik per dag</label
           ><input id="editDailyAmount" type="number" min="0" step="0.1" />
         </div>
-        <select id="editDailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
+        <select
+          id="editDailyUnit"
+          class="hidden"
+          aria-hidden="true"
+          tabindex="-1"
+        >
           <option value=""></option>
         </select>
         <div class="schedule-fields">
@@ -608,9 +628,14 @@
               placeholder="Bijv. na het eten geven"
             />
           </div>
-          <label class="flavor-check" style="margin-top:8px">
+          <label class="flavor-check" style="margin-top: 8px">
             <input id="editScheduleShowOnPdf" type="checkbox" checked />
-            <span><strong>Op bijvoedingslijst tonen</strong><br><small>Uitzetten als deze voeding al op de sondevoedingslijst staat.</small></span>
+            <span
+              ><strong>Op bijvoedingslijst tonen</strong><br /><small
+                >Uitzetten als deze voeding al op de sondevoedingslijst
+                staat.</small
+              ></span
+            >
           </label>
         </div>
         <div class="modal-info">
