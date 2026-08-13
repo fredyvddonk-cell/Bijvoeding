@@ -215,6 +215,30 @@ function stockUnits(p) {
 function orderedUnits(p) {
   return Number(p.alreadyOrdered || 0) * Number(p.contentPerOrderUnit || 1);
 }
+function familyOrderedPackages(name, mode) {
+  return familyProducts(name, mode, true).reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
+}
+function clearFamilyOrdered(name, mode) {
+  familyProducts(name, mode, true).forEach(p => p.alreadyOrdered = 0);
+}
+function saveFamilyOrdered(encodedName, mode, inputId) {
+  const name = decodeURIComponent(encodedName || "");
+  const input = document.getElementById(inputId);
+  const amount = Math.max(0, Math.floor(Number(input?.value || 0)));
+  const products = familyProducts(name, mode, true);
+  if (!products.length) return;
+  products.forEach(p => p.alreadyOrdered = 0);
+  const target = products.find(orderableProduct) || products.find(activeProduct) || products[0];
+  target.alreadyOrdered = amount;
+  saveData();
+}
+function saveProductOrdered(id, inputId) {
+  const p = data.products.find(x => x.id === id);
+  const input = document.getElementById(inputId);
+  if (!p || !input) return;
+  p.alreadyOrdered = Math.max(0, Math.floor(Number(input.value || 0)));
+  saveData();
+}
 function stockPackages(p) {
   return Number(p.stockFull || 0) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1) : 0);
 }
@@ -743,9 +767,15 @@ function renderDrinkOrders() {
     }).join("");
 
     const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
+    const ordered = familyOrderedPackages(g.name, "drink");
+    const orderedInputId = `ordered-family-${p.id}`;
+    const orderStatus = ordered > 0
+      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${totalOrder > 0 ? ` <span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
+      : (totalOrder > 0 ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`);
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
-      <div class="order-summary">${totalOrder > 0 ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>` : `<span class="status-ok">Voldoende voorraad</span>`}</div>
+      <div class="order-summary">${orderStatus}</div>
+      <div class="order-entry"><label for="${orderedInputId}">Besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" value="${ordered}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink', '${orderedInputId}')">Opslaan</button></div>
       <div class="order-variant-list">${stockRows}</div>
       <details class="order-details"><summary>Berekening bekijken</summary>
         <div class="order-pref-groups">${prefSections}</div>
@@ -856,6 +886,7 @@ function changeStock(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockFull = Math.max(0, Number(p.stockFull || 0) + delta);
+  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -863,6 +894,7 @@ function changeLoose(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockLoose = Math.max(0, Number(p.stockLoose || 0) + delta);
+  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -1033,6 +1065,7 @@ editLooseUnitsAllowed.onchange = syncEditLooseField;
 saveProductEdit.onclick = () => {
   const p = data.products.find(x => x.id === editingProductId);
   if (!p) return;
+  const oldStockUnits = stockUnits(p);
   const oldName = p.name;
   const name = canonicalName(editProductName.value.trim());
   const flavor = p.mode === "sonde" ? "" : editFlavor.value.trim();
@@ -1066,6 +1099,7 @@ saveProductEdit.onclick = () => {
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
+  if (stockUnits(p) > oldStockUnits) clearFamilyOrdered(p.name, p.mode);
 
   data.rooms.filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(name)).forEach(r => {
     const first = familyProducts(name, r.mode, true)[0];
@@ -1342,12 +1376,16 @@ function sondeOrGeneralOrderCard(p) {
   const meta = p.mode === "general"
     ? `Doelvoorraad: ${fmt(a.needed / Number(p.contentPerOrderUnit || 1))} ${esc(plural(p.orderUnit, a.needed / Number(p.contentPerOrderUnit || 1)))}${Number(p.minimumStock || 0) > 0 ? `<br>Minimum: ${esc(minimumText(p))}` : ""}`
     : `${esc(familyDaysSupplyText(p))} · gezamenlijk verbruik ${fmt(a.daily)} ${esc(p.consumptionUnit)} per dag · doel ${targetWeeks(p.mode)} weken<br>Minimum: ${esc(minimumText(p))}${phaseOutProduct(p) ? `<br><strong class="phaseout-note">Uitlopend product · voorraad telt mee, niet bestellen</strong>` : ""}`;
+  const ordered = Number(p.alreadyOrdered || 0);
+  const orderedInputId = `ordered-product-${p.id}`;
   let status = `<span class="status-ok">Voldoende voorraad</span>`;
-  if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
+  if (ordered > 0) status = `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${a.orderUnits > 0 ? ` <span class="status-order">Nog ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))} bestellen</span>` : ""}`;
+  else if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
   else if (phaseOutProduct(p) && a.shortage > 0) status = `<span class="phaseout-status">Uitlopend · niet bestellen</span>`;
   return `<div class="item order-card ${phaseOutProduct(p) ? "phaseout-card" : ""}">
     <div class="order-product">${esc(labelProduct(p))}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
     <div class="order-main">${status}</div>
+    ${!phaseOutProduct(p) ? `<div class="order-entry"><label for="${orderedInputId}">Besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" value="${ordered}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveProductOrdered('${p.id}', '${orderedInputId}')">Opslaan</button></div>` : ""}
     <div class="order-meta">${meta}</div>
     ${tht ? `<div class="order-chips">${tht}</div>` : ""}
   </div>`;
@@ -1384,10 +1422,11 @@ function overviewAttentionItems() {
     const p = products.find(activeProduct) || products[0];
     if (!p) return;
     const plan = drinkFamilyPlan(name);
-    const stock = familyStockUnits(name, "drink");
+    const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
+    const orderedPackages = familyOrderedPackages(name, "drink");
     const thtSummary = familyThtSummary(products);
-    if (plan.orderUnits > 0 || thtSummary.attention) {
-      items.push({p, name, orderUnits:plan.orderUnits, stock, days:plan.days, unused:false, tht:thtSummary.html, mode:"drink"});
+    if (plan.orderUnits > 0 || orderedPackages > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits:plan.orderUnits, orderedPackages, stock, days:plan.days, unused:false, tht:thtSummary.html, mode:"drink"});
     }
     products.filter(x => stockUnits(x) > 0 && !isInUse(x)).forEach(x => {
       items.push({p:x, name:labelProduct(x), orderUnits:0, stock:stockUnits(x), days:null, unused:true, tht:"", mode:"drink", transferOnly:true});
@@ -1401,9 +1440,10 @@ function overviewAttentionItems() {
     if (!p) return;
     const a = adviceForProduct(p);
     const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
+    const orderedPackages = familyOrderedPackages(name, "sonde");
     const thtSummary = familyThtSummary(products);
-    if (a.orderUnits > 0 || thtSummary.attention) {
-      items.push({p, name, orderUnits:a.orderUnits, stock, days:familyDaysSupply(p), unused:false, tht:thtSummary.html, mode:"sonde"});
+    if (a.orderUnits > 0 || orderedPackages > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits:a.orderUnits, orderedPackages, stock, days:familyDaysSupply(p), unused:false, tht:thtSummary.html, mode:"sonde"});
     }
     products.filter(x => stockUnits(x) > 0 && !isInUse(x)).forEach(x => {
       items.push({p:x, name:labelProduct(x), orderUnits:0, stock:stockUnits(x), days:null, unused:true, tht:"", mode:"sonde", transferOnly:true});
@@ -1417,9 +1457,10 @@ function overviewAttentionItems() {
     if (!p) return;
     const orderUnits = products.reduce((sum, x) => sum + adviceForProduct(x).orderUnits, 0);
     const stock = products.reduce((sum, x) => sum + stockUnits(x), 0);
+    const orderedPackages = familyOrderedPackages(name, "general");
     const thtSummary = familyThtSummary(products);
-    if (orderUnits > 0 || thtSummary.attention) {
-      items.push({p, name, orderUnits, stock, days:null, unused:false, tht:thtSummary.html, mode:"general"});
+    if (orderUnits > 0 || orderedPackages > 0 || thtSummary.attention) {
+      items.push({p, name, orderUnits, orderedPackages, stock, days:null, unused:false, tht:thtSummary.html, mode:"general"});
     }
   });
   currentMode = old;
@@ -1494,12 +1535,12 @@ function renderOverview() {
     const minimum = x.transferOnly ? "" : (x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`);
     const expiredTht = x.tht && x.tht.includes("danger-chip");
     const soonTht = x.tht && x.tht.includes("warn-chip");
-    const attentionClass = x.orderUnits > 0 ? "attention-card order-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
+    const attentionClass = x.orderUnits > 0 ? "attention-card order-priority" : x.orderedPackages > 0 ? "attention-card ordered-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
     return `<div class="item ${attentionClass}">
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
-      ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong></button>` : ""}
+      ${x.orderedPackages > 0 ? `<button type="button" class="attention-ordered attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages} ${esc(plural(p.orderUnit, x.orderedPackages))} besteld</strong>${x.orderUnits > 0 ? `<span class="ordered-remaining">Nog ${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))} bestellen</span>` : ""}</button>` : (x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong></button>` : "")}
       ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
@@ -1933,7 +1974,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.24",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.26",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1979,7 +2020,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.24",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.26",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2073,7 +2114,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.24",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.26",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2129,7 +2170,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.24",
+        version: "V3.3.26",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
