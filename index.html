@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.32</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.32" />
+    <title>Bij- &amp; Sondevoeding V3.3.33</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.33" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.32</span>
+        <span class="version">V3.3.33</span>
       </div>
     </header>
 
@@ -245,7 +245,11 @@
             </div>
             <div class="field">
               <label for="scheduleNote">Extra informatie</label
-              ><input id="scheduleNote" placeholder="Bijv. na het eten geven" />
+              ><input
+                id="scheduleNote"
+                placeholder="Bijv. na het eten geven"
+                onkeydown="if(event.key === 'Enter'){ event.preventDefault(); saveRoom.click(); this.blur(); }"
+              />
             </div>
             <label class="flavor-check" style="margin-top:8px">
               <input id="scheduleShowOnPdf" type="checkbox" checked />
@@ -395,6 +399,7 @@
               min="0"
               step="1"
               value="0"
+              onkeydown="if(event.key === 'Enter'){ event.preventDefault(); saveProduct.click(); this.blur(); }"
             />
           </div>
           <div class="toggle-row">
@@ -433,6 +438,7 @@
               min="0"
               step="1"
               value="0"
+              onkeydown="if(event.key === 'Enter'){ event.preventDefault(); saveProduct.click(); this.blur(); }"
             />
             <div class="field-help">
               Alleen ter registratie; dit aantal wordt niet meegenomen in
@@ -447,6 +453,7 @@
               min="0"
               step="1"
               value="0"
+              onkeydown="if(event.key === 'Enter'){ event.preventDefault(); saveProduct.click(); this.blur(); }"
             />
             <div class="field-help">
               Bij Bijvoeding en Sondevoeding berekent de app dit automatisch op
@@ -982,7 +989,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.32"></script>
+    <script src="js/app.js?v=3.3.33"></script>
 
     <script>
       if ("serviceWorker" in navigator) {
