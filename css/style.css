@@ -265,16 +265,12 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
   text-align: left;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   font: inherit;
 }
 .attention-order-link:focus-visible {
   outline: 3px solid rgba(180, 45, 45, 0.3);
   outline-offset: 2px;
-}
-.attention-order-link span {
-  font-size: 0.84rem;
-  font-weight: 700;
 }
 .order-jump-highlight {
   outline: 4px solid rgba(46, 115, 67, 0.32);

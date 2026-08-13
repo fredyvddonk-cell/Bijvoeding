@@ -1487,7 +1487,7 @@ function renderOverview() {
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
-      ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong><span>Bekijk product ›</span></button>` : ""}
+      ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong></button>` : ""}
       ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
