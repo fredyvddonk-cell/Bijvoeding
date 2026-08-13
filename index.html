@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.19</title>
+    <title>Bij- &amp; Sondevoeding V3.3.20</title>
     <link rel="stylesheet" href="css/style.css?v=3.3.7" />
   </head>
   <body>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.19</span>
+        <span class="version">V3.3.20</span>
       </div>
     </header>
 
@@ -399,6 +399,20 @@
           </div>
           <div class="toggle-row">
             <div>
+              <strong>Op weeklijst tonen</strong>
+              <div class="field-help">
+                Zet uit als dit product niet op de lijst met weekhoeveelheden
+                hoeft te komen.
+              </div>
+            </div>
+            <label class="switch"
+              ><input id="showOnWeeklyList" type="checkbox" checked /><span
+                class="switch-slider"
+              ></span
+            ></label>
+          </div>
+          <div class="toggle-row">
+            <div>
               <strong>Niet door ons besteld</strong>
               <div class="field-help">
                 Wel beschikbaar bij Kamers en op PDF-lijsten, maar niet in
@@ -734,6 +748,20 @@
           </div>
         </div>
 
+        <div class="toggle-row" id="editShowOnWeeklyListRow">
+          <div>
+            <strong>Op weeklijst tonen</strong>
+            <div class="field-help">
+              Zet uit als dit product niet op de lijst met weekhoeveelheden
+              hoeft te komen.
+            </div>
+          </div>
+          <label class="switch" aria-label="Op weeklijst tonen"
+            ><input id="editShowOnWeeklyList" type="checkbox" /><span
+              class="switch-slider"
+            ></span
+          ></label>
+        </div>
         <div class="toggle-row" id="editProductActiveRow">
           <div>
             <strong>Smaak actief in assortiment</strong>
@@ -951,7 +979,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.19"></script>
+    <script src="js/app.js?v=3.3.20"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

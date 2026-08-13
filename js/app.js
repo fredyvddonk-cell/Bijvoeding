@@ -51,6 +51,8 @@ function loadData() {
       if (p.active == null) p.active = true;
       if (p.externalProduct == null) p.externalProduct = false;
       if (p.externalQuantity == null) p.externalQuantity = 0;
+      // V3.3.20: bestaande producten blijven standaard op de weeklijst staan.
+      if (p.showOnWeeklyList == null) p.showOnWeeklyList = true;
       // 2.7.2: behoud bij bestaande producten het gedrag uit 2.7.1.
       // Daarna kan dit per product op Ja/Nee worden gezet.
       if (p.looseUnitsAllowed == null) p.looseUnitsAllowed = Number(p.contentPerOrderUnit || 1) > 1;
@@ -998,6 +1000,7 @@ function editStock(id) {
   editAlreadyOrdered.value = p.alreadyOrdered || 0;
   editExternalProduct.checked = p.externalProduct === true;
   editExternalQuantity.value = p.externalQuantity || 0;
+  editShowOnWeeklyList.checked = p.showOnWeeklyList !== false;
   syncExternalEditForm();
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
@@ -1053,6 +1056,7 @@ saveProductEdit.onclick = () => {
   p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
   p.externalProduct = isExternal;
   p.externalQuantity = isExternal ? Math.max(0, Number(editExternalQuantity.value) || 0) : 0;
+  p.showOnWeeklyList = editShowOnWeeklyList.checked;
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
@@ -1554,7 +1558,8 @@ saveProduct.onclick = () => {
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
     minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked,
-    externalQuantity: externalProduct.checked ? Math.max(0, Number(externalQuantity.value) || 0) : 0
+    externalQuantity: externalProduct.checked ? Math.max(0, Number(externalQuantity.value) || 0) : 0,
+    showOnWeeklyList: showOnWeeklyList.checked
   });
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
@@ -1628,6 +1633,7 @@ function resetProductAddForm(){
   contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes";
   if (typeof externalProduct !== "undefined") externalProduct.checked = false;
+  if (typeof showOnWeeklyList !== "undefined") showOnWeeklyList.checked = true;
   if (typeof productMemo !== "undefined") productMemo.value = "";
   syncProductTypeFields();
 }
@@ -1890,7 +1896,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1930,7 +1936,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -1956,7 +1962,15 @@ async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
 }
 
 function weeklyQuantityRows(unit){
-  const rooms = data.rooms.filter(r => String(r.unit) === String(unit) && r.mode === "drink" && r.scheduleTimes);
+  const rooms = data.rooms.filter(r => {
+    if (String(r.unit) !== String(unit) || r.mode !== "drink" || !r.scheduleTimes) return false;
+    const candidates = familyProducts(r.productName, r.mode, true);
+    const selectedIds = Array.isArray(r.selectedProductIds) ? r.selectedProductIds : [];
+    const selected = r.allFlavors || !selectedIds.length
+      ? candidates
+      : candidates.filter(p => selectedIds.includes(p.id));
+    return selected.some(p => p.showOnWeeklyList !== false);
+  });
   const normal = new Map();
   const orGroups = new Map();
   for (const r of rooms){
@@ -2016,7 +2030,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.20",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2072,7 +2086,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.19",
+        version: "V3.3.20",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
