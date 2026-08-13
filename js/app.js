@@ -221,6 +221,9 @@ function orderedUnits(p) {
 function familyOrderedPackages(name, mode) {
   return familyProducts(name, mode, true).reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
 }
+function remainingOrderPackages(p, advisedPackages) {
+  return Math.max(0, Number(advisedPackages || 0) - Number(p.alreadyOrdered || 0));
+}
 function saveFamilyOrdered(encodedName, mode, inputId) {
   const name = decodeURIComponent(encodedName || "");
   const input = document.getElementById(inputId);
@@ -306,7 +309,8 @@ function advice(p) {
     : (daily > 0 && activeProduct(p) ? Math.max(usageTarget, minimumTarget) : 0);
   const available = stockUnits(p) + orderedUnits(p);
   const shortage = Math.max(0, needed - available);
-  return { daily, weekly, usageTarget, minimumTarget, needed, available, orderUnits: Math.ceil(shortage / Number(p.contentPerOrderUnit || 1)) };
+  const advisedPackages = Math.ceil(shortage / Number(p.contentPerOrderUnit || 1));
+  return { daily, weekly, usageTarget, minimumTarget, needed, available, orderUnits: remainingOrderPackages(p, advisedPackages) };
 }
 
 function roomOptionValue(name) {
@@ -656,7 +660,9 @@ function drinkFamilyPlan(name) {
   const shortage = Math.max(0, targetDemand - fulfillable);
   const rep = active[0] || products[0];
   const pack = Number(rep?.contentPerOrderUnit || 1);
-  const orderUnits = pack > 0 ? Math.ceil(shortage / pack) : 0;
+  const advisedOrderUnits = pack > 0 ? Math.ceil(shortage / pack) : 0;
+  const orderedPackages = familyOrderedPackages(name, "drink");
+  const orderUnits = Math.max(0, advisedOrderUnits - orderedPackages);
 
   // Hoeveel dagen kunnen alle bewoners binnen hun eigen voorkeuren vooruit?
   let days = null;
@@ -733,6 +739,15 @@ function drinkFamilyPlan(name) {
     const gp = g.allowedIds.map(id => data.products.find(p => p.id === id)).find(Boolean) || rep;
     const packSize = Number(gp?.contentPerOrderUnit || 1);
     g.orderUnits = packSize > 0 ? Math.ceil(g.shortage / packSize) : 0;
+  });
+
+  // Een geregistreerde bestelling verlaagt alleen wat nog besteld moet worden.
+  // De fysieke voorraad en het aantal dagen voorraad blijven ongewijzigd.
+  let orderedLeft = orderedPackages;
+  prefGroups.forEach(g => {
+    const used = Math.min(orderedLeft, g.orderUnits);
+    g.orderUnits -= used;
+    orderedLeft -= used;
   });
 
   return { name, products, active, rooms, roomPlans, daily, targetDays, targetDemand, shortage, orderUnits, rep, days, accepted, other, acceptedStock, prefGroups };
@@ -1280,8 +1295,11 @@ function adviceForProduct(p) {
     const orderable = family.filter(orderableProduct);
     // Bestel bij voorkeur de grootste nog actieve verpakking; uitlopend nooit bestellen.
     const preferred = orderable.slice().sort((a,b) => Number(b.contentPerOrderUnit||1)-Number(a.contentPerOrderUnit||1))[0] || null;
-    const orderUnits = preferred && p.id === preferred.id && shortage > 0
+    const advisedOrderUnits = preferred && p.id === preferred.id && shortage > 0
       ? Math.ceil(shortage / Number(preferred.contentPerOrderUnit || 1))
+      : 0;
+    const orderUnits = preferred && p.id === preferred.id
+      ? Math.max(0, advisedOrderUnits - familyOrderedPackages(p.name, "sonde"))
       : 0;
     return {
       ...result, daily, weekly, usageTarget, minimumTarget, needed, available, shortage,
@@ -1967,7 +1985,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.27",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2013,7 +2031,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.27",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2107,7 +2125,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.27",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2163,7 +2181,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.27",
+        version: "V3.3.28",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
