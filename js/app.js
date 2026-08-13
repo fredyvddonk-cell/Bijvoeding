@@ -221,6 +221,9 @@ function orderedUnits(p) {
 function familyOrderedPackages(name, mode) {
   return familyProducts(name, mode, true).reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
 }
+function clearFamilyOrdered(name, mode) {
+  familyProducts(name, mode, true).forEach(p => p.alreadyOrdered = 0);
+}
 function remainingOrderPackages(p, advisedPackages) {
   return Math.max(0, Number(advisedPackages || 0) - Number(p.alreadyOrdered || 0));
 }
@@ -898,6 +901,7 @@ function changeStock(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockFull = Math.max(0, Number(p.stockFull || 0) + delta);
+  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -905,6 +909,7 @@ function changeLoose(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockLoose = Math.max(0, Number(p.stockLoose || 0) + delta);
+  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -1075,6 +1080,7 @@ editLooseUnitsAllowed.onchange = syncEditLooseField;
 saveProductEdit.onclick = () => {
   const p = data.products.find(x => x.id === editingProductId);
   if (!p) return;
+  const oldStockUnits = stockUnits(p);
   const oldName = p.name;
   const name = canonicalName(editProductName.value.trim());
   const flavor = p.mode === "sonde" ? "" : editFlavor.value.trim();
@@ -1108,6 +1114,7 @@ saveProductEdit.onclick = () => {
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
   p.active = p.mode === "general" ? true : editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
+  if (stockUnits(p) > oldStockUnits) clearFamilyOrdered(p.name, p.mode);
 
   data.rooms.filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(name)).forEach(r => {
     const first = familyProducts(name, r.mode, true)[0];
@@ -1985,7 +1992,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.29",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2031,7 +2038,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.29",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2125,7 +2132,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.28",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.29",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2181,7 +2188,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.28",
+        version: "V3.3.29",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
