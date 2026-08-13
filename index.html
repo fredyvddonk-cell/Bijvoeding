@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.18</title>
+    <title>Bij- &amp; Sondevoeding V3.3.19</title>
     <link rel="stylesheet" href="css/style.css?v=3.3.7" />
   </head>
   <body>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.18</span>
+        <span class="version">V3.3.19</span>
       </div>
     </header>
 
@@ -170,26 +170,13 @@
             </div>
           </div>
           <div id="roomFlavorChoices" class="flavor-choice-box hidden"></div>
-          <div class="row">
-            <div class="field">
-              <label for="dailyAmount">Verbruik per dag</label
-              ><input id="dailyAmount" type="number" min="0" step="0.1" />
-            </div>
-            <div class="field">
-              <label for="dailyUnit">Eenheid</label
-              ><select id="dailyUnit">
-                <option value="">geen eenheid</option>
-                <option value="flesjes">flesjes</option>
-                <option value="bakjes">bakjes</option>
-                <option value="zakjes">zakjes</option>
-                <option value="glazen">glas / glazen</option>
-                <option value="bekers">beker / bekers</option>
-                <option value="schaaltjes">schaaltje / schaaltjes</option>
-                <option value="stuks">stuk(s)</option>
-                <option value="ml">ml</option>
-              </select>
-            </div>
+          <div class="field">
+            <label for="dailyAmount">Verbruik per dag</label
+            ><input id="dailyAmount" type="number" min="0" step="0.1" />
           </div>
+          <select id="dailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
+            <option value=""></option>
+          </select>
           <div class="schedule-fields">
             <div class="field">
               <label>Tijdstip(pen)</label>
@@ -340,7 +327,7 @@
           </div>
           <div class="row">
             <div class="field">
-              <label for="consumptionUnit">Verbruikseenheid</label
+              <label for="consumptionUnit">Eenheid</label
               ><select id="consumptionUnit">
                 <option value="">geen eenheid</option>
                 <option value="flesjes">flesjes</option>
@@ -532,26 +519,13 @@
           </div>
         </div>
         <div id="editRoomFlavorChoices" class="flavor-choice-box hidden"></div>
-        <div class="row">
-          <div class="field">
-            <label for="editDailyAmount">Verbruik per dag</label
-            ><input id="editDailyAmount" type="number" min="0" step="0.1" />
-          </div>
-          <div class="field">
-            <label for="editDailyUnit">Eenheid</label
-            ><select id="editDailyUnit" disabled>
-              <option value="">geen eenheid</option>
-              <option value="flesjes">flesjes</option>
-              <option value="bakjes">bakjes</option>
-              <option value="zakjes">zakjes</option>
-              <option value="glazen">glas / glazen</option>
-              <option value="bekers">beker / bekers</option>
-              <option value="schaaltjes">schaaltje / schaaltjes</option>
-              <option value="stuks">stuk(s)</option>
-              <option value="ml">ml</option>
-            </select>
-          </div>
+        <div class="field">
+          <label for="editDailyAmount">Verbruik per dag</label
+          ><input id="editDailyAmount" type="number" min="0" step="0.1" />
         </div>
+        <select id="editDailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
+          <option value=""></option>
+        </select>
         <div class="schedule-fields">
           <div class="field">
             <label>Tijdstip(pen)</label>
@@ -670,7 +644,7 @@
         </div>
         <div class="row">
           <div class="field">
-            <label for="editConsumptionUnit">Verbruikseenheid</label
+            <label for="editConsumptionUnit">Eenheid</label
             ><select id="editConsumptionUnit">
               <option value="">geen eenheid</option>
               <option value="flesjes">flesjes</option>
@@ -977,7 +951,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.18"></script>
+    <script src="js/app.js?v=3.3.19"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

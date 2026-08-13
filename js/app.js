@@ -298,7 +298,14 @@ function selectedRoomMode(selectEl) {
 function setRoomUnitFromProduct(selectEl, unitEl) {
   const name = parseRoomProductName(selectEl.value);
   const p = familyProducts(name, selectedRoomMode(selectEl))[0];
-  if (p) unitEl.value = p.consumptionUnit;
+  if (!unitEl) return;
+  const value = p?.consumptionUnit || "";
+  // De eenheid hoort bij het product. Het verborgen veld bewaart alleen de
+  // afgeleide waarde zodat bestaande kamerdata en PDF-logica compatibel blijven.
+  if (![...unitEl.options].some(o => o.value === value)) {
+    unitEl.add(new Option(value, value));
+  }
+  unitEl.value = value;
 }
 function renderFlavorChoices(selectEl, boxEl, checkedIds = [], forceAll = false, dislikedIds = []) {
   const mode = selectedRoomMode(selectEl);
@@ -1883,7 +1890,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1923,7 +1930,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2009,7 +2016,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.18",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.19",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2049,7 +2056,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.18 — volledige back-up maken en terugzetten.
+// V3.3.19 — volledige back-up maken en terugzetten.
 (function setupBackupTools(){
   const makeBtn = document.getElementById("makeBackup");
   const restoreBtn = document.getElementById("restoreBackup");
@@ -2065,7 +2072,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.18",
+        version: "V3.3.19",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -2118,7 +2125,7 @@ async function makeSelectedSchedules(){
 })();
 
 
-// V3.3.18 — zoeken op product bij Voorraad en Bestellen.
+// V3.3.19 — zoeken op product bij Voorraad en Bestellen.
 (function setupProductSearch(){
   const countInput = document.getElementById("countSearch");
   const orderInput = document.getElementById("orderSearch");
