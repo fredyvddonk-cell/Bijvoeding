@@ -1827,6 +1827,17 @@ function pdfVisibleLine(line){
   if(!line.startsWith("__FLAVOR__")) return line;
   return line.slice(10).split("|||").join("");
 }
+function drawPdfFlavorLine(doc,line,x,ty,maxWidth,lineH){
+  const [product,suffix=""]=line.slice(10).split("|||");
+  doc.setFont("helvetica","normal");doc.setTextColor(45,45,55);
+  const productLines=doc.splitTextToSize(product,maxWidth);
+  productLines.forEach(part=>{doc.text(part,x,ty);ty+=lineH;});
+  const lastProduct=productLines.at(-1)||"",lastY=ty-lineH,lastWidth=doc.getTextWidth(lastProduct);
+  doc.setFont("helvetica","bold");doc.setTextColor(116,72,145);
+  if(lastWidth+doc.getTextWidth(suffix)<=maxWidth){doc.text(suffix,x+lastWidth,lastY);return ty;}
+  doc.splitTextToSize(suffix.trim(),maxWidth).forEach(part=>{doc.text(part,x,ty);ty+=lineH;});
+  return ty;
+}
 function closePdfUnitModal(){document.getElementById("pdfUnitModal")?.classList.add("hidden");document.body.style.overflow="";}
 function localISODate(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;}
 function openPdfUnitModal(){
@@ -1994,15 +2005,7 @@ async function createSchedulePdf(unit,dateValue){
         const text=isExtra?line.slice(9):line;
         const isChoiceTitle=row.choice&&i===0;
         if(isFlavor){
-          const [product,suffix=""]=line.slice(10).split("|||");
-          doc.setFont("helvetica","normal");
-          const visible=`${product}${suffix}`,wrapped=doc.splitTextToSize(visible,detailW-3);
-          if(wrapped.length===1){
-            const tx=ml+roomW+amountW+1.5;doc.setTextColor(45,45,55);doc.text(product,tx,ty);
-            const productW=doc.getTextWidth(product);doc.setFont("helvetica","bold");doc.setTextColor(116,72,145);doc.text(suffix,tx+productW,ty);ty+=lineH;
-          }else{
-            doc.setFont("helvetica","bold");doc.setTextColor(116,72,145);wrapped.forEach(part=>{doc.text(part,ml+roomW+amountW+1.5,ty);ty+=lineH;});
-          }
+          ty=drawPdfFlavorLine(doc,line,ml+roomW+amountW+1.5,ty,detailW-3,lineH);
           return;
         }
         doc.setFont("helvetica",isExtra?"italic":(isChoiceTitle?"bold":"normal"));
@@ -2066,10 +2069,7 @@ async function createOverviewPdf(unit){
         }
         const extra=line.startsWith("__EXTRA__"),flavor=line.startsWith("__FLAVOR__"),text=extra?line.slice(9):line,choiceTitle=row.choice&&i===0;
         if(flavor){
-          const [product,suffix=""]=line.slice(10).split("|||");doc.setFont("helvetica","normal");
-          const visible=`${product}${suffix}`,wrapped=doc.splitTextToSize(visible,detailW-5);
-          if(wrapped.length===1){doc.setTextColor(45,45,55);doc.text(product,x,ty);const productW=doc.getTextWidth(product);doc.setFont("helvetica","bold");doc.setTextColor(116,72,145);doc.text(suffix,x+productW,ty);ty+=lineH;}
-          else{doc.setFont("helvetica","bold");doc.setTextColor(116,72,145);wrapped.forEach(part=>{doc.text(part,x,ty);ty+=lineH;});}
+          ty=drawPdfFlavorLine(doc,line,x,ty,detailW-5,lineH);
           return;
         }
         doc.setFont("helvetica",extra?"italic":(choiceTitle?"bold":"normal"));
