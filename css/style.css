@@ -258,3 +258,26 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .product-search input[type="search"]{width:100%;min-height:44px;padding:10px 13px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text);font:inherit;outline:none}
 .product-search input[type="search"]:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(149,122,193,.13)}
 .product-search input[type="search"]::placeholder{color:#8a8a93}
+.attention-order-link {
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: inherit;
+}
+.attention-order-link:focus-visible {
+  outline: 3px solid rgba(180, 45, 45, 0.3);
+  outline-offset: 2px;
+}
+.attention-order-link span {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.order-jump-highlight {
+  outline: 4px solid rgba(46, 115, 67, 0.32);
+  outline-offset: 3px;
+  transition: outline-color 0.4s ease;
+}

@@ -1437,6 +1437,24 @@ function renderRoomOverview() {
   roomOverviewList.innerHTML = rooms.length ? rooms.map(g => `<div class="compact-room-card"><div class="compact-room-head"><strong>Kamer ${esc(g.room)}</strong><span>Unit ${esc(g.unit)}</span></div>${g.rows.map(r => `<div class="compact-room-product"><span>${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF</span>` : ""}</span><strong>${esc(amountText(r))} per keer</strong></div>`).join("")}</div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
+function openOrderProduct(encodedName) {
+  const name = decodeURIComponent(encodedName || "");
+  document.querySelector('[data-tab="orders"]')?.click();
+  const search = document.getElementById("orderSearch");
+  if (search) {
+    search.value = name;
+    search.dispatchEvent(new Event("input", {bubbles:true}));
+  }
+  requestAnimationFrame(() => {
+    const card = [...document.querySelectorAll("#orderList .order-card")]
+      .find(el => el.style.display !== "none" && normalize(el.textContent).includes(normalize(name)));
+    if (!card) return;
+    card.scrollIntoView({behavior:"smooth", block:"center"});
+    card.classList.add("order-jump-highlight");
+    setTimeout(() => card.classList.remove("order-jump-highlight"), 1800);
+  });
+}
+
 function renderOverview() {
   overviewTitle.textContent = "Alles in één overzicht";
   statUsageLabel.textContent = "Kamers";
@@ -1469,7 +1487,7 @@ function renderOverview() {
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
-      ${x.orderUnits > 0 ? `<div class="attention-order attention-action"><strong>BESTELLEN</strong></div>` : ""}
+      ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong><span>Bekijk product ›</span></button>` : ""}
       ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
@@ -1903,7 +1921,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.23",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -1949,7 +1967,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.23",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2043,7 +2061,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.22",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.23",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2099,7 +2117,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.22",
+        version: "V3.3.23",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
