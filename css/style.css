@@ -278,14 +278,21 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
   transition: outline-color 0.4s ease;
 }
 .back-to-overview {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
   border: 0;
+  border-radius: 0;
   background: transparent;
+  box-shadow: none;
   color: var(--purple);
   font: inherit;
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 4px 0 12px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 .back-to-overview:focus-visible {
   outline: 3px solid rgba(149, 122, 193, 0.25);
