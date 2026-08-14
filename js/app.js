@@ -308,7 +308,7 @@ function advice(p) {
   const usageTarget = currentMode === "general" ? Number(p.generalTarget || 0) : weekly * targetWeeks();
   const minimumTarget = autoMinimumUnits(p);
   const needed = currentMode === "general"
-    ? Math.max(usageTarget, minimumTarget)
+    ? (activeProduct(p) ? Math.max(usageTarget, minimumTarget) : 0)
     : (daily > 0 && activeProduct(p) ? Math.max(usageTarget, minimumTarget) : 0);
   const available = stockUnits(p) + orderedUnits(p);
   const shortage = Math.max(0, needed - available);
@@ -1047,6 +1047,7 @@ function editStock(id) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   editingProductId = id;
+  editProductType.value = p.mode || "drink";
   editProductName.value = p.name || "";
   editFlavor.value = p.flavor || "";
   editFlavorField.classList.toggle("hidden", p.mode === "sonde");
@@ -1063,7 +1064,7 @@ function editStock(id) {
   syncExternalEditForm();
   editMinimumStock.value = p.minimumStock || 0;
   editProductActive.checked = activeProduct(p);
-  editProductActiveRow.classList.toggle("hidden", p.mode === "general");
+  editProductActiveRow.classList.toggle("hidden", editExternalProduct.checked);
   editProductPhaseOut.checked = phaseOutProduct(p);
   editProductPhaseOutRow.classList.toggle("hidden", p.mode !== "sonde");
   editLooseField.classList.toggle("hidden", !hasLooseUnits(p));
@@ -1086,10 +1087,21 @@ editLooseUnitsAllowed.onchange = syncEditLooseField;
 saveProductEdit.onclick = () => {
   const p = data.products.find(x => x.id === editingProductId);
   if (!p) return;
+  const oldMode = p.mode;
+  const newMode = editProductType.value;
+  const linkedToRoom = data.rooms.some(r =>
+    r.mode === oldMode &&
+    canonicalName(r.productName) === canonicalName(p.name) &&
+    (r.allFlavors === true || (Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(p.id)))
+  );
+  if (newMode !== oldMode && linkedToRoom) {
+    alert("Dit product is nog aan een kamer gekoppeld. Verwijder of wijzig eerst die kamerregel voordat je de productgroep verandert.");
+    return;
+  }
   const oldStockUnits = stockUnits(p);
   const oldName = p.name;
   const name = canonicalName(editProductName.value.trim());
-  const flavor = p.mode === "sonde" ? "" : editFlavor.value.trim();
+  const flavor = newMode === "sonde" ? "" : editFlavor.value.trim();
   const isExternal = editExternalProduct.checked;
   const content = isExternal ? 1 : Number(String(editContentPerOrderUnit.value).replace(",", "."));
   if (!name || !Number.isFinite(content) || content <= 0) {
@@ -1099,12 +1111,13 @@ saveProductEdit.onclick = () => {
 
   if (canonicalName(oldName) !== canonicalName(name)) {
     data.products
-      .filter(x => x.mode === p.mode && canonicalName(x.name) === canonicalName(oldName))
+      .filter(x => x.mode === oldMode && canonicalName(x.name) === canonicalName(oldName))
       .forEach(x => x.name = name);
     data.rooms
-      .filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(oldName))
+      .filter(r => r.mode === oldMode && canonicalName(r.productName) === canonicalName(oldName))
       .forEach(r => r.productName = name);
   }
+  p.mode = newMode;
   p.name = name;
   p.flavor = flavor;
   p.consumptionUnit = editConsumptionUnit.value;
@@ -1118,7 +1131,8 @@ saveProductEdit.onclick = () => {
   p.externalQuantity = isExternal ? Math.max(0, Number(editExternalQuantity.value) || 0) : 0;
   p.showOnWeeklyList = editShowOnWeeklyList.checked;
   p.minimumStock = Math.max(0, Number(editMinimumStock.value) || 0);
-  p.active = p.mode === "general" ? true : editProductActive.checked;
+  p.generalTarget = p.mode === "general" ? p.minimumStock : 0;
+  p.active = editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
   if (stockUnits(p) > oldStockUnits) clearFamilyOrdered(p.name, p.mode);
 
@@ -1223,13 +1237,28 @@ externalProduct.onchange = syncExternalNewForm;
 
 const syncExternalEditForm = () => {
   const ext = editExternalProduct.checked;
+  if (ext) editProductType.value = "drink";
+  editProductType.disabled = ext;
   editExternalQuantityField.classList.toggle("hidden", !ext);
   [editConsumptionUnit, editOrderUnit, editContentPerOrderUnit, editLooseUnitsAllowed, editStockFull, editStockLoose, editAlreadyOrdered, editMinimumStock].forEach(el => el.closest(".field")?.classList.toggle("hidden", ext));
-  editProductActiveRow.classList.toggle("hidden", ext || (data.products.find(x => x.id === editingProductId)?.mode === "general"));
-  editProductPhaseOutRow.classList.add("hidden");
-  editFlavorField.classList.remove("hidden");
+  editProductActiveRow.classList.toggle("hidden", ext);
+  syncProductEditTypeFields();
 };
 editExternalProduct.onchange = syncExternalEditForm;
+
+function syncProductEditTypeFields() {
+  const mode = editProductType.value;
+  const ext = editExternalProduct.checked;
+  editFlavorField.classList.toggle("hidden", mode === "sonde");
+  editFlavorField.querySelector("label").textContent = mode === "general" ? "Soort" : "Smaak";
+  editMinimumStock.closest(".field").classList.toggle("hidden", ext || mode !== "general");
+  editProductPhaseOutRow.classList.toggle("hidden", ext || mode !== "sonde");
+  editProductActiveTitle.textContent = mode === "drink" ? "Smaak actief in assortiment" : "Product actief in assortiment";
+  editProductActiveHelp.textContent = mode === "general"
+    ? "Zet uit als dit product tijdelijk niet wordt gebruikt."
+    : "Zet uit als dit product of deze smaak niet meer gebruikt wordt.";
+}
+editProductType.onchange = syncProductEditTypeFields;
 
 saveProduct.onclick = () => {
   const name = canonicalName(productName.value.trim());
@@ -1346,7 +1375,7 @@ function renderCounting() {
     const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
     return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
       <div class="item-head">
-        <div><strong>${esc(labelProduct(p))}</strong>${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
+        <div><strong>${esc(labelProduct(p))}</strong>${!activeProduct(p) ? ` <span class="badge inactive-badge">Niet actief</span>` : ""}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
       </div>
       ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
       ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
@@ -1386,7 +1415,7 @@ function renderProducts() {
   const ps = allProductsOrdered();
   productList.innerHTML = ps.length ? ps.map(p => `<div class="compact-product-row product-sort-item ${!activeProduct(p) ? "inactive-product" : ""}" data-product-id="${p.id}">
     <button type="button" class="product-row-main" onclick="editStock('${p.id}')" aria-label="${esc(labelProduct(p))} wijzigen">
-      <span class="product-row-name">${esc(p.name || "Product")}</span>
+      <span class="product-row-name">${esc(p.name || "Product")}${!activeProduct(p) ? ` <span class="badge inactive-badge">Niet actief</span>` : ""}</span>
       <span class="product-row-variant">${esc(variantLabel(p) || typeName(p.mode))}</span>
     </button>
     <button type="button" class="drag-handle compact-drag" aria-label="Sleep ${esc(labelProduct(p))}" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span></button>
@@ -1394,6 +1423,7 @@ function renderProducts() {
 }
 
 function sondeOrGeneralOrderCard(p) {
+  if (!activeProduct(p)) return "";
   const a = adviceForProduct(p);
   if (p.mode !== "general" && (!activeProduct(p) || a.daily <= 0)) return "";
   const tht = p.mode === "general" ? "" : thtBadgeHtml(p);
@@ -1475,7 +1505,7 @@ function overviewAttentionItems() {
     });
   });
 
-  const generalNames = [...new Set(allProductsOrdered().filter(p => p.mode === "general").map(p => p.name))];
+  const generalNames = [...new Set(allProductsOrdered().filter(p => p.mode === "general" && activeProduct(p)).map(p => p.name))];
   generalNames.forEach(name => {
     const products = familyProducts(name, "general", true);
     const p = products[0];
@@ -1581,6 +1611,7 @@ function syncProductTypeFields() {
   flavorField.classList.toggle("hidden", mode === "sonde");
   flavorLabel.textContent = mode === "general" ? "Soort" : "Smaak / soort";
   manualMinimumField.classList.toggle("hidden", mode !== "general");
+  newGeneralActiveRow.classList.toggle("hidden", mode !== "general");
   syncNewLooseField();
 }
 
@@ -1662,13 +1693,13 @@ saveProduct.onclick = () => {
     id: crypto.randomUUID(), mode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
     stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
-    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: true, phaseOut: false, externalProduct: externalProduct.checked,
+    minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: mode === "general" ? newGeneralActive.checked : true, phaseOut: false, externalProduct: externalProduct.checked,
     externalQuantity: externalProduct.checked ? Math.max(0, Number(externalQuantity.value) || 0) : 0,
     showOnWeeklyList: showOnWeeklyList.checked
   });
   productName.value = ""; flavor.value = ""; contentPerOrderUnit.value = "";
   looseUnitsAllowed.value = "yes"; stockFull.value = "0"; stockLoose.value = "0";
-  alreadyOrdered.value = "0"; minimumStock.value = "0"; externalQuantity.value = "0"; externalProduct.checked = false; syncExternalNewForm(); syncNewLooseField(); saveData();
+  alreadyOrdered.value = "0"; minimumStock.value = "0"; externalQuantity.value = "0"; externalProduct.checked = false; newGeneralActive.checked = true; syncExternalNewForm(); syncNewLooseField(); saveData();
   if (productFormCardV316) productFormCardV316.classList.add("hidden");
   if (showProductFormBtn) showProductFormBtn.focus();
 };
@@ -2028,7 +2059,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.35",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2078,7 +2109,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.35",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2172,7 +2203,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.35",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2228,7 +2259,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.35",
+        version: "V3.3.36",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data

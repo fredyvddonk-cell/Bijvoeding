@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.35</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.35" />
+    <title>Bij- &amp; Sondevoeding V3.3.36</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.36" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.35</span>
+        <span class="version">V3.3.36</span>
       </div>
     </header>
 
@@ -416,6 +416,19 @@
               ></span
             ></label>
           </div>
+          <div class="toggle-row hidden" id="newGeneralActiveRow">
+            <div>
+              <strong>Product actief in assortiment</strong>
+              <div class="field-help">
+                Zet uit als dit algemene product tijdelijk niet wordt gebruikt.
+              </div>
+            </div>
+            <label class="switch" aria-label="Product actief in assortiment"
+              ><input id="newGeneralActive" type="checkbox" checked /><span
+                class="switch-slider"
+              ></span
+            ></label>
+          </div>
           <div class="toggle-row">
             <div>
               <strong>Niet door ons besteld</strong>
@@ -657,6 +670,18 @@
             ×
           </button>
         </div>
+        <div class="field">
+          <label for="editProductType">Productgroep</label>
+          <select id="editProductType">
+            <option value="drink">Bijvoeding</option>
+            <option value="sonde">Sondevoeding</option>
+            <option value="general">Algemeen</option>
+          </select>
+          <div class="field-help">
+            Een product dat aan een kamer is gekoppeld, kan pas worden
+            verplaatst nadat die koppeling is verwijderd.
+          </div>
+        </div>
         <div class="row">
           <div class="field">
             <label for="editProductName">Productnaam</label
@@ -774,10 +799,10 @@
         </div>
         <div class="toggle-row" id="editProductActiveRow">
           <div>
-            <strong>Smaak actief in assortiment</strong>
+            <strong id="editProductActiveTitle">Smaak actief in assortiment</strong>
             <div class="field-help">
-              Zet uit als deze smaak niet meer leverbaar is. Bestaande voorraad
-              blijft zichtbaar bij Voorraad tellen.
+              <span id="editProductActiveHelp">Zet uit als deze smaak niet meer leverbaar is.</span>
+              Bestaande voorraad blijft zichtbaar bij Voorraad tellen.
             </div>
           </div>
           <label class="switch" aria-label="Smaak actief"
@@ -989,7 +1014,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.35"></script>
+    <script src="js/app.js?v=3.3.36"></script>
 
     <script>
       if ("serviceWorker" in navigator) {
