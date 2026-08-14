@@ -1406,7 +1406,7 @@ function renderUsage() {
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</span></div>
       ${r.scheduleNote ? `<div class="schedule-meta"><strong>Extra info:</strong> ${esc(r.scheduleNote)}</div>` : ""}
-      <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+      <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-copy" onclick="copyRoom('${r.id}')">Kopiëren</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
@@ -1418,6 +1418,7 @@ function renderProducts() {
       <span class="product-row-name">${esc(p.name || "Product")}${!activeProduct(p) ? ` <span class="badge inactive-badge">Niet actief</span>` : ""}</span>
       <span class="product-row-variant">${esc(variantLabel(p) || typeName(p.mode))}</span>
     </button>
+    <button type="button" class="copy-product-btn" onclick="copyProduct('${p.id}')">Kopiëren</button>
     <button type="button" class="drag-handle compact-drag" aria-label="Sleep ${esc(labelProduct(p))}" title="Sleep om te verplaatsen"><span aria-hidden="true">☰</span></button>
   </div>`).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -1688,6 +1689,17 @@ saveProduct.onclick = () => {
   const ao = Number(alreadyOrdered.value || 0);
   const min = Number(minimumStock.value || 0);
   if (!name || content <= 0) { alert("Vul productnaam en inhoud per besteleenheid in."); return; }
+  const exactDuplicate = data.products.some(p =>
+    p.mode === mode &&
+    canonicalName(p.name) === name &&
+    (mode === "sonde"
+      ? Number(p.contentPerOrderUnit || 0) === content
+      : String(p.flavor || "").trim().toLowerCase() === fl.toLowerCase())
+  );
+  if (exactDuplicate) {
+    alert("Dit product met dezelfde smaak, soort of inhoud bestaat al. Pas de kopie eerst aan.");
+    return;
+  }
   const maxOrder = Math.max(0, ...data.products.map(p => Number(p.order || 0)));
   data.products.push({
     id: crypto.randomUUID(), mode, name, flavor: fl,
@@ -1744,6 +1756,7 @@ function closeAddForm(card){
   if (card) card.classList.add("hidden");
 }
 function resetRoomAddForm(){
+  roomFormCardV316?.querySelector("h2") && (roomFormCardV316.querySelector("h2").textContent = "Voeding aan kamer toevoegen");
   room.value = "";
   unit.value = "";
   roomType.value = "";
@@ -1761,6 +1774,7 @@ function resetRoomAddForm(){
   syncChipPicker("add", "", ALL_DAYS);
 }
 function resetProductAddForm(){
+  productFormCardV316?.querySelector("h2") && (productFormCardV316.querySelector("h2").textContent = "Product toevoegen");
   productType.value = "drink";
   productName.value = "";
   flavor.value = "";
@@ -1777,6 +1791,53 @@ if (showRoomFormBtn) showRoomFormBtn.onclick = () => { resetRoomAddForm(); openA
 if (cancelRoomAddBtn) cancelRoomAddBtn.onclick = () => closeAddForm(roomFormCardV316);
 if (showProductFormBtn) showProductFormBtn.onclick = () => { resetProductAddForm(); openAddForm(productFormCardV316, productName); };
 if (cancelProductAddBtn) cancelProductAddBtn.onclick = () => closeAddForm(productFormCardV316);
+
+function copyRoom(id){
+  const source=data.rooms.find(r=>r.id===id);
+  if(!source) return;
+  resetRoomAddForm();
+  roomFormCardV316.querySelector("h2").textContent = "Gekopieerde voeding toevoegen";
+  room.value=source.room || "";
+  unit.value=source.unit || "";
+  roomType.value=source.mode || "drink";
+  currentMode=roomType.value;
+  renderProductOptionsCombined();
+  roomProduct.value=roomOptionValue(source.productName || "");
+  setRoomUnitFromProduct(roomProduct,dailyUnit);
+  renderFlavorChoices(roomProduct,roomFlavorChoices,source.selectedProductIds || [],source.allFlavors === true,source.dislikedProductIds || []);
+  dailyAmount.value=source.dailyAmount || "";
+  scheduleAmount.value=source.scheduleAmount || "";
+  scheduleDays.value=normalizeDays(source.scheduleDays);
+  scheduleChoice.value=source.scheduleChoice || "fixed";
+  scheduleTimes.value="";
+  scheduleNote.value="";
+  scheduleShowOnPdf.checked=source.showOnPdf !== false;
+  syncChipPicker("add","",scheduleDays.value);
+  openAddForm(roomFormCardV316,scheduleAmount);
+}
+
+function copyProduct(id){
+  const source=data.products.find(p=>p.id===id);
+  if(!source) return;
+  resetProductAddForm();
+  productFormCardV316.querySelector("h2").textContent = "Gekopieerd product toevoegen";
+  productType.value=source.mode || "drink";
+  syncProductTypeFields();
+  productName.value=source.name || "";
+  flavor.value="";
+  consumptionUnit.value=source.consumptionUnit || "";
+  orderUnit.value=source.orderUnit || "flesje";
+  contentPerOrderUnit.value=source.contentPerOrderUnit || 1;
+  looseUnitsAllowed.value=source.looseUnitsAllowed === false ? "no" : "yes";
+  stockFull.value="0";stockLoose.value="0";alreadyOrdered.value="0";
+  minimumStock.value=source.minimumStock || 0;
+  externalProduct.checked=source.externalProduct === true;
+  externalQuantity.value="0";
+  showOnWeeklyList.checked=source.showOnWeeklyList !== false;
+  newGeneralActive.checked=activeProduct(source);
+  syncExternalNewForm();syncProductTypeFields();syncNewLooseField();
+  openAddForm(productFormCardV316,flavorField.classList.contains("hidden") ? contentPerOrderUnit : flavor);
+}
 
 renderAll();
 
@@ -2059,7 +2120,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.37",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2109,7 +2170,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.37",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2203,7 +2264,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.36",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.37",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2259,7 +2320,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.36",
+        version: "V3.3.37",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
