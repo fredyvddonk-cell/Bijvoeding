@@ -960,9 +960,12 @@ function editRoom(id) {
   editScheduleTimes.value = r.scheduleTimes || "";
   editScheduleAmount.value = r.scheduleAmount || "";
   editScheduleDays.value = normalizeDays(r.scheduleDays);
+  scheduleEntryDrafts.edit.clear();
+  roomScheduleEntries(r).forEach(e=>scheduleEntryDrafts.edit.set(e.time,e));
   syncChipPicker("edit", editScheduleTimes.value, editScheduleDays.value);
   editScheduleChoice.value = r.scheduleChoice || "fixed";
   editScheduleNote.value = r.scheduleNote || "";
+  syncScheduleEntryEditor("edit");
   editScheduleShowOnPdf.checked = r.showOnPdf !== false;
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   const checked = r.allFlavors ? activeFlavorIds(r.productName, r.mode) : (r.selectedProductIds || []);
@@ -983,6 +986,8 @@ editRoomProduct.onchange = () => {
 };
 saveRoomEdit.onclick = () => {
   const r = data.rooms.find(x => x.id === editingRoomId);
+  const entries = getScheduleEntries("edit");
+  updateCalculatedDailyAmount("edit");
   const amount = Number(String(editDailyAmount.value).replace(",", "."));
   const roomNumber = editRoomNumber.value.trim();
   const productName = parseRoomProductName(editRoomProduct.value);
@@ -990,6 +995,7 @@ saveRoomEdit.onclick = () => {
     alert("Vul kamernummer, product en verbruik in.");
     return;
   }
+  if(entries.some(e=>!(Number(e.amount)>0))){alert("Vul bij ieder gekozen tijdstip een hoeveelheid per keer in.");return;}
   const selection = selectionForRoom(productName, r.mode, editRoomFlavorChoices);
   if (r.mode === "sonde" && familyProducts(productName, r.mode).length > 1 && selection.ids.length < 1) {
     alert("Vink minimaal één inhoud/variant aan.");
@@ -1006,10 +1012,11 @@ saveRoomEdit.onclick = () => {
   setRoomUnitFromProduct(editRoomProduct, editDailyUnit);
   r.dailyUnit = editDailyUnit.value;
   r.scheduleTimes = editScheduleTimes.value.trim();
-  r.scheduleAmount = Number(String(editScheduleAmount.value).replace(",", ".")) || 0;
+  r.scheduleEntries = entries;
+  r.scheduleAmount = entries.length===1 ? Number(entries[0].amount||0) : 0;
   r.scheduleDays = editScheduleDays.value;
   r.scheduleChoice = editScheduleChoice.value || "fixed";
-  r.scheduleNote = editScheduleNote.value.trim();
+  r.scheduleNote = entries.length===1 ? entries[0].note : "";
   r.showOnPdf = editScheduleShowOnPdf.checked;
   closeRoomEdit();
   saveData();
@@ -1182,6 +1189,8 @@ roomProduct.onchange = () => {
 saveRoom.onclick = () => {
   const roomV = room.value.trim();
   const unitV = unit.value;
+  const entries = getScheduleEntries("add");
+  updateCalculatedDailyAmount("add");
   const amount = Number(String(dailyAmount.value).replace(",", "."));
   const productName = parseRoomProductName(roomProduct.value);
   if (!roomV || amount <= 0 || !productName) {
@@ -1405,10 +1414,16 @@ function renderUsage() {
     ${g.rows.map(r => `<div class="room-line">
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</span></div>
-      ${r.scheduleNote ? `<div class="schedule-meta"><strong>Extra info:</strong> ${esc(r.scheduleNote)}</div>` : ""}
+      ${roomScheduleSummary(r)}
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-copy" onclick="copyRoom('${r.id}')">Kopiëren</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+}
+
+function roomScheduleSummary(r){
+  const entries=roomScheduleEntries(r);
+  if(!entries.length) return r.scheduleNote ? `<div class="schedule-meta"><strong>Extra info:</strong> ${esc(r.scheduleNote)}</div>` : "";
+  return `<div class="schedule-meta">${entries.map(e=>`<strong>${esc(e.time)}</strong> · ${esc(withUnit(e.amount,r.dailyUnit))}${e.note?` — ${esc(e.note)}`:""}`).join("<br>")}</div>`;
 }
 
 function renderProducts() {
@@ -1649,6 +1664,7 @@ saveRoom.onclick = () => {
     alert("Vul kamernummer, unit, soort voeding, product en verbruik in.");
     return;
   }
+  if(entries.some(e=>!(Number(e.amount)>0))){alert("Vul bij ieder gekozen tijdstip een hoeveelheid per keer in.");return;}
   const selection = selectionForRoom(productNameV, mode, roomFlavorChoices);
   if (mode === "drink" && familyProducts(productNameV, mode).some(p => p.flavor) && selection.ids.length < 1) {
     alert("Vink minimaal één voorkeurssmaak aan."); return;
@@ -1661,11 +1677,12 @@ saveRoom.onclick = () => {
     id: crypto.randomUUID(), mode, room: roomV, unit: unitV,
     productId: null, productName: productNameV, allFlavors: selection.allFlavors,
     selectedProductIds: selection.ids, dislikedProductIds: selection.dislikedIds || [], dailyAmount: amount, dailyUnit: dailyUnit.value,
-    scheduleTimes: scheduleTimes.value.trim(), scheduleAmount: Number(String(scheduleAmount.value).replace(",", ".")) || 0,
-    scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: scheduleNote.value.trim(),
+    scheduleTimes: scheduleTimes.value.trim(), scheduleEntries: entries, scheduleAmount: entries.length===1 ? Number(entries[0].amount||0) : 0,
+    scheduleDays: scheduleDays.value, scheduleChoice: scheduleChoice.value || "fixed", scheduleNote: entries.length===1 ? entries[0].note : "",
     showOnPdf: scheduleShowOnPdf.checked
   });
   scheduleTimes.value = ""; scheduleAmount.value = ""; scheduleDays.value = ALL_DAYS; scheduleChoice.value = "fixed"; scheduleNote.value = ""; scheduleShowOnPdf.checked = true; syncChipPicker("add", "", ALL_DAYS);
+  scheduleEntryDrafts.add.clear();syncScheduleEntryEditor("add");
   dailyAmount.value = "";
   renderFlavorChoices(roomProduct, roomFlavorChoices, []);
   saveData();
@@ -1771,7 +1788,9 @@ function resetRoomAddForm(){
   scheduleShowOnPdf.checked = true;
   roomFlavorChoices.innerHTML = "";
   roomFlavorChoices.classList.add("hidden");
+  scheduleEntryDrafts.add.clear();
   syncChipPicker("add", "", ALL_DAYS);
+  syncScheduleEntryEditor("add");
 }
 function resetProductAddForm(){
   productFormCardV316?.querySelector("h2") && (productFormCardV316.querySelector("h2").textContent = "Product toevoegen");
@@ -1811,8 +1830,10 @@ function copyRoom(id){
   scheduleChoice.value=source.scheduleChoice || "fixed";
   scheduleTimes.value="";
   scheduleNote.value="";
+  scheduleEntryDrafts.add.clear();
   scheduleShowOnPdf.checked=source.showOnPdf !== false;
   syncChipPicker("add","",scheduleDays.value);
+  syncScheduleEntryEditor("add");
   openAddForm(roomFormCardV316,scheduleAmount);
 }
 
@@ -1861,6 +1882,7 @@ function setupChipPicker(prefix){
     const vals=[...timeBox.querySelectorAll("[data-time].selected")].map(b=>b.dataset.time);
     if(other.value) vals.push(other.value);
     timeInput.value=[...new Set(vals)].sort().join(", ");
+    syncScheduleEntryEditor(prefix);
   }
   timeBox.querySelectorAll("[data-time]").forEach(b=>b.onclick=()=>{b.classList.toggle("selected");writeTimes();});
   timeBox.querySelector(".other-time").onclick=()=>{other.classList.toggle("hidden"); if(!other.classList.contains("hidden")) other.focus();};
@@ -1868,6 +1890,7 @@ function setupChipPicker(prefix){
   dayBox.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
     b.classList.toggle("selected");
     dayInput.value=[...dayBox.querySelectorAll("[data-day].selected")].map(x=>x.dataset.day).join(",");
+    updateCalculatedDailyAmount(prefix);
   });
 }
 function syncChipPicker(prefix,times,days){
@@ -1883,6 +1906,8 @@ function syncChipPicker(prefix,times,days){
   dayBox.querySelectorAll("[data-day]").forEach(b=>b.classList.toggle("selected",selected.includes(b.dataset.day)));
 }
 setupChipPicker("add"); setupChipPicker("edit");
+scheduleAmount.addEventListener("input",()=>updateCalculatedDailyAmount("add"));
+editScheduleAmount.addEventListener("input",()=>updateCalculatedDailyAmount("edit"));
 
 function scheduleFlavorText(r){
   if (r.mode !== "drink") return "";
@@ -1893,6 +1918,67 @@ function scheduleFlavorText(r){
   return ids.map(id => data.products.find(p => p.id === id)?.flavor).filter(Boolean).join("/");
 }
 function normalizedTimes(v){return String(v||"").split(/[,;]+/).map(x=>x.trim().replace(".",":")).filter(Boolean);}
+const scheduleEntryDrafts={add:new Map(),edit:new Map()};
+function roomScheduleEntries(r){
+  if(Array.isArray(r?.scheduleEntries) && r.scheduleEntries.length){
+    return r.scheduleEntries.map(e=>({time:String(e.time||""),amount:Number(e.amount||0),note:String(e.note||"")})).filter(e=>e.time);
+  }
+  const times=normalizedTimes(r?.scheduleTimes);
+  if(!times.length) return [];
+  const amount=Number(r?.scheduleAmount||0)>0 ? Number(r.scheduleAmount) : Number(r?.dailyAmount||0)/times.length;
+  return times.map(time=>({time,amount,note:String(r?.scheduleNote||"")}));
+}
+function scheduleEls(prefix){
+  const edit=prefix==="edit";
+  return {
+    times:document.getElementById(edit?"editScheduleTimes":"scheduleTimes"),
+    editor:document.getElementById(edit?"editScheduleEntriesEditor":"scheduleEntriesEditor"),
+    amount:document.getElementById(edit?"editScheduleAmount":"scheduleAmount"),
+    note:document.getElementById(edit?"editScheduleNote":"scheduleNote"),
+    amountField:document.getElementById(edit?"editScheduleAmountField":"scheduleAmountField"),
+    noteField:document.getElementById(edit?"editScheduleNoteField":"scheduleNoteField"),
+    daily:document.getElementById(edit?"editDailyAmount":"dailyAmount"),
+    dailyLabel:document.getElementById(edit?"editDailyAmountLabel":"dailyAmountLabel"),
+    dailyHelp:document.getElementById(edit?"editDailyAmountHelp":"dailyAmountHelp"),
+    days:document.getElementById(edit?"editScheduleDays":"scheduleDays")
+  };
+}
+function captureScheduleDrafts(prefix){
+  const {editor}=scheduleEls(prefix),map=scheduleEntryDrafts[prefix];
+  editor?.querySelectorAll(".schedule-entry-row").forEach(row=>map.set(row.dataset.time,{time:row.dataset.time,amount:Number(row.querySelector(".schedule-entry-amount").value||0),note:row.querySelector(".schedule-entry-note").value}));
+}
+function getScheduleEntries(prefix){
+  const el=scheduleEls(prefix),times=normalizedTimes(el.times.value);
+  if(!times.length) return [];
+  if(times.length===1) return [{time:times[0],amount:Number(el.amount.value||0),note:el.note.value.trim()}];
+  captureScheduleDrafts(prefix);
+  return times.map(time=>scheduleEntryDrafts[prefix].get(time)||{time,amount:0,note:""});
+}
+function updateCalculatedDailyAmount(prefix){
+  const el=scheduleEls(prefix),entries=getScheduleEntries(prefix);
+  if(!entries.length){el.daily.readOnly=false;el.dailyLabel.textContent="Verbruik per dag";el.dailyHelp.textContent="Geen tijdstip gekozen: vul het dagverbruik handmatig in.";return;}
+  const selectedDays=normalizeDays(el.days.value).split(",").filter(Boolean).length||7;
+  const perGiftDay=entries.reduce((sum,e)=>sum+Number(e.amount||0),0);
+  const average=perGiftDay*selectedDays/7;
+  el.daily.value=average>0?String(Math.round(average*100)/100):"";
+  el.daily.readOnly=true;el.dailyLabel.textContent="Berekend gemiddeld verbruik per dag";
+  el.dailyHelp.textContent=selectedDays===7?`Automatisch berekend: ${fmt(perGiftDay)} per dag.`:`Automatisch berekend over ${selectedDays} dagen per week: gemiddeld ${fmt(average)} per dag.`;
+}
+function syncScheduleEntryEditor(prefix){
+  const el=scheduleEls(prefix),times=normalizedTimes(el.times.value),map=scheduleEntryDrafts[prefix];
+  captureScheduleDrafts(prefix);
+  if(times.length<=1){
+    el.editor.classList.add("hidden");el.amountField.classList.remove("hidden");el.noteField.classList.remove("hidden");
+    if(times.length===1 && map.has(times[0])){const d=map.get(times[0]);el.amount.value=d.amount||"";el.note.value=d.note||"";}
+    updateCalculatedDailyAmount(prefix);return;
+  }
+  const defaultAmount=Number(el.amount.value||0),defaultNote=el.note.value.trim();
+  times.forEach((time,i)=>{if(!map.has(time))map.set(time,{time,amount:defaultAmount,note:i===0?defaultNote:""});});
+  el.amountField.classList.add("hidden");el.noteField.classList.add("hidden");el.editor.classList.remove("hidden");
+  el.editor.innerHTML=times.map(time=>{const d=map.get(time);return `<div class="schedule-entry-row" data-time="${esc(time)}"><strong>${esc(time)} uur</strong><label>Hoeveelheid per keer<input class="schedule-entry-amount" type="number" min="0" step="0.1" value="${d.amount||""}"></label><label>Extra informatie<input class="schedule-entry-note" value="${esc(d.note||"")}" placeholder="Bijv. in vla"></label></div>`;}).join("");
+  el.editor.querySelectorAll("input").forEach(input=>input.addEventListener("input",()=>{captureScheduleDrafts(prefix);updateCalculatedDailyAmount(prefix);}));
+  updateCalculatedDailyAmount(prefix);
+}
 function dayText(r){const d=normalizeDays(r.scheduleDays); return d===ALL_DAYS ? "" : d.split(",").join(" ");}
 function amountText(r){
   // Op de aftekenlijst tonen we altijd wat er op DIT tijdstip gegeven moet worden.
@@ -1974,7 +2060,10 @@ document.getElementById("printDaySchedule")?.addEventListener("click",openPdfUni
 
 function buildUnitRows(unit){
   const rows=[];
-  data.rooms.filter(r=>String(r.unit)===String(unit) && r.mode==="drink" && r.scheduleTimes && r.showOnPdf !== false).forEach(r=>normalizedTimes(r.scheduleTimes).forEach(time=>rows.push({time,r})));
+  data.rooms.filter(r=>String(r.unit)===String(unit) && r.mode==="drink" && r.scheduleTimes && r.showOnPdf !== false).forEach(r=>roomScheduleEntries(r).forEach(entry=>{
+    const scheduled={...r,scheduleTimes:entry.time,scheduleAmount:Number(entry.amount||0),scheduleNote:entry.note||""};
+    rows.push({time:entry.time,r:scheduled});
+  }));
   rows.sort((a,b)=>a.time.localeCompare(b.time)||String(a.r.room).localeCompare(String(b.r.room),undefined,{numeric:true}));
   const result=[],used=new Set();
   rows.forEach((x,i)=>{
@@ -2125,7 +2214,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.38",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.39",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2175,7 +2264,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.38",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.39",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2214,9 +2303,7 @@ function weeklyQuantityRows(unit){
   const orGroups = new Map();
   for (const r of rooms){
     const days = normalizeDays(r.scheduleDays).split(",").filter(Boolean).length || 7;
-    const times = Math.max(1, normalizedTimes(r.scheduleTimes).length);
-    const perTime = Number(r.scheduleAmount || 0) > 0 ? Number(r.scheduleAmount) : Number(r.dailyAmount || 0) / times;
-    const weekly = perTime * times * days;
+    const weekly = roomScheduleEntries(r).reduce((sum,e)=>sum+Number(e.amount||0),0) * days;
     if (!(weekly > 0)) continue;
     const unitLabel = r.dailyUnit || "";
     if (r.scheduleChoice === "or"){
@@ -2269,7 +2356,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.38",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.39",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2325,7 +2412,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.38",
+        version: "V3.3.39",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data

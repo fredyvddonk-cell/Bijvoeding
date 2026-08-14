@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.38</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.38" />
+    <title>Bij- &amp; Sondevoeding V3.3.39</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.39" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.38</span>
+        <span class="version">V3.3.39</span>
       </div>
     </header>
 
@@ -171,8 +171,9 @@
           </div>
           <div id="roomFlavorChoices" class="flavor-choice-box hidden"></div>
           <div class="field">
-            <label for="dailyAmount">Verbruik per dag</label
+            <label for="dailyAmount" id="dailyAmountLabel">Verbruik per dag</label
             ><input id="dailyAmount" type="number" min="0" step="0.1" />
+            <div class="field-help" id="dailyAmountHelp"></div>
           </div>
           <select id="dailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
             <option value=""></option>
@@ -194,8 +195,9 @@
                 type="time"
               /><input id="scheduleTimes" type="hidden" />
             </div>
+            <div id="scheduleEntriesEditor" class="schedule-entry-editor hidden"></div>
             <div class="row">
-              <div class="field">
+              <div class="field" id="scheduleAmountField">
                 <label for="scheduleAmount">Hoeveelheid per keer</label
                 ><input
                   id="scheduleAmount"
@@ -231,7 +233,7 @@
                 />
               </div>
             </div>
-            <div class="field">
+            <div class="field" id="scheduleNoteField">
               <label for="scheduleChoice">Gebruik op dit tijdstip</label
               ><select id="scheduleChoice">
                 <option value="fixed">Deze voeding geven</option>
@@ -559,8 +561,9 @@
         </div>
         <div id="editRoomFlavorChoices" class="flavor-choice-box hidden"></div>
         <div class="field">
-          <label for="editDailyAmount">Verbruik per dag</label
+          <label for="editDailyAmount" id="editDailyAmountLabel">Verbruik per dag</label
           ><input id="editDailyAmount" type="number" min="0" step="0.1" />
+          <div class="field-help" id="editDailyAmountHelp"></div>
         </div>
         <select id="editDailyUnit" class="hidden" aria-hidden="true" tabindex="-1">
           <option value=""></option>
@@ -582,8 +585,9 @@
               type="time"
             /><input id="editScheduleTimes" type="hidden" />
           </div>
+          <div id="editScheduleEntriesEditor" class="schedule-entry-editor hidden"></div>
           <div class="row">
-            <div class="field">
+            <div class="field" id="editScheduleAmountField">
               <label for="editScheduleAmount">Hoeveelheid per keer</label
               ><input
                 id="editScheduleAmount"
@@ -612,7 +616,7 @@
               />
             </div>
           </div>
-          <div class="field">
+          <div class="field" id="editScheduleNoteField">
             <label for="editScheduleChoice">Gebruik op dit tijdstip</label
             ><select id="editScheduleChoice">
               <option value="fixed">Deze voeding geven</option>
@@ -1018,7 +1022,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.38"></script>
+    <script src="js/app.js?v=3.3.39"></script>
 
     <script>
       if ("serviceWorker" in navigator) {
