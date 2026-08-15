@@ -33,6 +33,22 @@ function formatDate(s) {
   const d = parseLocalDate(s);
   return d ? d.toLocaleDateString("nl-NL") : "";
 }
+function normalizeExpiryMonth(s) {
+  const match = String(s || "").match(/^(\d{4})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}` : "";
+}
+function expiryMonthEndDate(s) {
+  const value = normalizeExpiryMonth(s);
+  if (!value) return null;
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year, month, 0);
+}
+function formatExpiryMonth(s) {
+  const value = normalizeExpiryMonth(s);
+  if (!value) return "";
+  const [year, month] = value.split("-");
+  return `${month}-${year}`;
+}
 function cloneDefaults() {
   return typeof structuredClone === "function" ? structuredClone(defaults) : JSON.parse(JSON.stringify(defaults));
 }
@@ -50,7 +66,8 @@ function loadData() {
       p.name = canonicalName(p.name);
       if (p.order == null) p.order = i + 1;
       if (p.minimumStock == null) p.minimumStock = 0;
-      if (p.expiryDate == null) p.expiryDate = "";
+      // Oude volledige THT-datums omzetten naar maand-jaar.
+      p.expiryDate = normalizeExpiryMonth(p.expiryDate);
       if (p.lastExpiryCheck == null) p.lastExpiryCheck = "";
       if (p.active == null) p.active = true;
       if (p.externalProduct == null) p.externalProduct = false;
@@ -310,7 +327,8 @@ function expiryInfo(p) {
   const quarterlyDue = !last || daysBetween(last, today) >= 90;
   let expiryDays = null, expired = false, soon = false;
   if (p.expiryDate) {
-    expiryDays = daysBetween(today, parseLocalDate(p.expiryDate));
+    // Een THT-maand is geldig tot en met de laatste dag van die maand.
+    expiryDays = daysBetween(today, expiryMonthEndDate(p.expiryDate));
     expired = expiryDays < 0;
     soon = expiryDays >= 0 && expiryDays <= 60;
   }
@@ -440,14 +458,14 @@ function thtStatusHtml(p) {
   const e = expiryInfo(p);
   const bits = [];
   if (e.expired) bits.push(`<span class="status-danger">THT verstreken</span>`);
-  else if (e.soon) bits.push(`<span class="status-warn">THT ${esc(formatDate(p.expiryDate))} · Let op</span>`);
-  else if (p.expiryDate) bits.push(`<span class="muted">THT ${esc(formatDate(p.expiryDate))}</span>`);
+  else if (e.soon) bits.push(`<span class="status-warn">THT ${esc(formatExpiryMonth(p.expiryDate))} · Let op</span>`);
+  else if (p.expiryDate) bits.push(`<span class="muted">THT ${esc(formatExpiryMonth(p.expiryDate))}</span>`);
   // Periodieke controle wordt via de THT-knop uitgevoerd; geen herhaalde tekst in de voorraadkaart.
   return bits.join("<br>");
 }
 function thtBadgeHtml(p) {
   const e = expiryInfo(p);
-  const date = p.expiryDate ? esc(formatDate(p.expiryDate)) : "";
+  const date = p.expiryDate ? esc(formatExpiryMonth(p.expiryDate)) : "";
   if (e.expired) return `<span class="attention-chip danger-chip tht-chip"><strong>THT verlopen</strong>${date ? `<span class="tht-date">${date}</span>` : ""}</span>`;
   if (e.soon) return `<span class="attention-chip warn-chip tht-chip"><strong>THT binnenkort</strong>${date ? `<span class="tht-date">${date}</span>` : ""}</span>`;
   if (e.quarterlyDue) return `<span class="attention-chip neutral-chip">THT controleren</span>`;
@@ -468,7 +486,7 @@ function renderCounting() {
       ${currentMode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
       ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${currentMode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
+      ${currentMode !== "general" ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatExpiryMonth(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -940,7 +958,7 @@ function openExpiryModal(id) {
   if (!p) return;
   editingExpiryProductId = id;
   expiryProductLabel.textContent = labelProduct(p);
-  expiryDateInput.value = p.expiryDate || "";
+  expiryDateInput.value = normalizeExpiryMonth(p.expiryDate);
   lastExpiryCheckInfo.innerHTML = p.lastExpiryCheck
     ? `Laatste THT-controle: <strong>${esc(formatDate(p.lastExpiryCheck))}</strong><br>Na 3 maanden geeft de app opnieuw een controlemelding.`
     : `Nog geen THT-controle opgeslagen. Controleer ook de flesjes of verpakkingen achteraan in de kast.`;
@@ -956,7 +974,7 @@ function closeExpiryModal() {
 saveExpiryCheck.onclick = () => {
   const p = data.products.find(x => x.id === editingExpiryProductId);
   if (!p) return;
-  p.expiryDate = expiryDateInput.value || "";
+  p.expiryDate = normalizeExpiryMonth(expiryDateInput.value);
   p.lastExpiryCheck = isoToday();
   closeExpiryModal();
   saveData();
@@ -1403,7 +1421,7 @@ function renderCounting() {
       ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
       <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
       ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatDate(p.expiryDate))}</span>` : ""}</div>` : ""}
+      ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatExpiryMonth(p.expiryDate))}</span>` : ""}</div>` : ""}
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
@@ -1487,9 +1505,9 @@ function renderOrders() {
 function familyThtSummary(products) {
   const rows = (products || []).map(p => ({p, e: expiryInfo(p)}));
   const expired = rows.filter(x => x.e.expired && x.p.expiryDate).sort((a,b) => String(a.p.expiryDate).localeCompare(String(b.p.expiryDate)));
-  if (expired.length) return {attention:true, html:`<span class="attention-chip danger-chip">THT verlopen · ${esc(formatDate(expired[0].p.expiryDate))}</span>`};
+  if (expired.length) return {attention:true, html:`<span class="attention-chip danger-chip">THT verlopen · ${esc(formatExpiryMonth(expired[0].p.expiryDate))}</span>`};
   const soon = rows.filter(x => x.e.soon && x.p.expiryDate).sort((a,b) => String(a.p.expiryDate).localeCompare(String(b.p.expiryDate)));
-  if (soon.length) return {attention:true, html:`<span class="attention-chip warn-chip">THT binnenkort · ${esc(formatDate(soon[0].p.expiryDate))}</span>`};
+  if (soon.length) return {attention:true, html:`<span class="attention-chip warn-chip">THT binnenkort · ${esc(formatExpiryMonth(soon[0].p.expiryDate))}</span>`};
   const quarterly = rows.find(x => x.e.quarterlyDue);
   if (quarterly) return {attention:true, html:`<button type="button" class="attention-chip neutral-chip tht-link" onclick="openExpiryModal('${quarterly.p.id}')">THT controleren</button>`};
   return {attention:false, html:""};
@@ -2236,7 +2254,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2286,7 +2304,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2378,7 +2396,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2434,7 +2452,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.43",
+        version: "V3.3.44",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
