@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.44</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.44" />
+    <title>Bij- &amp; Sondevoeding V3.3.45</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.45" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.44</span>
+        <span class="version">V3.3.45</span>
       </div>
     </header>
 
@@ -879,8 +879,23 @@
         </div>
         <div id="expiryProductLabel" class="modal-product-name"></div>
         <div class="field">
-          <label for="expiryDateInput">Eerstvolgende THT (maand–jaar)</label>
-          <input id="expiryDateInput" type="month" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();saveExpiryCheck.click();this.blur();}" />
+          <span class="field-label">Eerstvolgende THT</span>
+          <div class="expiry-select-row">
+            <label>Maand
+              <select id="expiryMonthInput">
+                <option value="">Maand</option>
+                <option value="01">01</option><option value="02">02</option>
+                <option value="03">03</option><option value="04">04</option>
+                <option value="05">05</option><option value="06">06</option>
+                <option value="07">07</option><option value="08">08</option>
+                <option value="09">09</option><option value="10">10</option>
+                <option value="11">11</option><option value="12">12</option>
+              </select>
+            </label>
+            <label>Jaar
+              <select id="expiryYearInput"><option value="">Jaar</option></select>
+            </label>
+          </div>
           <div class="field-help">
             Vul de vroegste THT-maand in die je in de kast ziet. Controleer ook
             achteraan in de kast.
@@ -1022,7 +1037,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.44"></script>
+    <script src="js/app.js?v=3.3.45"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

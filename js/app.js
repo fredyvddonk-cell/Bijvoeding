@@ -953,18 +953,31 @@ function changeLoose(id, delta) {
 }
 
 let editingExpiryProductId = null;
+function populateExpiryYearOptions(selectedYear) {
+  const currentYear = new Date().getFullYear();
+  const selected = Number(selectedYear || 0);
+  const firstYear = Math.min(currentYear - 2, selected || currentYear);
+  const lastYear = Math.max(currentYear + 10, selected || currentYear);
+  expiryYearInput.innerHTML = `<option value="">Jaar</option>` +
+    Array.from({length:lastYear-firstYear+1},(_,i)=>firstYear+i)
+      .map(year=>`<option value="${year}">${year}</option>`).join("");
+  expiryYearInput.value = selected ? String(selected) : "";
+}
 function openExpiryModal(id) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   editingExpiryProductId = id;
   expiryProductLabel.textContent = labelProduct(p);
-  expiryDateInput.value = normalizeExpiryMonth(p.expiryDate);
+  const expiryMonth = normalizeExpiryMonth(p.expiryDate);
+  const [selectedYear="",selectedMonth=""] = expiryMonth.split("-");
+  expiryMonthInput.value = selectedMonth;
+  populateExpiryYearOptions(selectedYear);
   lastExpiryCheckInfo.innerHTML = p.lastExpiryCheck
     ? `Laatste THT-controle: <strong>${esc(formatDate(p.lastExpiryCheck))}</strong><br>Na 3 maanden geeft de app opnieuw een controlemelding.`
     : `Nog geen THT-controle opgeslagen. Controleer ook de flesjes of verpakkingen achteraan in de kast.`;
   expiryModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
-  setTimeout(() => expiryDateInput.focus(), 0);
+  setTimeout(() => expiryMonthInput.focus(), 0);
 }
 function closeExpiryModal() {
   editingExpiryProductId = null;
@@ -974,7 +987,13 @@ function closeExpiryModal() {
 saveExpiryCheck.onclick = () => {
   const p = data.products.find(x => x.id === editingExpiryProductId);
   if (!p) return;
-  p.expiryDate = normalizeExpiryMonth(expiryDateInput.value);
+  const month = expiryMonthInput.value;
+  const year = expiryYearInput.value;
+  if ((month && !year) || (!month && year)) {
+    alert("Kies zowel de maand als het jaar van de THT.");
+    return;
+  }
+  p.expiryDate = month && year ? `${year}-${month}` : "";
   p.lastExpiryCheck = isoToday();
   closeExpiryModal();
   saveData();
@@ -2254,7 +2273,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.45",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2304,7 +2323,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.45",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2396,7 +2415,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.44",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.45",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2452,7 +2471,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.44",
+        version: "V3.3.45",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
