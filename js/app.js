@@ -245,6 +245,20 @@ function saveProductOrdered(id, inputId) {
   p.alreadyOrdered = Math.max(0, Math.floor(Number(input.value || 0)));
   saveData();
 }
+function receiveFamilyOrder(encodedName, mode) {
+  const name = decodeURIComponent(encodedName || "");
+  if (!familyOrderedPackages(name, mode)) return;
+  if (!confirm(`Is de bestelling van ${name} ontvangen en in de voorraad geteld?`)) return;
+  clearFamilyOrdered(name, mode);
+  saveData();
+}
+function receiveProductOrder(id) {
+  const p = data.products.find(x => x.id === id);
+  if (!p || Number(p.alreadyOrdered || 0) <= 0) return;
+  if (!confirm(`Is de bestelling van ${labelProduct(p)} ontvangen en in de voorraad geteld?`)) return;
+  p.alreadyOrdered = 0;
+  saveData();
+}
 function stockPackages(p) {
   return Number(p.stockFull || 0) + (hasLooseUnits(p) ? Number(p.stockLoose || 0) / Number(p.contentPerOrderUnit || 1) : 0);
 }
@@ -796,6 +810,7 @@ function renderDrinkOrders() {
       <div class="order-product">${esc(g.name)}</div>
       <div class="order-summary">${orderStatus}</div>
       <div class="order-entry"><label for="${orderedInputId}">Werkelijk besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" enterkeyhint="done" value="${ordered}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}','drink','${orderedInputId}');this.blur();}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink', '${orderedInputId}')">Opslaan</button></div>
+      ${ordered > 0 ? `<button type="button" class="secondary compact-btn" onclick="receiveFamilyOrder('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink')">Bestelling ontvangen</button>` : ""}
       <div class="order-variant-list">${stockRows}</div>
       <details class="order-details"><summary>Berekening bekijken</summary>
         <div class="order-pref-groups">${prefSections}</div>
@@ -906,7 +921,8 @@ function changeStock(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockFull = Math.max(0, Number(p.stockFull || 0) + delta);
-  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
+  // Een hogere telling betekent niet automatisch dat een bestelling ontvangen is.
+  // De bestelregistratie wordt alleen bewust via 'Werkelijk besteld' aangepast.
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -914,7 +930,6 @@ function changeLoose(id, delta) {
   const p = data.products.find(x => x.id === id);
   if (!p) return;
   p.stockLoose = Math.max(0, Number(p.stockLoose || 0) + delta);
-  if (delta > 0) clearFamilyOrdered(p.name, p.mode);
   if (stockUnits(p) <= 0) { p.expiryDate = ""; p.lastExpiryCheck = ""; }
   saveData();
 }
@@ -1105,7 +1120,6 @@ saveProductEdit.onclick = () => {
     alert("Dit product is nog aan een kamer gekoppeld. Verwijder of wijzig eerst die kamerregel voordat je de productgroep verandert.");
     return;
   }
-  const oldStockUnits = stockUnits(p);
   const oldName = p.name;
   const name = canonicalName(editProductName.value.trim());
   const flavor = newMode === "sonde" ? "" : editFlavor.value.trim();
@@ -1141,8 +1155,6 @@ saveProductEdit.onclick = () => {
   p.generalTarget = p.mode === "general" ? p.minimumStock : 0;
   p.active = editProductActive.checked;
   p.phaseOut = p.mode === "sonde" ? editProductPhaseOut.checked : false;
-  if (stockUnits(p) > oldStockUnits) clearFamilyOrdered(p.name, p.mode);
-
   data.rooms.filter(r => r.mode === p.mode && canonicalName(r.productName) === canonicalName(name)).forEach(r => {
     const first = familyProducts(name, r.mode, true)[0];
     if (first) r.dailyUnit = first.consumptionUnit;
@@ -1456,6 +1468,7 @@ function sondeOrGeneralOrderCard(p) {
     <div class="order-product">${esc(labelProduct(p))}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
     <div class="order-main">${status}</div>
     ${!phaseOutProduct(p) ? `<div class="order-entry"><label for="${orderedInputId}">Werkelijk besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" enterkeyhint="done" value="${ordered}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveProductOrdered('${p.id}','${orderedInputId}');this.blur();}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveProductOrdered('${p.id}', '${orderedInputId}')">Opslaan</button></div>` : ""}
+    ${ordered > 0 ? `<button type="button" class="secondary compact-btn" onclick="receiveProductOrder('${p.id}')">Bestelling ontvangen</button>` : ""}
     <div class="order-meta">${meta}</div>
     ${tht ? `<div class="order-chips">${tht}</div>` : ""}
   </div>`;
@@ -2223,7 +2236,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.42",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2273,7 +2286,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.42",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2365,7 +2378,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.42",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.43",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2421,7 +2434,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.42",
+        version: "V3.3.43",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
