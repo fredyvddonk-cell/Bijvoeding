@@ -1447,7 +1447,7 @@ function renderCounting() {
 
 function renderUsage() {
   generalTargetCard.classList.add("hidden");
-  usageListTitle.textContent = "Ingevoerde kamers";
+  usageListTitle.classList.add("hidden");
   const rs = [...data.rooms]
     .filter(r => r.mode === "drink" || r.mode === "sonde")
     .sort((a, b) => Number(a.unit) - Number(b.unit) || String(a.room).localeCompare(String(b.room), undefined, { numeric: true }) || roomProductLabel(a).localeCompare(roomProductLabel(b)));
@@ -1458,15 +1458,29 @@ function renderUsage() {
     if (!g) { g = {key, unit:r.unit, room:r.room, rows:[]}; groups.push(g); }
     g.rows.push(r);
   });
-  usageList.innerHTML = groups.length ? groups.map(g => `<div class="room-group-card">
-    <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong><span class="muted">Unit ${esc(g.unit)}</span></div>
+  const units = [];
+  groups.forEach(group => {
+    let unit = units.find(item => String(item.unit) === String(group.unit));
+    if (!unit) {
+      unit = { unit: group.unit, rooms: [] };
+      units.push(unit);
+    }
+    unit.rooms.push(group);
+  });
+  usageList.innerHTML = units.length ? units.map(unit => `<details class="room-unit-section" open>
+    <summary><strong>Unit ${esc(unit.unit)}</strong><span>${unit.rooms.length} ${unit.rooms.length === 1 ? "kamer" : "kamers"}</span></summary>
+    <div class="room-unit-list">
+    ${unit.rooms.map(g => `<div class="room-group-card">
+    <div class="room-group-head"><strong>Kamer ${esc(g.room)}</strong></div>
     ${g.rows.map(r => `<div class="room-line">
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</span></div>
       ${roomScheduleSummary(r)}
       <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-copy" onclick="copyRoom('${r.id}')">Kopiëren</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
     </div>`).join("")}
-  </div>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
+  </div>`).join("")}
+    </div>
+  </details>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
 
 function roomScheduleSummary(r){
@@ -2272,7 +2286,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2322,7 +2336,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2414,7 +2428,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2470,7 +2484,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.47",
+        version: "V3.3.48",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data

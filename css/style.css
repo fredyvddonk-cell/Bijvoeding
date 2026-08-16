@@ -310,3 +310,13 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .expiry-select-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .expiry-select-row label{margin:0;font-size:.8rem;color:var(--muted)}
 .expiry-select-row select{margin-top:5px;color:var(--text)}
+
+/* V3.3.48 - kamers per unit inklapbaar */
+.room-unit-section{border:1px solid var(--border);border-radius:16px;background:#f8fbf7;overflow:hidden}
+.room-unit-section>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;cursor:pointer;color:var(--green);list-style:none}
+.room-unit-section>summary::-webkit-details-marker{display:none}
+.room-unit-section>summary:before{content:"▾";font-size:1rem;transition:transform .15s ease}
+.room-unit-section:not([open])>summary:before{transform:rotate(-90deg)}
+.room-unit-section>summary strong{font-size:1.12rem;margin-right:auto}
+.room-unit-section>summary span{font-size:.82rem;color:var(--muted);font-weight:700}
+.room-unit-list{display:grid;gap:8px;padding:0 8px 8px}
