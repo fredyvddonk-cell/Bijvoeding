@@ -320,3 +320,4 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .room-unit-section>summary strong{font-size:1.12rem;margin-right:auto}
 .room-unit-section>summary span{font-size:.82rem;color:var(--muted);font-weight:700}
 .room-unit-list{display:grid;gap:8px;padding:0 8px 8px}
+.ordered-date{display:block;margin-top:3px;font-size:.78rem;font-weight:600;color:var(--muted)}

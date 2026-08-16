@@ -124,6 +124,15 @@ function loadData() {
       d.settings.cupboardOrderApplied = true;
     }
 
+    // V3.3.49: de openstaande bestellingen van vóór de datumregistratie
+    // zijn volgens de gebruiker op 14 augustus 2026 geplaatst.
+    if (!d.settings.orderDateMigration3349) {
+      d.products.forEach(p => {
+        if (Number(p.alreadyOrdered || 0) > 0 && !p.orderedDate) p.orderedDate = "2026-08-14";
+      });
+      d.settings.orderDateMigration3349 = true;
+    }
+
     return d;
   } catch (e) {
     return cloneDefaults();
@@ -238,8 +247,29 @@ function orderedUnits(p) {
 function familyOrderedPackages(name, mode) {
   return familyProducts(name, mode, true).reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
 }
+function todayLocalIso() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+function formatOrderDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+}
+function familyOrderedDate(name, mode) {
+  const ordered = familyProducts(name, mode, true).find(p => Number(p.alreadyOrdered || 0) > 0 && p.orderedDate);
+  return ordered?.orderedDate || "";
+}
+function orderedDateHtml(value) {
+  const formatted = formatOrderDate(value);
+  return formatted ? `<span class="ordered-date">Besteld op ${esc(formatted)}</span>` : "";
+}
 function clearFamilyOrdered(name, mode) {
-  familyProducts(name, mode, true).forEach(p => p.alreadyOrdered = 0);
+  familyProducts(name, mode, true).forEach(p => {
+    p.alreadyOrdered = 0;
+    p.orderedDate = "";
+  });
 }
 function remainingOrderPackages(p, advisedPackages) {
   return Math.max(0, Number(advisedPackages || 0) - Number(p.alreadyOrdered || 0));
@@ -250,16 +280,25 @@ function saveFamilyOrdered(encodedName, mode, inputId) {
   const amount = Math.max(0, Math.floor(Number(input?.value || 0)));
   const products = familyProducts(name, mode, true);
   if (!products.length) return;
-  products.forEach(p => p.alreadyOrdered = 0);
+  const previousAmount = familyOrderedPackages(name, mode);
+  const previousDate = familyOrderedDate(name, mode);
+  products.forEach(p => {
+    p.alreadyOrdered = 0;
+    p.orderedDate = "";
+  });
   const target = products.find(orderableProduct) || products.find(activeProduct) || products[0];
   target.alreadyOrdered = amount;
+  target.orderedDate = amount > 0 ? (previousAmount === amount && previousDate ? previousDate : todayLocalIso()) : "";
   saveData();
 }
 function saveProductOrdered(id, inputId) {
   const p = data.products.find(x => x.id === id);
   const input = document.getElementById(inputId);
   if (!p || !input) return;
-  p.alreadyOrdered = Math.max(0, Math.floor(Number(input.value || 0)));
+  const amount = Math.max(0, Math.floor(Number(input.value || 0)));
+  if (amount > 0 && (amount !== Number(p.alreadyOrdered || 0) || !p.orderedDate)) p.orderedDate = todayLocalIso();
+  if (amount === 0) p.orderedDate = "";
+  p.alreadyOrdered = amount;
   saveData();
 }
 function receiveFamilyOrder(encodedName, mode) {
@@ -274,6 +313,7 @@ function receiveProductOrder(id) {
   if (!p || Number(p.alreadyOrdered || 0) <= 0) return;
   if (!confirm(`Is de bestelling van ${labelProduct(p)} ontvangen en in de voorraad geteld?`)) return;
   p.alreadyOrdered = 0;
+  p.orderedDate = "";
   saveData();
 }
 function stockPackages(p) {
@@ -818,9 +858,10 @@ function renderDrinkOrders() {
 
     const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
     const ordered = familyOrderedPackages(g.name, "drink");
+    const orderedDate = familyOrderedDate(g.name, "drink");
     const orderedInputId = `ordered-family-${p.id}`;
     const orderStatus = ordered > 0
-      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${totalOrder > 0 ? `<br><span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
+      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${orderedDateHtml(orderedDate)}${totalOrder > 0 ? `<br><span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
       : totalOrder > 0
         ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>`
         : `<span class="status-ok">Voldoende voorraad</span>`;
@@ -1184,7 +1225,10 @@ saveProductEdit.onclick = () => {
   p.looseUnitsAllowed = content > 1 && editLooseUnitsAllowed.value === "yes";
   p.stockFull = Math.max(0, Number(editStockFull.value) || 0);
   p.stockLoose = p.looseUnitsAllowed ? Math.max(0, Number(editStockLoose.value) || 0) : 0;
-  p.alreadyOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
+  const editedOrdered = Math.max(0, Number(editAlreadyOrdered.value) || 0);
+  if (editedOrdered > 0 && (editedOrdered !== Number(p.alreadyOrdered || 0) || !p.orderedDate)) p.orderedDate = todayLocalIso();
+  if (editedOrdered === 0) p.orderedDate = "";
+  p.alreadyOrdered = editedOrdered;
   p.externalProduct = isExternal;
   p.externalQuantity = isExternal ? Math.max(0, Number(editExternalQuantity.value) || 0) : 0;
   p.showOnWeeklyList = editShowOnWeeklyList.checked;
@@ -1512,7 +1556,7 @@ function sondeOrGeneralOrderCard(p) {
   const ordered = Number(p.alreadyOrdered || 0);
   const orderedInputId = `ordered-product-${p.id}`;
   let status = `<span class="status-ok">Voldoende voorraad</span>`;
-  if (ordered > 0) status = `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${a.orderUnits > 0 ? `<br><span class="status-order">Nog ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))} bestellen</span>` : ""}`;
+  if (ordered > 0) status = `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${orderedDateHtml(p.orderedDate)}${a.orderUnits > 0 ? `<br><span class="status-order">Nog ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))} bestellen</span>` : ""}`;
   else if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
   else if (phaseOutProduct(p) && a.shortage > 0) status = `<span class="phaseout-status">Uitlopend · niet bestellen</span>`;
   return `<div class="item order-card ${phaseOutProduct(p) ? "phaseout-card" : ""}">
@@ -1675,7 +1719,7 @@ function renderOverview() {
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
-      ${x.orderedPackages > 0 ? `<button type="button" class="attention-ordered attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages} ${esc(plural(p.orderUnit, x.orderedPackages))} besteld</strong></button>` : ""}
+      ${x.orderedPackages > 0 ? `<button type="button" class="attention-ordered attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages} ${esc(plural(p.orderUnit, x.orderedPackages))} besteld</strong>${orderedDateHtml(familyOrderedDate(x.name, x.mode))}</button>` : ""}
       ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages > 0 ? `NOG ${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))} BESTELLEN` : "BESTELLEN"}</strong></button>` : ""}
       ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
@@ -1784,7 +1828,7 @@ saveProduct.onclick = () => {
   data.products.push({
     id: crypto.randomUUID(), mode, name, flavor: fl,
     consumptionUnit: cu, orderUnit: ou, contentPerOrderUnit: content, looseUnitsAllowed: allowLoose,
-    stockFull: sf, stockLoose: sl, alreadyOrdered: ao, generalTarget: mode === "general" ? min : 0,
+    stockFull: sf, stockLoose: sl, alreadyOrdered: ao, orderedDate: ao > 0 ? todayLocalIso() : "", generalTarget: mode === "general" ? min : 0,
     minimumStock: min, order: maxOrder + 1, expiryDate: "", lastExpiryCheck: "", active: mode === "general" ? newGeneralActive.checked : true, phaseOut: false, externalProduct: externalProduct.checked,
     externalQuantity: externalProduct.checked ? Math.max(0, Number(externalQuantity.value) || 0) : 0,
     showOnWeeklyList: showOnWeeklyList.checked
@@ -2286,7 +2330,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2336,7 +2380,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2428,7 +2472,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.48",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2484,7 +2528,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.48",
+        version: "V3.3.49",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
