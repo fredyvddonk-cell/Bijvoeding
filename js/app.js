@@ -819,10 +819,10 @@ function renderDrinkOrders() {
     const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
     const ordered = familyOrderedPackages(g.name, "drink");
     const orderedInputId = `ordered-family-${p.id}`;
-    const orderStatus = totalOrder > 0
-      ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>`
-      : ordered > 0
-        ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>`
+    const orderStatus = ordered > 0
+      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${totalOrder > 0 ? `<br><span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
+      : totalOrder > 0
+        ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>`
         : `<span class="status-ok">Voldoende voorraad</span>`;
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
@@ -1498,8 +1498,8 @@ function sondeOrGeneralOrderCard(p) {
   const ordered = Number(p.alreadyOrdered || 0);
   const orderedInputId = `ordered-product-${p.id}`;
   let status = `<span class="status-ok">Voldoende voorraad</span>`;
-  if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
-  else if (ordered > 0) status = `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>`;
+  if (ordered > 0) status = `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${a.orderUnits > 0 ? `<br><span class="status-order">Nog ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))} bestellen</span>` : ""}`;
+  else if (a.orderUnits > 0) status = `<span class="status-order">Bestellen · ${a.orderUnits} ${esc(plural(p.orderUnit, a.orderUnits))}</span>`;
   else if (phaseOutProduct(p) && a.shortage > 0) status = `<span class="phaseout-status">Uitlopend · niet bestellen</span>`;
   return `<div class="item order-card ${phaseOutProduct(p) ? "phaseout-card" : ""}">
     <div class="order-product">${esc(labelProduct(p))}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
@@ -1656,14 +1656,13 @@ function renderOverview() {
     const minimum = x.transferOnly ? "" : (x.mode === "general" ? `Minimum: ${esc(minimumText(p))}` : `Minimum: <strong>10 dagen</strong>`);
     const expiredTht = x.tht && x.tht.includes("danger-chip");
     const soonTht = x.tht && x.tht.includes("warn-chip");
-    const attentionClass = x.orderUnits > 0 ? "attention-card order-priority" : x.orderedPackages > 0 ? "attention-card ordered-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
+    const attentionClass = x.orderedPackages > 0 ? "attention-card ordered-priority" : x.orderUnits > 0 ? "attention-card order-priority" : expiredTht ? "attention-card tht-expired" : soonTht ? "attention-card tht-soon" : "attention-card attention-other";
     return `<div class="item ${attentionClass}">
       <div class="attention-product">${esc(x.name)}</div>
       <div class="overview-stock">Voorraad: <strong>${fmt(x.stock)} ${esc(unit)}</strong>${daysText}</div>
       ${minimum ? `<div class="overview-minimum">${minimum}</div>` : ""}
-      ${x.orderUnits > 0
-        ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>BESTELLEN</strong></button>`
-        : (x.orderedPackages > 0 ? `<button type="button" class="attention-ordered attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages} ${esc(plural(p.orderUnit, x.orderedPackages))} besteld</strong></button>` : "")}
+      ${x.orderedPackages > 0 ? `<button type="button" class="attention-ordered attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages} ${esc(plural(p.orderUnit, x.orderedPackages))} besteld</strong></button>` : ""}
+      ${x.orderUnits > 0 ? `<button type="button" class="attention-order attention-action attention-order-link" onclick="openOrderProduct('${encodeURIComponent(x.name).replace(/'/g, "%27")}')"><strong>${x.orderedPackages > 0 ? `NOG ${x.orderUnits} ${esc(plural(p.orderUnit, x.orderUnits))} BESTELLEN` : "BESTELLEN"}</strong></button>` : ""}
       ${x.unused ? `<div class="attention-unused attention-action"><strong>VOORRAAD AANWEZIG · NIET IN GEBRUIK</strong><span class="unused-hint">Kijk of een andere afdeling dit kan gebruiken</span></div>` : ""}
       ${x.tht ? `<div class="attention-chips attention-action">${x.tht}</div>` : ""}
     </div>`;
@@ -2273,7 +2272,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.46",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2323,7 +2322,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.46",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2415,7 +2414,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.46",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.47",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2471,7 +2470,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.46",
+        version: "V3.3.47",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
