@@ -1630,24 +1630,37 @@ function sondeOrGeneralOrderCard(p) {
   </div>`;
 }
 
+function groupedOtherOrderCards(){
+  const products=allProductsOrdered().filter(p=>p.externalProduct!==true).filter(p=>p.mode==="sonde"||p.mode==="general");
+  const groups=new Map(); products.forEach(p=>{const k=productFamilyKey(p);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p)});
+  return [...groups.values()].map(ps=>{
+    if(ps.length===1)return sondeOrGeneralOrderCard(ps[0]);
+    const visible=ps.filter(p=>activeProduct(p)); if(!visible.length)return "";
+    const rep=visible[0], name=canonicalName(rep.name);
+    const variants=visible.map(p=>{const a=adviceForProduct(p),q=Number(a.orderUnits||0);return `<div class="order-family-variant"><strong>${esc(variantLabel(p)||"Standaard")}</strong><span>${q>0?`${fmt(q)} ${esc(plural(p.orderUnit,q))}`:"voldoende"}</span></div>`}).join("");
+    const total=visible.reduce((n,p)=>n+Number(adviceForProduct(p).orderUnits||0),0);
+    return `<div class="item order-card order-family-card"><div class="order-product">${esc(name)}</div><div class="order-main">${total>0?`<span class="status-order">Bestellen</span>`:`<span class="status-ok">Voldoende voorraad</span>`}</div><div class="order-family-variants">${variants}</div></div>`;
+  }).join("");
+}
+
 function renderOrders() {
   const old = currentMode;
   currentMode = "drink";
   renderDrinkOrders();
   let drinkHtml = orderList.querySelector(".empty") ? "" : orderList.innerHTML;
-  const otherHtml = allProductsOrdered().filter(p => p.externalProduct !== true).filter(p => p.mode === "sonde" || p.mode === "general").map(sondeOrGeneralOrderCard).filter(Boolean).join("");
+  const otherHtml = groupedOtherOrderCards();
   orderList.innerHTML = drinkHtml + otherHtml || `<div class="empty">Er zijn nog geen producten waarvoor een besteladvies nodig is.</div>`;
   currentMode = old;
   renderOrderScanHistory();
 }
 
 
-// V3.3.54 - digitaal afbeeldingsbestand of camera; robuustere tabelherkenning en samenvoegen.
+// V3.3.55 - digitaal afbeeldingsbestand of camera; robuustere tabelherkenning en samenvoegen.
 let orderScanState = { imageDataUrl:"", rawText:"", rows:[] };
 function scanNorm(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function scanFamilies(){const m=new Map();allProductsOrdered().filter(p=>p.externalProduct!==true).forEach(p=>{const k=productFamilyKey(p);if(!m.has(k))m.set(k,{key:k,name:canonicalName(p.name),mode:p.mode,products:[]});m.get(k).products.push(p)});return [...m.values()].map(g=>({...g,products:g.products.sort((a,b)=>Number(a.order)-Number(b.order))}))}
-function scanFamilyOptions(k=""){return scanFamilies().map(g=>`<option value="${esc(g.key)}" ${g.key===k?"selected":""}>${esc(g.name)} · ${esc(g.mode==="drink"?"Bijvoeding":g.mode==="sonde"?"Sondevoeding":"Algemeen")}</option>`).join("")}
-function scanVariantOptions(k,id=""){const g=scanFamilies().find(x=>x.key===k);return g?g.products.map(p=>`<option value="${esc(p.id)}" ${p.id===id?"selected":""}>${esc(variantLabel(p)||"Standaard")}</option>`).join(""):""}
+function scanFamilyOptions(k=""){return `<option value="" ${!k?"selected":""} disabled>Kies product…</option>`+scanFamilies().map(g=>`<option value="${esc(g.key)}" ${g.key===k?"selected":""}>${esc(g.name)} · ${esc(g.mode==="drink"?"Bijvoeding":g.mode==="sonde"?"Sondevoeding":"Algemeen")}</option>`).join("")}
+function scanVariantOptions(k,id=""){const g=scanFamilies().find(x=>x.key===k);if(!g)return `<option value="" selected disabled>Kies eerst product…</option>`;return `<option value="" ${!id?"selected":""} disabled>Kies variant…</option>`+g.products.map(p=>`<option value="${esc(p.id)}" ${p.id===id?"selected":""}>${esc(variantLabel(p)||"Standaard")}</option>`).join("")}
 function bestScanFamily(text){const n=scanNorm(text);if(!n)return null;let best=null;for(const g of scanFamilies()){const gn=scanNorm(g.name);let score=n.includes(gn)?100+gn.length:0;const toks=gn.split(" ").filter(x=>x.length>2);score+=toks.reduce((a,t)=>a+(n.includes(t)?Math.min(t.length,10):0),0);if(/nutridrink creme/.test(gn)&&/nutridrink creme/.test(n))score+=60;if(/ensure plus advance/.test(gn)&&/ensure plus advance/.test(n))score+=60;if(/ensure two cal|ensure twocal/.test(gn)&&/ensure two ?cal/.test(n))score+=60;if(/thicken up clear/.test(gn)&&/thicken up clear/.test(n))score+=60;if(/jevity 1 5/.test(gn)&&/jevity 1 5/.test(n))score+=60;if(/slikgel/.test(gn)&&/slikgel/.test(n))score+=60;if(/abound/.test(gn)&&/abound/.test(n))score+=60;if(!best||score>best.score)best={g,score}}return best&&best.score>=18?best.g:null}
 function bestScanProduct(g,text){if(!g||!g.products.length)return null;if(g.products.length===1)return g.products[0];const n=scanNorm(text);let best=null;g.products.forEach(p=>{const l=scanNorm(variantLabel(p));let score=l&&n.includes(l)?100+l.length:0;const size=String(Math.round(Number(p.contentPerOrderUnit||0)));if(p.mode==="sonde"&&size&&new RegExp(`\\b${size}\\s*ml\\b`).test(n))score+=150;if(!best||score>best.score)best={p,score}});return best&&best.score>0?best.p:g.products[0]}
 function quantityFromScanLine(text,p){
@@ -1688,14 +1701,14 @@ function parseOrderScanText(raw,lines=[]){
 function openOrderScanFilePicker(){const i=document.getElementById("orderScanInput");if(i){i.value="";i.click()}}
 function openOrderScanCamera(){const i=document.getElementById("orderScanCameraInput");if(i){i.value="";i.click()}}
 function openOrderScanPicker(){openOrderScanFilePicker()}
-function openOrderScanModal(){document.getElementById("orderScanModal")?.classList.remove("hidden")}
-function closeOrderScanModal(){document.getElementById("orderScanModal")?.classList.add("hidden")}
+function openOrderScanModal(){document.getElementById("orderScanModal")?.classList.remove("hidden");document.body.classList.add("order-scan-open")}
+function closeOrderScanModal(){document.getElementById("orderScanModal")?.classList.add("hidden");document.body.classList.remove("order-scan-open")}
 function closeOrderHistoryModal(){document.getElementById("orderHistoryModal")?.classList.add("hidden")}
 async function compactScanImage(file){const b=await createImageBitmap(file),max=1280,scale=Math.min(1,max/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(b.width*scale));c.height=Math.max(1,Math.round(b.height*scale));c.getContext("2d").drawImage(b,0,0,c.width,c.height);b.close?.();return c.toDataURL("image/jpeg",.72)}
 async function processOrderScanFile(file){if(!file)return;openOrderScanModal();const st=document.getElementById("orderScanStatus"),pr=document.getElementById("orderScanProgress"),bar=document.getElementById("orderScanProgressBar"),pv=document.getElementById("orderScanPreview");orderScanState={imageDataUrl:"",rawText:"",rows:[]};st.textContent="Afbeelding voorbereiden…";pr.classList.remove("hidden");bar.style.width="5%";try{orderScanState.imageDataUrl=await compactScanImage(file)}catch(e){orderScanState.imageDataUrl=""}if(orderScanState.imageDataUrl){pv.src=orderScanState.imageDataUrl;pv.classList.remove("hidden")}if(!window.Tesseract){st.textContent="Tekstherkenning kon niet worden geladen. Voeg de regels handmatig toe en controleer ze.";pr.classList.add("hidden");addOrderScanRow();return}try{const r=await Tesseract.recognize(file,"nld",{logger:m=>{if(m.status==="recognizing text"){const pc=Math.round((m.progress||0)*100);bar.style.width=`${pc}%`;st.textContent=`Besteloverzicht lezen… ${pc}%`}}});orderScanState.rawText=r?.data?.text||"";const ls=(r?.data?.lines||[]).map(x=>x.text);orderScanState.rows=mergeOrderScanRows(parseOrderScanText(orderScanState.rawText,ls));document.getElementById("orderScanRawText").textContent=orderScanState.rawText;st.textContent=orderScanState.rows.length?`${orderScanState.rows.length} regel${orderScanState.rows.length===1?"":"s"} herkend. Controleer product, variant en aantal.`:"Geen bestelregels betrouwbaar herkend. Voeg ze handmatig toe.";if(!orderScanState.rows.length)addOrderScanRow(false);renderOrderScanRows()}catch(e){console.warn("OCR mislukt",e);st.textContent="Automatisch uitlezen lukte niet. Je kunt de bestelling hieronder handmatig koppelen.";addOrderScanRow(false);renderOrderScanRows()}finally{pr.classList.add("hidden");bar.style.width="0"}}
-function addOrderScanRow(render=true){const g=scanFamilies()[0];if(!g)return;orderScanState.rows.push({familyKey:g.key,productId:g.products[0]?.id||"",qty:1,source:"Handmatig toegevoegd"});if(render)renderOrderScanRows()}
+function addOrderScanRow(render=true){orderScanState.rows.push({familyKey:"",productId:"",qty:1,source:"Handmatig toegevoegd"});if(render)renderOrderScanRows()}
 function removeOrderScanRow(i){orderScanState.rows.splice(i,1);renderOrderScanRows()}
-function changeOrderScanFamily(i,k){const g=scanFamilies().find(x=>x.key===k);if(!g)return;orderScanState.rows[i].familyKey=k;orderScanState.rows[i].productId=g.products[0]?.id||"";renderOrderScanRows()}
+function changeOrderScanFamily(i,k){const g=scanFamilies().find(x=>x.key===k);if(!g)return;orderScanState.rows[i].familyKey=k;orderScanState.rows[i].productId=g.products.length===1?(g.products[0]?.id||""):"";renderOrderScanRows()}
 function changeOrderScanProduct(i,id){if(orderScanState.rows[i])orderScanState.rows[i].productId=id;renderOrderScanSummary()}
 function changeOrderScanQty(i,v){if(orderScanState.rows[i])orderScanState.rows[i].qty=Math.max(0,Number(v)||0);renderOrderScanSummary()}
 function renderOrderScanRows(){const el=document.getElementById("orderScanRows");if(!el)return;el.innerHTML=orderScanState.rows.map((r,i)=>`<div class="scan-row"><div class="scan-field scan-field-family"><label>Hoofdproduct</label><select onchange="changeOrderScanFamily(${i},this.value)">${scanFamilyOptions(r.familyKey)}</select></div><div class="scan-field"><label>Smaak / variant</label><select onchange="changeOrderScanProduct(${i},this.value)">${scanVariantOptions(r.familyKey,r.productId)}</select></div><div class="scan-field"><label>Aantal</label><input type="number" min="0" step="1" value="${Number(r.qty)||0}" onchange="changeOrderScanQty(${i},this.value)"></div><button type="button" class="scan-remove" aria-label="Regel verwijderen" onclick="removeOrderScanRow(${i})">×</button></div>`).join("");renderOrderScanSummary()}
@@ -2456,7 +2469,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.54",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.55",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2506,7 +2519,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.54",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.55",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2598,7 +2611,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.54",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.55",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2654,7 +2667,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.54",
+        version: "V3.3.55",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
