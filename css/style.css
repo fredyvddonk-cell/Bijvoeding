@@ -321,3 +321,15 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .room-unit-section>summary span{font-size:.82rem;color:var(--muted);font-weight:700}
 .room-unit-list{display:grid;gap:8px;padding:0 8px 8px}
 .ordered-date{display:block;margin-top:3px;font-size:.78rem;font-weight:600;color:var(--muted)}
+
+/* V3.3.50 - voorraad per hoofdproduct met smaken */
+.product-family-card{border-left-color:var(--purple)}
+.family-total{text-align:right;font-size:.78rem;color:var(--muted);background:#f7f3fb;border-radius:12px;padding:7px 10px;white-space:nowrap}
+.family-total strong{font-size:1rem!important;color:var(--purple)!important;margin-top:2px}
+.flavor-stock-list{display:grid;gap:7px;margin-top:10px}
+.flavor-stock-row{border-top:1px solid var(--border);padding-top:9px}
+.flavor-stock-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.flavor-stock-head strong{font-size:.92rem;color:var(--text)}
+.flavor-counter{margin-top:5px!important}
+.loose-flavor{margin-top:4px!important}
+.product-family-card .expiry-compact{margin-top:3px}

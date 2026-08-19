@@ -124,7 +124,7 @@ function loadData() {
       d.settings.cupboardOrderApplied = true;
     }
 
-    // V3.3.49: de openstaande bestellingen van vóór de datumregistratie
+    // V3.3.50: de openstaande bestellingen van vóór de datumregistratie
     // zijn volgens de gebruiker op 14 augustus 2026 geplaatst.
     if (!d.settings.orderDateMigration3349) {
       d.products.forEach(p => {
@@ -1472,23 +1472,54 @@ function renderProductOptionsCombined() {
 
 function renderCounting() {
   const ps = allProductsOrdered().filter(p => p.externalProduct !== true);
-  countList.innerHTML = ps.length ? ps.map(p => {
-    const loose = hasLooseUnits(p);
-    const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
-    return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
-      <div class="item-head">
-        <div><strong>${esc(labelProduct(p))}</strong>${!activeProduct(p) ? ` <span class="badge inactive-badge">Niet actief</span>` : ""}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div>
-      </div>
-      ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
-      ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
-      ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
-      <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
-      ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
-      ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatExpiryMonth(p.expiryDate))}</span>` : ""}</div>` : ""}
+  const groups = [];
+  ps.forEach(p => {
+    // Bijvoeding met meerdere smaken wordt als één hoofdproduct getoond.
+    // Sondevoeding en algemene artikelen houden hun bestaande losse kaart.
+    const key = p.mode === "drink" ? `drink::${p.name}` : `single::${p.id}`;
+    let g = groups.find(x => x.key === key);
+    if (!g) { g = { key, mode: p.mode, name: p.name, products: [] }; groups.push(g); }
+    g.products.push(p);
+  });
+
+  countList.innerHTML = groups.length ? groups.map(g => {
+    if (g.mode !== "drink" || g.products.length === 1) {
+      const p = g.products[0];
+      const loose = hasLooseUnits(p);
+      const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
+      return `<div class="item count-card ${unusedStock ? "unused-stock" : ""}">
+        <div class="item-head"><div><strong>${esc(labelProduct(p))}</strong>${!activeProduct(p) ? ` <span class="badge inactive-badge">Niet actief</span>` : ""}${phaseOutProduct(p) ? ` <span class="badge phaseout-badge">Uitlopend</span>` : ""}</div></div>
+        ${p.mode === "general" ? "" : `<div class="stock-status-row"><div class="count-meta">${useBadge(p)}</div><div class="days-pill">${esc(daysSupplyText(p))}</div></div>`}
+        ${unusedStock ? `<div class="status-warn" style="margin-top:8px">Voorraad aanwezig, maar momenteel niet in gebruik</div>` : ""}
+        ${p.mode !== "general" && activeProduct(p) && isInUse(p) && belowMinimum(p) ? `<div class="status-danger" style="margin-top:6px">Onder minimumvoorraad</div>` : ""}
+        <div class="counter-wrap"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${hasLooseUnits(p) ? esc(packageCountLabel(p, p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit, p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
+        ${loose ? `<div class="loose-counter-compact"><div class="counter-wrap"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p, p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div><div class="count-total">Totaal: <strong>${fmt(stockUnits(p))} ${esc(looseUnitLabel(p, stockUnits(p)))}</strong></div></div>` : ""}
+        ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatExpiryMonth(p.expiryDate))}</span>` : ""}</div>` : ""}
+      </div>`;
+    }
+
+    const family = g.products;
+    const total = family.reduce((sum,p) => sum + stockUnits(p), 0);
+    const unit = family[0]?.consumptionUnit || "stuks";
+    const inUse = family.some(isInUse);
+    const low = family.some(p => activeProduct(p) && isInUse(p) && belowMinimum(p));
+    const rows = family.map(p => {
+      const variant = variantLabel(p) || "Zonder smaak";
+      const loose = hasLooseUnits(p);
+      return `<div class="flavor-stock-row">
+        <div class="flavor-stock-head"><strong>${esc(variant)}</strong>${!activeProduct(p) ? `<span class="badge inactive-badge">Niet actief</span>` : ""}</div>
+        <div class="counter-wrap flavor-counter"><button class="counter-btn" onclick="changeStock('${p.id}',-1)">−</button><div class="counter-value">${loose ? esc(packageCountLabel(p,p.stockFull)) : `${fmt(p.stockFull)} ${esc(plural(p.orderUnit,p.stockFull))}`}</div><button class="counter-btn" onclick="changeStock('${p.id}',1)">+</button></div>
+        ${loose ? `<div class="counter-wrap flavor-counter loose-flavor"><button class="counter-btn" onclick="changeLoose('${p.id}',-1)">−</button><div class="counter-value">${fmt(p.stockLoose)} ${esc(looseUnitLabel(p,p.stockLoose))}</div><button class="counter-btn" onclick="changeLoose('${p.id}',1)">+</button></div>` : ""}
+        ${stockUnits(p) > 0 ? `<div class="expiry-compact"><button class="secondary compact-btn" onclick="openExpiryModal('${p.id}')">THT</button>${p.expiryDate ? `<span class="expiry-date-text">${esc(formatExpiryMonth(p.expiryDate))}</span>` : ""}</div>` : ""}
+      </div>`;
+    }).join("");
+    return `<div class="item count-card product-family-card">
+      <div class="item-head"><div><strong>${esc(g.name)}</strong><div class="count-meta">${inUse ? `<span class="badge use-yes">In gebruik</span>` : `<span class="badge use-no">Niet in gebruik</span>`}</div></div><div class="family-total">Totaal<br><strong>${fmt(total)} ${esc(looseUnitLabel(family[0], total) || unit)}</strong></div></div>
+      ${low ? `<div class="status-danger" style="margin-top:6px">Eén of meer smaken onder minimumvoorraad</div>` : ""}
+      <div class="flavor-stock-list">${rows}</div>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
 }
-
 function renderUsage() {
   generalTargetCard.classList.add("hidden");
   usageListTitle.classList.add("hidden");
@@ -2330,7 +2361,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2380,7 +2411,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2472,7 +2503,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.49",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2528,7 +2559,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.49",
+        version: "V3.3.50",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
