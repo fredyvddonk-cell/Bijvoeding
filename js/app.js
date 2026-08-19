@@ -124,7 +124,7 @@ function loadData() {
       d.settings.cupboardOrderApplied = true;
     }
 
-    // V3.3.50: de openstaande bestellingen van vóór de datumregistratie
+    // V3.3.51: de openstaande bestellingen van vóór de datumregistratie
     // zijn volgens de gebruiker op 14 augustus 2026 geplaatst.
     if (!d.settings.orderDateMigration3349) {
       d.products.forEach(p => {
@@ -1474,16 +1474,17 @@ function renderCounting() {
   const ps = allProductsOrdered().filter(p => p.externalProduct !== true);
   const groups = [];
   ps.forEach(p => {
-    // Bijvoeding met meerdere smaken wordt als één hoofdproduct getoond.
-    // Sondevoeding en algemene artikelen houden hun bestaande losse kaart.
-    const key = p.mode === "drink" ? `drink::${p.name}` : `single::${p.id}`;
+    // V3.3.51: ieder product met meerdere smaken/inhouden/varianten wordt
+    // als één hoofdproduct getoond. Dit geldt voor bijvoeding, sondevoeding
+    // én algemene voorraad (bijv. Abound, Slikgel, Thicken Up Clear en Jevity).
+    const key = `${p.mode}::${canonicalName(p.name)}`;
     let g = groups.find(x => x.key === key);
     if (!g) { g = { key, mode: p.mode, name: p.name, products: [] }; groups.push(g); }
     g.products.push(p);
   });
 
   countList.innerHTML = groups.length ? groups.map(g => {
-    if (g.mode !== "drink" || g.products.length === 1) {
+    if (g.products.length === 1) {
       const p = g.products[0];
       const loose = hasLooseUnits(p);
       const unusedStock = p.mode !== "general" && !isInUse(p) && stockUnits(p) > 0;
@@ -1504,7 +1505,7 @@ function renderCounting() {
     const inUse = family.some(isInUse);
     const low = family.some(p => activeProduct(p) && isInUse(p) && belowMinimum(p));
     const rows = family.map(p => {
-      const variant = variantLabel(p) || "Zonder smaak";
+      const variant = variantLabel(p) || "Standaard";
       const loose = hasLooseUnits(p);
       return `<div class="flavor-stock-row">
         <div class="flavor-stock-head"><strong>${esc(variant)}</strong>${!activeProduct(p) ? `<span class="badge inactive-badge">Niet actief</span>` : ""}</div>
@@ -1515,7 +1516,7 @@ function renderCounting() {
     }).join("");
     return `<div class="item count-card product-family-card">
       <div class="item-head"><div><strong>${esc(g.name)}</strong><div class="count-meta">${inUse ? `<span class="badge use-yes">In gebruik</span>` : `<span class="badge use-no">Niet in gebruik</span>`}</div></div><div class="family-total">Totaal<br><strong>${fmt(total)} ${esc(looseUnitLabel(family[0], total) || unit)}</strong></div></div>
-      ${low ? `<div class="status-danger" style="margin-top:6px">Eén of meer smaken onder minimumvoorraad</div>` : ""}
+      ${low ? `<div class="status-danger" style="margin-top:6px">Eén of meer varianten onder minimumvoorraad</div>` : ""}
       <div class="flavor-stock-list">${rows}</div>
     </div>`;
   }).join("") : `<div class="empty">Nog geen producten.</div>`;
@@ -2361,7 +2362,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.51",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2411,7 +2412,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.51",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2503,7 +2504,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.50",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.51",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2559,7 +2560,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.50",
+        version: "V3.3.51",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
