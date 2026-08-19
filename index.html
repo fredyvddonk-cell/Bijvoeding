@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.51</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.51" />
+    <title>Bij- &amp; Sondevoeding V3.3.53</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.53" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.51</span>
+        <span class="version">V3.3.53</span>
       </div>
     </header>
 
@@ -500,6 +500,12 @@
             ‹ Terug naar overzicht
           </button>
           <h2>Besteladvies</h2>
+          <div class="order-scan-panel">
+            <button type="button" class="primary order-scan-btn" onclick="openOrderScanPicker()">Foto / screenshot verwerken</button>
+            <input id="orderScanInput" type="file" accept="image/*" capture="environment" class="hidden" />
+            <small>Maak een foto of kies een screenshot van het besteloverzicht. Je controleert eerst wat herkend is.</small>
+          </div>
+          <div id="orderHistoryPanel" class="order-history-panel"></div>
           <div class="product-search">
             <input
               id="orderSearch"
@@ -516,6 +522,34 @@
         Gegevens worden lokaal in deze browser opgeslagen.
       </div>
     </main>
+
+    <div id="orderScanModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="orderScanTitle">
+      <div class="modal-card order-scan-modal-card">
+        <div class="modal-head">
+          <div><h2 id="orderScanTitle">Besteloverzicht verwerken</h2><p id="orderScanStatus" class="hint">Kies eerst een foto of screenshot.</p></div>
+          <button type="button" class="icon-close" aria-label="Sluiten" onclick="closeOrderScanModal()">×</button>
+        </div>
+        <div id="orderScanProgress" class="scan-progress hidden"><div id="orderScanProgressBar"></div></div>
+        <img id="orderScanPreview" class="order-scan-preview hidden" alt="Voorbeeld besteloverzicht" />
+        <div id="orderScanSummary" class="scan-summary hidden"></div>
+        <div id="orderScanRows" class="scan-rows"></div>
+        <div class="scan-actions">
+          <button type="button" class="secondary" onclick="addOrderScanRow()">+ Regel toevoegen</button>
+          <button type="button" id="orderScanConfirm" class="primary" onclick="confirmOrderScan()" disabled>Bevestigen en als besteld opslaan</button>
+        </div>
+        <details class="scan-ocr-details"><summary>Herkende tekst bekijken</summary><pre id="orderScanRawText"></pre></details>
+      </div>
+    </div>
+
+    <div id="orderHistoryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="orderHistoryTitle">
+      <div class="modal-card order-history-modal-card">
+        <div class="modal-head">
+          <h2 id="orderHistoryTitle">Bestelling</h2>
+          <button type="button" class="icon-close" aria-label="Sluiten" onclick="closeOrderHistoryModal()">×</button>
+        </div>
+        <div id="orderHistoryDetail"></div>
+      </div>
+    </div>
 
     <div
       id="roomEditModal"
@@ -1036,8 +1070,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.51"></script>
+    <script src="js/app.js?v=3.3.53"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

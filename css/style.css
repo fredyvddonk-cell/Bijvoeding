@@ -322,14 +322,33 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .room-unit-list{display:grid;gap:8px;padding:0 8px 8px}
 .ordered-date{display:block;margin-top:3px;font-size:.78rem;font-weight:600;color:var(--muted)}
 
-/* V3.3.51 - voorraad per hoofdproduct met smaken/varianten */
+/* V3.3.53 - voorraad per hoofdproduct, smaak rechts uitgelijnd */
 .product-family-card{border-left-color:var(--purple)}
 .family-total{text-align:right;font-size:.78rem;color:var(--muted);background:#f7f3fb;border-radius:12px;padding:7px 10px;white-space:nowrap}
 .family-total strong{font-size:1rem!important;color:var(--purple)!important;margin-top:2px}
 .flavor-stock-list{display:grid;gap:7px;margin-top:10px}
 .flavor-stock-row{border-top:1px solid var(--border);padding-top:9px}
-.flavor-stock-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.flavor-stock-head{display:flex;align-items:center;justify-content:flex-end;gap:8px;text-align:right;min-height:1.35em}
 .flavor-stock-head strong{font-size:.92rem;color:var(--text)}
 .flavor-counter{margin-top:5px!important}
 .loose-flavor{margin-top:4px!important}
 .product-family-card .expiry-compact{margin-top:3px}
+
+
+/* V3.3.53 - besteloverzicht via foto/screenshot */
+.order-scan-panel{display:grid;gap:6px;margin:8px 0 12px;padding:10px;border:1px solid var(--border);border-radius:14px;background:#fbfcfb}
+.order-scan-panel small{color:var(--muted);line-height:1.35}
+.order-scan-btn{width:100%}
+.order-scan-modal-card{max-width:760px;max-height:92vh;overflow:auto}
+.order-scan-preview{display:block;width:100%;max-height:280px;object-fit:contain;border:1px solid var(--border);border-radius:12px;margin:8px 0 12px;background:#fff}
+.scan-progress{height:8px;background:#edf0ed;border-radius:999px;overflow:hidden;margin:8px 0}
+.scan-progress>div{height:100%;width:0;background:var(--green);transition:width .15s ease}
+.scan-summary{margin:10px 0;padding:10px;border-radius:12px;background:#f7f3fb;color:var(--text);font-weight:700}
+.scan-rows{display:grid;gap:9px;margin:10px 0}
+.scan-row{display:grid;grid-template-columns:minmax(140px,1.6fr) minmax(105px,1fr) 85px 38px;gap:7px;align-items:end;padding:9px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.scan-field{display:grid;gap:4px}.scan-field label{font-size:.72rem;color:var(--muted);font-weight:700}.scan-field select,.scan-field input{width:100%;min-width:0}
+.scan-remove{height:42px;border:0;border-radius:10px;background:#f7eaea;color:#8d2f2f;font-size:1.2rem;font-weight:800}
+.scan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.scan-actions .primary{flex:1;min-width:220px}
+.scan-ocr-details{margin-top:12px;color:var(--muted)}.scan-ocr-details pre{white-space:pre-wrap;font-size:.76rem;max-height:180px;overflow:auto;background:#f7f7f7;padding:8px;border-radius:10px}
+.order-history-panel{margin:4px 0 12px}.order-history-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.order-history-list{display:grid;gap:6px}.order-history-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 10px}.order-history-item small{display:block;color:var(--muted);margin-top:2px}.order-history-thumb{width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex:0 0 auto}.order-history-main{flex:1;min-width:0}.order-history-modal-card{max-width:720px;max-height:90vh;overflow:auto}.order-history-image{display:block;width:100%;max-height:420px;object-fit:contain;border:1px solid var(--border);border-radius:12px}.history-items{display:grid;gap:6px;margin-top:10px}.history-item{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+@media(max-width:620px){.scan-row{grid-template-columns:1fr 1fr 72px 38px}.scan-field-family{grid-column:1/-1}.scan-actions{display:grid}.scan-actions .primary{min-width:0}.order-scan-modal-card{width:calc(100vw - 18px);padding:14px}}
