@@ -1,0 +1,25 @@
+{
+  "name": "Bij- & Sondevoeding",
+  "short_name": "Bij- & Sondevoeding",
+  "description": "Voorraad tellen en bestellen van bijvoeding, sondevoeding en algemene voedingsproducten.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#957AC1",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
