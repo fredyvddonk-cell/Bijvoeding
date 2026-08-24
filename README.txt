@@ -1,6 +1,9 @@
-Bij- & Sondevoeding V3.3.58
+Bij- & Sondevoeding V3.3.59
 
-Nieuw in V3.3.58:
+Nieuw in V3.3.59:
+- Algemene producten tonen geen status “In gebruik” of “Niet in gebruik”, ook niet als een product meerdere varianten heeft.
+
+Vorige wijzigingen:
 - Bugfix Overzicht: sondevoeding gebruikt nu hetzelfde besteladvies per productfamilie als Bestellen. Bij meerdere inhoudsvarianten verschijnt BESTELLEN daardoor ook correct op Overzicht.
 
 Vorige wijzigingen:

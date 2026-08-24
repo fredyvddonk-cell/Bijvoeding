@@ -1500,7 +1500,7 @@ function renderProductOptionsCombined() {
 }
 
 function renderCounting() {
-  // V3.3.58: Algemeen blijft altijd zichtbaar in Voorraad.
+  // V3.3.59: Algemeen blijft altijd zichtbaar in Voorraad en heeft geen gebruiksstatus.
   // Bijvoeding en sondevoeding worden alleen getoond als de variant
   // daadwerkelijk in gebruik is of er nog fysieke voorraad aanwezig is.
   // De producten blijven ongewijzigd beschikbaar in Beheer.
@@ -1551,7 +1551,7 @@ function renderCounting() {
       </div>`;
     }).join("");
     return `<div class="item count-card product-family-card">
-      <div class="item-head"><div><strong>${esc(g.name)}</strong><div class="count-meta">${inUse ? `<span class="badge use-yes">In gebruik</span>` : `<span class="badge use-no">Niet in gebruik</span>`}</div></div><div class="family-total">Totaal<br><strong>${fmt(total)} ${esc(looseUnitLabel(family[0], total) || unit)}</strong></div></div>
+      <div class="item-head"><div><strong>${esc(g.name)}</strong>${g.mode === "general" ? "" : `<div class="count-meta">${inUse ? `<span class="badge use-yes">In gebruik</span>` : `<span class="badge use-no">Niet in gebruik</span>`}</div>`}</div><div class="family-total">Totaal<br><strong>${fmt(total)} ${esc(looseUnitLabel(family[0], total) || unit)}</strong></div></div>
       ${low ? `<div class="status-danger" style="margin-top:6px">Eén of meer varianten onder minimumvoorraad</div>` : ""}
       <div class="flavor-stock-list">${rows}</div>
     </div>`;
@@ -1677,7 +1677,7 @@ function renderOrders() {
 }
 
 
-// V3.3.58 - digitaal afbeeldingsbestand of camera; robuustere tabelherkenning en samenvoegen.
+// V3.3.59 - digitaal afbeeldingsbestand of camera; robuustere tabelherkenning en samenvoegen.
 let orderScanState = { imageDataUrl:"", rawText:"", rows:[] };
 function scanNorm(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
 function scanFamilies(){const m=new Map();allProductsOrdered().filter(p=>p.externalProduct!==true).forEach(p=>{const k=productFamilyKey(p);if(!m.has(k))m.set(k,{key:k,name:canonicalName(p.name),mode:p.mode,products:[]});m.get(k).products.push(p)});return [...m.values()].map(g=>({...g,products:g.products.sort((a,b)=>Number(a.order)-Number(b.order))}))}
@@ -1778,7 +1778,7 @@ function overviewAttentionItems() {
     const products = familyProducts(name, "sonde", true);
     const p = products.find(activeProduct) || products[0];
     if (!p) return;
-    // V3.3.58: gebruik exact hetzelfde familie-besteladvies als op Bestellen.
+    // V3.3.59: gebruik exact hetzelfde familie-besteladvies als op Bestellen.
     // Bij meerdere inhoudsvarianten kan alleen de voorkeursverpakking orderUnits krijgen;
     // daarom mag Overzicht niet alleen de eerste actieve variant controleren.
     const orderUnits = products
@@ -2496,7 +2496,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.58",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.59",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2546,7 +2546,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.58",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.59",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2638,7 +2638,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.58",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.59",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2694,7 +2694,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.58",
+        version: "V3.3.59",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
