@@ -1,6 +1,9 @@
-Bij- & Sondevoeding V3.3.57
+Bij- & Sondevoeding V3.3.58
 
-Nieuw in V3.3.57:
+Nieuw in V3.3.58:
+- Bugfix Overzicht: sondevoeding gebruikt nu hetzelfde besteladvies per productfamilie als Bestellen. Bij meerdere inhoudsvarianten verschijnt BESTELLEN daardoor ook correct op Overzicht.
+
+Vorige wijzigingen:
 - Abound, Slikgel, Thicken Up Clear en Jevity Plus 1,5 gebruiken bij Bestellen dezelfde bediening als de overige producten.
 - Bij gegroepeerde producten staat nu Werkelijk besteld met invoerveld en Opslaan.
 - Zodra een werkelijk besteld aantal is opgeslagen, verschijnt Bestelling ontvangen.
