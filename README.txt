@@ -1,6 +1,6 @@
-Bij- & Sondevoeding V3.3.60
+Bij- & Sondevoeding V3.3.61
 
-Nieuw in V3.3.60:
+Nieuw in V3.3.61:
 - Variantnamen bij algemene producten zijn gecentreerd in de voorraadkaart.
 - Hierdoor vallen smaakkeuzes zoals Banaan/Tutti frutti en vormen zoals Gel/Poeder duidelijker op.
 
