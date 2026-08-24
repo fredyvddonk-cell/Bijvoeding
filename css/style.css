@@ -328,7 +328,7 @@ main{max-width:980px;margin:auto;padding:14px 16px 112px}.mode-caption{font-size
 .family-total strong{font-size:1rem!important;color:var(--purple)!important;margin-top:2px}
 .flavor-stock-list{display:grid;gap:7px;margin-top:10px}
 .flavor-stock-row{border-top:1px solid var(--border);padding-top:9px}
-.flavor-stock-head{display:flex;align-items:center;justify-content:flex-end;gap:8px;text-align:right;min-height:1.35em}
+.flavor-stock-head{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;min-height:1.35em}
 .flavor-stock-head strong{font-size:.92rem;color:var(--text)}
 .flavor-counter{margin-top:5px!important}
 .loose-flavor{margin-top:4px!important}
