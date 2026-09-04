@@ -2553,7 +2553,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2603,7 +2603,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2695,7 +2695,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2736,7 +2736,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.69 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
+// V3.3.71 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
@@ -2863,8 +2863,9 @@ function createStockMail() {
     "BESCHIKBARE PRODUCTEN",
     `Datum: ${date}`,
     "",
-    "Onderstaande producten zijn bij ons beschikbaar voor andere afdelingen.",
-    "Kunnen jullie hiervan iets gebruiken?",
+    "Op Wamberg zijn onderstaande producten beschikbaar.",
+    "",
+    "Kunnen jullie deze gebruiken?",
     ""
   ];
 
@@ -2895,7 +2896,8 @@ function createStockMail() {
       });
   });
 
-  body.push(`Totaal: ${products.length} geselecteerd product${products.length === 1 ? "" : "en"}.`);
+  body.push("Met vriendelijke groet,", "", "Fredy Zinauer", "Afdeling Wamberg");
+
   const subject = `Beschikbare bijvoeding, sondevoeding en overige voedingsproducten - ${date}`;
   const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
   closeStockMailModal();
@@ -2918,7 +2920,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.69",
+        version: "V3.3.71",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -3025,4 +3027,4 @@ function createStockMail() {
 // V3.3.53 - foto/screenshot-invoer koppelen.
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initOrderScan); else initOrderScan();
 
-// V3.3.69 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
+// V3.3.71 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
