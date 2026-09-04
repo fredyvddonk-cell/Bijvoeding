@@ -1,6 +1,12 @@
-Bij- & Sondevoeding V3.3.62
+Bij- & Sondevoeding V3.3.63
 
-Nieuw in V3.3.62:
+Nieuw in V3.3.63:
+- Nieuwe knop “Voorraad mailen” bij Bijvoeding.
+- Zelf één of meerdere bijvoedingssoorten selecteren.
+- De mail wordt automatisch uitgesplitst per smaak/variant met actuele hoeveelheid en THT.
+- Knoppen “Alles selecteren” en “Selectie wissen” toegevoegd.
+- De standaard mailapp opent met onderwerp en voorraadlijst al ingevuld.
+
 - Kamer toevoegen hersteld: tijdstipregels worden correct ingelezen vóór validatie en opslag.
 - Variantnamen bij algemene producten zijn gecentreerd in de voorraadkaart.
 - Hierdoor vallen smaakkeuzes zoals Banaan/Tutti frutti en vormen zoals Gel/Poeder duidelijker op.

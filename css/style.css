@@ -365,3 +365,14 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 .order-family-variants{display:grid;gap:5px;margin:8px 0 10px;padding:8px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .order-family-variant{display:flex;justify-content:space-between;gap:14px;padding:3px 0}.order-family-variant strong{font-weight:800}.order-family-variant span:last-child{text-align:right;font-weight:700}
 @media(max-width:620px){#orderScanModal{padding:0}#orderScanModal .order-scan-modal-card{width:100vw;max-height:100dvh;min-height:100dvh;border-radius:0;padding:14px}#orderScanModal .modal-head{top:-14px;margin-top:-14px;padding-top:14px}}
+
+
+/* V3.3.63 — voorraad bijvoeding selecteren en mailen */
+.stock-mail-toolbar{margin:0 0 10px}.stock-mail-toolbar .secondary{width:auto;min-width:180px}
+.stock-mail-panel{width:min(620px,100%)}
+.stock-mail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stock-mail-family-list{display:grid;gap:8px;margin:0 0 16px}
+.stock-mail-family{display:flex;align-items:center;gap:10px;margin:0;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer}
+.stock-mail-family input{width:20px;height:20px;margin:0;accent-color:var(--purple);flex:0 0 auto}
+.stock-mail-family span{display:block;min-width:0}.stock-mail-family strong{display:block;font-size:1rem}.stock-mail-family small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+@media(max-width:520px){.stock-mail-toolbar .secondary{width:100%}.stock-mail-actions{grid-template-columns:1fr}}

@@ -995,6 +995,8 @@ function renderOverview() {
   }).join("") : `<div class="empty">Geen directe aandachtspunten. Alles is voldoende op voorraad en er zijn geen THT-meldingen.</div>`;
 }
 function renderAll() {
+  const stockMailToolbar = document.getElementById("stockMailToolbar");
+  if (stockMailToolbar) stockMailToolbar.classList.toggle("hidden", currentMode !== "drink");
   flavorField.classList.toggle("hidden", currentMode === "sonde");
   if (typeof manualMinimumField !== "undefined") manualMinimumField.classList.toggle("hidden", currentMode !== "general");
   looseField.classList.toggle("hidden", Number(contentPerOrderUnit.value || 1) <= 1);
@@ -2498,7 +2500,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.62",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2548,7 +2550,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.62",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2640,7 +2642,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.62",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2680,6 +2682,85 @@ async function makeSelectedSchedules(){
 
 
 
+
+// V3.3.63 — geselecteerde bijvoedingssoorten per smaak, voorraad en THT mailen.
+function stockMailFamilies() {
+  const map = new Map();
+  allProductsOrdered()
+    .filter(p => p.mode === "drink" && p.externalProduct !== true && (isInUse(p) || stockUnits(p) > 0))
+    .forEach(p => {
+      const name = canonicalName(p.name);
+      const key = name.toLocaleLowerCase("nl-NL");
+      if (!map.has(key)) map.set(key, { key, name, products: [] });
+      map.get(key).products.push(p);
+    });
+  return [...map.values()];
+}
+
+function openStockMailModal() {
+  if (currentMode !== "drink") {
+    alert("Deze mailfunctie is bedoeld voor Bijvoeding.");
+    return;
+  }
+  const modal = document.getElementById("stockMailModal");
+  const list = document.getElementById("stockMailFamilyList");
+  const families = stockMailFamilies();
+  if (!families.length) {
+    alert("Er zijn geen bijvoedingssoorten met gebruik of voorraad om te mailen.");
+    return;
+  }
+  list.innerHTML = families.map(g => `
+    <label class="stock-mail-family">
+      <input type="checkbox" class="stock-mail-family-check" value="${esc(g.key)}">
+      <span><strong>${esc(g.name)}</strong><small>${g.products.length} ${g.products.length === 1 ? "smaak/variant" : "smaken/varianten"}</small></span>
+    </label>`).join("");
+  modal.classList.remove("hidden");
+}
+
+function closeStockMailModal() {
+  document.getElementById("stockMailModal")?.classList.add("hidden");
+}
+
+function setAllStockMailFamilies(checked) {
+  document.querySelectorAll(".stock-mail-family-check").forEach(input => { input.checked = checked; });
+}
+
+function stockMailQuantityText(p) {
+  const total = stockUnits(p);
+  if (hasLooseUnits(p)) return `${fmt(total)} ${looseUnitLabel(p, total)}`;
+  return `${fmt(p.stockFull || 0)} ${plural(p.orderUnit, p.stockFull || 0)}`;
+}
+
+function stockMailFlavorName(p) {
+  return String(p.flavor || variantLabel(p) || "Zonder smaak").trim();
+}
+
+function createStockMail() {
+  const selected = new Set([...document.querySelectorAll(".stock-mail-family-check:checked")].map(input => input.value));
+  if (!selected.size) {
+    alert("Selecteer minimaal één soort bijvoeding.");
+    return;
+  }
+  const families = stockMailFamilies().filter(g => selected.has(g.key));
+  const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const body = ["Voorraad bijvoeding", `Datum: ${date}`, ""];
+
+  families.forEach((g, familyIndex) => {
+    body.push(g.name);
+    const products = [...g.products].sort((a, b) => stockMailFlavorName(a).localeCompare(stockMailFlavorName(b), "nl-NL", { sensitivity: "base" }));
+    products.forEach(p => {
+      const tht = p.expiryDate ? formatExpiryMonth(p.expiryDate) : "geen THT ingevuld";
+      body.push(`- ${stockMailFlavorName(p)}: ${stockMailQuantityText(p)} — THT ${tht}`);
+    });
+    if (familyIndex < families.length - 1) body.push("");
+  });
+
+  const subject = `Voorraad bijvoeding - ${date}`;
+  const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
+  closeStockMailModal();
+  window.location.href = href;
+}
+
 // V3.3.19 — volledige back-up maken en terugzetten.
 (function setupBackupTools(){
   const makeBtn = document.getElementById("makeBackup");
@@ -2696,7 +2777,7 @@ async function makeSelectedSchedules(){
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.62",
+        version: "V3.3.63",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
