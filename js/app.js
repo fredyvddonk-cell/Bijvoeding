@@ -2683,22 +2683,18 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.65 — één kort-houdbaarheidsmail over meerdere productgroepen.
+// V3.3.66 — alle voorraadproducten selecteerbaar voor één mail over meerdere productgroepen.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
   return mode === "drink" ? "Bijvoeding" : mode === "sonde" ? "Sondevoeding" : "Algemeen";
 }
 
-function shortExpiryMailProducts() {
+function stockMailProducts() {
   return allProductsOrdered()
     .filter(p => stockMailModes.has(p.mode))
     .filter(p => p.externalProduct !== true && activeProduct(p))
-    .filter(p => stockUnits(p) > 0 && p.expiryDate)
-    .filter(p => {
-      const e = expiryInfo(p);
-      return e.expired || e.soon;
-    })
+    .filter(p => stockUnits(p) > 0)
     .sort((a, b) => {
       const modeOrder = {drink:0, general:1, sonde:2};
       const modeDiff = (modeOrder[a.mode] ?? 9) - (modeOrder[b.mode] ?? 9);
@@ -2738,9 +2734,9 @@ function renderStockMailFamilyList() {
     list.innerHTML = `<div class="empty">Kies minimaal één productgroep.</div>`;
     return;
   }
-  const products = shortExpiryMailProducts();
+  const products = stockMailProducts();
   if (!products.length) {
-    list.innerHTML = `<div class="empty">In de gekozen productgroep${stockMailModes.size === 1 ? "" : "en"} zijn geen producten met voorraad die verlopen zijn of binnen 60 dagen de THT bereiken.</div>`;
+    list.innerHTML = `<div class="empty">In de gekozen productgroep${stockMailModes.size === 1 ? "" : "en"} zijn geen producten op voorraad.</div>`;
     return;
   }
   let currentMode = null;
@@ -2751,12 +2747,12 @@ function renderStockMailFamilyList() {
       html.push(`<div class="stock-mail-group-title">${esc(stockMailModeLabel(p.mode))}</div>`);
     }
     const e = expiryInfo(p);
-    const status = e.expired ? "THT verlopen" : "Kort houdbaar";
+    const status = e.expired ? "THT verlopen" : e.soon ? "Kort houdbaar" : (p.expiryDate ? "" : "Geen THT ingevuld");
     html.push(`<label class="stock-mail-family stock-mail-product-row">
       <input type="checkbox" class="stock-mail-family-check" value="${esc(p.id)}" checked>
       <span>
         <strong>${esc(stockMailDisplayName(p))}</strong>
-        <small>${esc(stockMailQuantityText(p))} · THT ${esc(stockMailThtText(p))} · ${esc(status)}</small>
+        <small>${esc(stockMailQuantityText(p))} · THT ${esc(stockMailThtText(p))}${status ? ` · ${esc(status)}` : ""}</small>
       </span>
     </label>`);
   });
@@ -2767,7 +2763,7 @@ function openStockMailModal() {
   stockMailModes = new Set(["drink", "general", "sonde"]);
   document.getElementById("stockMailModal")?.classList.remove("hidden");
   const title = document.getElementById("stockMailTitle");
-  if (title) title.textContent = "Kort houdbare producten mailen";
+  if (title) title.textContent = "Producten mailen";
   renderStockMailModePicker();
   renderStockMailFamilyList();
 }
@@ -2802,17 +2798,17 @@ function createStockMail() {
     alert("Selecteer minimaal één product.");
     return;
   }
-  const products = shortExpiryMailProducts().filter(p => selectedIds.has(p.id));
+  const products = stockMailProducts().filter(p => selectedIds.has(p.id));
   if (!products.length) {
     alert("De geselecteerde producten zijn niet meer beschikbaar in deze lijst.");
     return;
   }
   const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
   const body = [
-    "KORT HOUDBARE PRODUCTEN – BESCHIKBAAR",
+    "BESCHIKBARE PRODUCTEN",
     `Datum: ${date}`,
     "",
-    "Onderstaande producten hebben bij ons een korte houdbaarheid en zijn beschikbaar voor andere afdelingen.",
+    "Onderstaande producten zijn bij ons beschikbaar voor andere afdelingen.",
     "Kunnen jullie hiervan iets gebruiken?",
     ""
   ];
@@ -2833,7 +2829,7 @@ function createStockMail() {
   });
 
   body.push(`Totaal: ${products.length} geselecteerd product${products.length === 1 ? "" : "en"}.`);
-  const subject = `Kort houdbare producten beschikbaar - ${date}`;
+  const subject = `Beschikbare producten - ${date}`;
   const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
   closeStockMailModal();
   window.location.href = href;
