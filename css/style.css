@@ -387,3 +387,5 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 .stock-mail-group-title{margin:14px 2px 4px;font-size:.82rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .stock-mail-product-row small{line-height:1.35}
 .stock-mail-mode-picker button.active::before{content:"✓ ";font-weight:900}
+
+.order-flavor-suggestion{margin:9px 0 7px;padding:9px 10px;border:1px solid #ddd;border-radius:12px;background:#fafafa}.order-flavor-title{font-weight:900;margin-bottom:5px}.order-flavor-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:.82rem}.order-flavor-note{font-size:.72rem;line-height:1.3;color:var(--muted);margin-top:5px}.pref-tag{font-size:.68rem;font-weight:800;border:1px solid #ccc;border-radius:999px;padding:1px 5px;white-space:nowrap}

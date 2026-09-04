@@ -857,6 +857,56 @@ function drinkFamilyPlan(name) {
   return { name, products, active, rooms, roomPlans, daily, targetDays, targetDemand, shortage, orderUnits, rep, days, accepted, other, acceptedStock, prefGroups };
 }
 
+function flavorOrderSuggestion(g, totalPackages) {
+  totalPackages = Math.max(0, Math.floor(Number(totalPackages || 0)));
+  if (!g || totalPackages <= 0) return [];
+
+  const candidates = (g.active || []).filter(p => p && p.externalProduct !== true);
+  if (!candidates.length) return [];
+
+  // Bouw de gewenste voorraad per voorkeurssmaak op uit het werkelijke verbruik.
+  // Bij meerdere gelijkwaardige voorkeurssmaken wordt de vraag gelijk verdeeld.
+  const preferenceDemand = new Map(candidates.map(p => [p.id, 0]));
+  (g.roomPlans || []).forEach(rp => {
+    const prefs = (rp.preferredIds || []).filter(id => preferenceDemand.has(id));
+    if (!prefs.length) return;
+    const units = Number(rp.daily || 0) * Number(g.targetDays || 0) / prefs.length;
+    prefs.forEach(id => preferenceDemand.set(id, (preferenceDemand.get(id) || 0) + units));
+  });
+
+  const hasPreferences = [...preferenceDemand.values()].some(v => v > 0);
+  let pool = hasPreferences ? candidates.filter(p => (preferenceDemand.get(p.id) || 0) > 0) : candidates;
+  if (!pool.length) pool = candidates;
+
+  const proposed = new Map(pool.map(p => [p.id, 0]));
+  for (let i = 0; i < totalPackages; i++) {
+    let best = null;
+    let bestScore = -Infinity;
+    for (const p of pool) {
+      const pack = Math.max(1, Number(p.contentPerOrderUnit || 1));
+      const current = stockUnits(p) + orderedUnits(p) + (proposed.get(p.id) || 0) * pack;
+      const demand = preferenceDemand.get(p.id) || 0;
+      // Voorkeurstekort krijgt voorrang. Als dat al gedekt is, verdeel dan op
+      // laagste dekking zodat niet alles automatisch naar één smaak gaat.
+      const deficit = Math.max(0, demand - current);
+      const coverage = demand > 0 ? current / demand : current / pack;
+      const score = deficit > 0 ? 1000000 + deficit / pack : -coverage;
+      if (score > bestScore) { bestScore = score; best = p; }
+    }
+    if (!best) break;
+    proposed.set(best.id, (proposed.get(best.id) || 0) + 1);
+  }
+
+  return pool
+    .filter(p => (proposed.get(p.id) || 0) > 0)
+    .map(p => ({
+      product: p,
+      packages: proposed.get(p.id) || 0,
+      preference: (preferenceDemand.get(p.id) || 0) > 0
+    }))
+    .sort((a,b) => b.packages - a.packages || String(variantLabel(a.product)).localeCompare(String(variantLabel(b.product)), 'nl'));
+}
+
 function renderDrinkOrders() {
   const groups = familyNames("drink").map(drinkFamilyPlan).filter(g => g.daily > 0 && g.rep && g.products.some(p => p.externalProduct !== true));
   orderList.innerHTML = groups.length ? groups.map(g => {
@@ -886,6 +936,8 @@ function renderDrinkOrders() {
     }).join("");
 
     const totalOrder = g.prefGroups.reduce((sum, pg) => sum + Number(pg.orderUnits || 0), 0);
+    const flavorSuggestion = flavorOrderSuggestion(g, totalOrder);
+    const flavorSuggestionHtml = flavorSuggestion.length ? `<div class="order-flavor-suggestion"><div class="order-flavor-title">Voorstel smaken</div>${flavorSuggestion.map(x => `<div class="order-flavor-row"><span><strong>${esc(variantLabel(x.product) || "Zonder smaak")}</strong>${x.preference ? ` <span class="pref-tag">voorkeur</span>` : ""}</span><span><strong>${x.packages}</strong> ${esc(plural(x.product.orderUnit, x.packages))}</span></div>`).join("")}<div class="order-flavor-note">Verdeling binnen het bestaande besteladvies. Voorkeurssmaken krijgen voorrang op basis van verbruik en aanwezige voorraad.</div></div>` : "";
     const ordered = familyOrderedPackages(g.name, "drink");
     const orderedDate = familyOrderedDate(g.name, "drink");
     const orderedInputId = `ordered-family-${p.id}`;
@@ -899,6 +951,7 @@ function renderDrinkOrders() {
       <div class="order-summary">${orderStatus}</div>
       <div class="order-entry"><label for="${orderedInputId}">Werkelijk besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" enterkeyhint="done" value="${ordered}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}','drink','${orderedInputId}');this.blur();}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink', '${orderedInputId}')">Opslaan</button></div>
       ${ordered > 0 ? `<button type="button" class="secondary compact-btn" onclick="receiveFamilyOrder('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink')">Bestelling ontvangen</button>` : ""}
+      ${flavorSuggestionHtml}
       <div class="order-variant-list">${stockRows}</div>
       <details class="order-details"><summary>Berekening bekijken</summary>
         <div class="order-pref-groups">${prefSections}</div>
@@ -2500,7 +2553,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.67",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2550,7 +2603,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.67",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2642,7 +2695,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.67",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2683,7 +2736,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.67 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
+// V3.3.68 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
@@ -2851,7 +2904,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.67",
+        version: "V3.3.68",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -2957,3 +3010,5 @@ function createStockMail() {
 
 // V3.3.53 - foto/screenshot-invoer koppelen.
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initOrderScan); else initOrderScan();
+
+// V3.3.68 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
