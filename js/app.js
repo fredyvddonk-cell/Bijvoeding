@@ -2553,7 +2553,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2603,7 +2603,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2695,7 +2695,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.68",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.69",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2736,7 +2736,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.68 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
+// V3.3.69 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
@@ -2752,9 +2752,11 @@ function stockMailProducts() {
       const modeOrder = {drink:0, general:1, sonde:2};
       const modeDiff = (modeOrder[a.mode] ?? 9) - (modeOrder[b.mode] ?? 9);
       if (modeDiff) return modeDiff;
-      const thtDiff = String(a.expiryDate || "9999-99").localeCompare(String(b.expiryDate || "9999-99"));
-      if (thtDiff) return thtDiff;
-      return stockMailDisplayName(a).localeCompare(stockMailDisplayName(b), "nl-NL", {sensitivity:"base"});
+      const familyDiff = canonicalName(a.name).localeCompare(canonicalName(b.name), "nl-NL", {sensitivity:"base"});
+      if (familyDiff) return familyDiff;
+      const variantDiff = stockMailVariantName(a).localeCompare(stockMailVariantName(b), "nl-NL", {sensitivity:"base"});
+      if (variantDiff) return variantDiff;
+      return String(a.expiryDate || "9999-99").localeCompare(String(b.expiryDate || "9999-99"));
     });
 }
 
@@ -2871,14 +2873,26 @@ function createStockMail() {
     if (!rows.length) return;
     body.push(stockMailModeLabel(mode).toUpperCase());
     body.push("-".repeat(stockMailModeLabel(mode).length));
-    rows
-      .sort((a,b) => String(a.expiryDate).localeCompare(String(b.expiryDate)) || stockMailDisplayName(a).localeCompare(stockMailDisplayName(b), "nl-NL", {sensitivity:"base"}))
-      .forEach(p => {
-        const e = expiryInfo(p);
-        body.push(`• ${stockMailDisplayName(p)}`);
-        body.push(`  ${stockMailQuantityText(p)} | THT ${stockMailThtText(p)}${e.expired ? " | VERLOPEN" : ""}`);
+    const families = new Map();
+    rows.forEach(p => {
+      const family = canonicalName(p.name);
+      if (!families.has(family)) families.set(family, []);
+      families.get(family).push(p);
+    });
+    [...families.entries()]
+      .sort((a,b) => a[0].localeCompare(b[0], "nl-NL", {sensitivity:"base"}))
+      .forEach(([family, familyRows]) => {
+        body.push(`• ${family}`);
+        familyRows
+          .sort((a,b) => stockMailVariantName(a).localeCompare(stockMailVariantName(b), "nl-NL", {sensitivity:"base"}) || String(a.expiryDate || "9999-99").localeCompare(String(b.expiryDate || "9999-99")))
+          .forEach(p => {
+            const e = expiryInfo(p);
+            const variant = stockMailVariantName(p);
+            const showVariant = variant && variant !== "Standaard" && variant !== "Zonder smaak";
+            body.push(`  ${showVariant ? `- ${variant}: ` : "- "}${stockMailQuantityText(p)} | THT ${stockMailThtText(p)}${e.expired ? " | VERLOPEN" : ""}`);
+          });
+        body.push("");
       });
-    body.push("");
   });
 
   body.push(`Totaal: ${products.length} geselecteerd product${products.length === 1 ? "" : "en"}.`);
@@ -2904,7 +2918,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.68",
+        version: "V3.3.69",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -3011,4 +3025,4 @@ function createStockMail() {
 // V3.3.53 - foto/screenshot-invoer koppelen.
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initOrderScan); else initOrderScan();
 
-// V3.3.68 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
+// V3.3.69 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.

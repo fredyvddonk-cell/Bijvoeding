@@ -1,6 +1,6 @@
-Bij- & Sondevoeding V3.3.68
+Bij- & Sondevoeding V3.3.69
 
-Nieuw in V3.3.68:
+Nieuw in V3.3.69:
 - Alle producten met voorraad zijn selecteerbaar, ongeacht de THT.
 - Bijvoeding, Algemeen en Sondevoeding kunnen tegelijk worden geselecteerd.
 - Producten kunnen afzonderlijk aan- of uitgevinkt worden.
