@@ -2553,7 +2553,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.72",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2603,7 +2603,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.72",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2695,7 +2695,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.71",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.72",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2736,7 +2736,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.71 — mailselectie gebruikt dezelfde fysieke voorraadbasis als Voorraad; selectie standaard uit.
+// V3.3.72 — mailselectie met zelf gekozen aantallen en duidelijke eenheden.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
@@ -2782,6 +2782,26 @@ function renderStockMailModePicker() {
   });
 }
 
+function stockMailAvailableUnits(p) {
+  return Math.max(0, stockUnits(p));
+}
+
+function stockMailUnitLabel(p, n) {
+  if (hasLooseUnits(p)) return looseUnitLabel(p, n);
+  return plural(p.orderUnit || p.consumptionUnit || "stuks", n);
+}
+
+function stockMailQuantityText(p, amount = stockMailAvailableUnits(p)) {
+  return `${fmt(amount)} ${stockMailUnitLabel(p, amount)}`;
+}
+
+function toggleStockMailProduct(id, checked) {
+  const qty = document.querySelector(`.stock-mail-qty[data-product-id="${CSS.escape(String(id))}"]`);
+  if (!qty) return;
+  qty.disabled = !checked;
+  if (checked && !(Number(qty.value) > 0)) qty.value = String(qty.max || 1);
+}
+
 function renderStockMailFamilyList() {
   const list = document.getElementById("stockMailFamilyList");
   if (!list) return;
@@ -2802,14 +2822,19 @@ function renderStockMailFamilyList() {
       html.push(`<div class="stock-mail-group-title">${esc(stockMailModeLabel(p.mode))}</div>`);
     }
     const e = expiryInfo(p);
-    const status = e.expired ? "THT verlopen" : e.soon ? "Kort houdbaar" : (p.expiryDate ? "" : "Geen THT ingevuld");
-    html.push(`<label class="stock-mail-family stock-mail-product-row">
-      <input type="checkbox" class="stock-mail-family-check" value="${esc(p.id)}">
-      <span>
+    const status = e.expired ? "Houdbaarheid verlopen" : e.soon ? "Kort houdbaar" : (p.expiryDate ? "" : "Geen houdbaarheid ingevuld");
+    const max = stockMailAvailableUnits(p);
+    html.push(`<div class="stock-mail-family stock-mail-product-row">
+      <input type="checkbox" class="stock-mail-family-check" value="${esc(p.id)}" onchange="toggleStockMailProduct('${esc(p.id)}', this.checked)">
+      <span class="stock-mail-product-info">
         <strong>${esc(stockMailDisplayName(p))}</strong>
-        <small>${esc(stockMailQuantityText(p))} · THT ${esc(stockMailThtText(p))}${status ? ` · ${esc(status)}` : ""}</small>
+        <small>Voorraad: ${esc(stockMailQuantityText(p))} · Houdbaar tot ${esc(stockMailThtText(p))}${status ? ` · ${esc(status)}` : ""}</small>
       </span>
-    </label>`);
+      <label class="stock-mail-qty-wrap">
+        <span>Aantal</span>
+        <input type="number" class="stock-mail-qty" data-product-id="${esc(p.id)}" min="1" max="${esc(max)}" step="1" value="${esc(max)}" disabled>
+      </label>
+    </div>`);
   });
   list.innerHTML = html.join("");
 }
@@ -2828,13 +2853,10 @@ function closeStockMailModal() {
 }
 
 function setAllStockMailFamilies(checked) {
-  document.querySelectorAll(".stock-mail-family-check").forEach(input => { input.checked = checked; });
-}
-
-function stockMailQuantityText(p) {
-  const total = stockUnits(p);
-  if (hasLooseUnits(p)) return `${fmt(total)} ${looseUnitLabel(p, total)}`;
-  return `${fmt(p.stockFull || 0)} ${plural(p.orderUnit, p.stockFull || 0)}`;
+  document.querySelectorAll(".stock-mail-family-check").forEach(input => {
+    input.checked = checked;
+    toggleStockMailProduct(input.value, checked);
+  });
 }
 
 function stockMailVariantName(p) {
@@ -2844,24 +2866,36 @@ function stockMailVariantName(p) {
 }
 
 function stockMailThtText(p) {
-  return p.expiryDate ? formatExpiryMonth(p.expiryDate) : "geen THT ingevuld";
+  return p.expiryDate ? formatExpiryMonth(p.expiryDate) : "niet ingevuld";
 }
 
 function createStockMail() {
-  const selectedIds = new Set([...document.querySelectorAll(".stock-mail-family-check:checked")].map(input => input.value));
-  if (!selectedIds.size) {
+  const checked = [...document.querySelectorAll(".stock-mail-family-check:checked")];
+  if (!checked.length) {
     alert("Selecteer minimaal één product.");
     return;
   }
-  const products = stockMailProducts().filter(p => selectedIds.has(p.id));
+
+  const selected = new Map();
+  for (const input of checked) {
+    const p = data.products.find(x => String(x.id) === String(input.value));
+    if (!p) continue;
+    const qtyInput = document.querySelector(`.stock-mail-qty[data-product-id="${CSS.escape(String(p.id))}"]`);
+    const max = stockMailAvailableUnits(p);
+    let amount = Number(qtyInput?.value || 0);
+    if (!Number.isFinite(amount) || amount < 1) amount = 1;
+    amount = Math.min(Math.floor(amount), Math.floor(max));
+    if (amount > 0) selected.set(String(p.id), amount);
+  }
+
+  const products = stockMailProducts().filter(p => selected.has(String(p.id)));
   if (!products.length) {
     alert("De geselecteerde producten zijn niet meer beschikbaar in deze lijst.");
     return;
   }
-  const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+
   const body = [
-    "BESCHIKBARE PRODUCTEN",
-    `Datum: ${date}`,
+    "Hoi collega's,",
     "",
     "Op Wamberg zijn onderstaande producten beschikbaar.",
     "",
@@ -2890,7 +2924,8 @@ function createStockMail() {
             const e = expiryInfo(p);
             const variant = stockMailVariantName(p);
             const showVariant = variant && variant !== "Standaard" && variant !== "Zonder smaak";
-            body.push(`  ${showVariant ? `- ${variant}: ` : "- "}${stockMailQuantityText(p)} | THT ${stockMailThtText(p)}${e.expired ? " | VERLOPEN" : ""}`);
+            const amount = selected.get(String(p.id));
+            body.push(`  ${showVariant ? `- ${variant}: ` : "- "}${stockMailQuantityText(p, amount)} | Houdbaar tot ${stockMailThtText(p)}${e.expired ? " | VERLOPEN" : ""}`);
           });
         body.push("");
       });
@@ -2898,6 +2933,7 @@ function createStockMail() {
 
   body.push("Met vriendelijke groet,", "", "Fredy Zinauer", "Afdeling Wamberg");
 
+  const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
   const subject = `Beschikbare bijvoeding, sondevoeding en overige voedingsproducten - ${date}`;
   const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
   closeStockMailModal();
@@ -2920,7 +2956,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.71",
+        version: "V3.3.72",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -3027,4 +3063,4 @@ function createStockMail() {
 // V3.3.53 - foto/screenshot-invoer koppelen.
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initOrderScan); else initOrderScan();
 
-// V3.3.71 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
+// V3.3.72 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
