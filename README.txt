@@ -1,58 +1,10 @@
-Bij- & Sondevoeding V3.3.64
+Bij- & Sondevoeding V3.3.65
 
-Nieuw in V3.3.64:
-- Voorraad mailen werkt nu voor Bijvoeding, Algemeen en Sondevoeding.
-- In het mailscherm kies je eerst de hoofdgroep.
-- Daarna selecteer je zelf één of meerdere producten.
-- Varianten/smaken, actuele voorraad en THT worden automatisch in de mail gezet.
-
-  "./index.html",
-  "./css/style.css",
-  "./data/defaults.js",
-  "./js/app.js",
-  "./manifest.webmanifest",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./logo-header.png",
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key)),
-        ),
-      ),
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-
-  // Network first: nieuwe GitHub-versies worden zo snel mogelijk opgehaald.
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() =>
-        caches
-          .match(event.request)
-          .then((cached) => cached || caches.match("./index.html")),
-      ),
-  );
-});
+Nieuw in V3.3.65:
+- Nieuwe functie: Kort houdbaar mailen.
+- Bijvoeding, Algemeen en Sondevoeding kunnen tegelijk worden geselecteerd.
+- De lijst toont producten met voorraad die verlopen zijn of binnen 60 dagen de THT bereiken.
+- Producten kunnen afzonderlijk aan- of uitgevinkt worden.
+- Alle gekozen producten komen samen in één duidelijke e-mail.
+- De e-mail is per productgroep opgebouwd en binnen de groep op THT gesorteerd.
+- Per product staan naam/variant, hoeveelheid en THT direct onder elkaar.

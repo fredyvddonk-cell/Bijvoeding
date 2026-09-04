@@ -382,3 +382,8 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 .stock-mail-mode-picker button{border:1px solid var(--border);border-radius:10px;background:#fff;padding:10px 8px;font-weight:700;cursor:pointer}
 .stock-mail-mode-picker button.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 @media(max-width:520px){.stock-mail-mode-picker{grid-template-columns:1fr}}
+
+/* V3.3.65 — kort-houdbaarheidsmail over meerdere productgroepen */
+.stock-mail-group-title{margin:14px 2px 4px;font-size:.82rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stock-mail-product-row small{line-height:1.35}
+.stock-mail-mode-picker button.active::before{content:"✓ ";font-weight:900}

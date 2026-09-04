@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.64</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.64" />
+    <title>Bij- &amp; Sondevoeding V3.3.65</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.65" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.64</span>
+        <span class="version">V3.3.65</span>
       </div>
     </header>
 
@@ -108,7 +108,7 @@
           </p>
           <div class="stock-mail-toolbar" id="stockMailToolbar">
             <button type="button" class="secondary" onclick="openStockMailModal()">
-              ✉ Voorraad mailen
+              ✉ Kort houdbaar mailen
             </button>
           </div>
           <div class="product-search">
@@ -993,14 +993,14 @@
       <div class="modal-backdrop" onclick="closeStockMailModal()"></div>
       <div class="modal-panel stock-mail-panel">
         <div class="modal-head">
-          <h2 id="stockMailTitle">Voorraad bijvoeding mailen</h2>
+          <h2 id="stockMailTitle">Kort houdbare producten mailen</h2>
           <button type="button" class="modal-close" onclick="closeStockMailModal()">×</button>
         </div>
-        <p class="muted">Kies eerst de hoofdgroep. Daarna bepaal je zelf welke producten in de mail komen. Varianten, aantallen en THT worden automatisch toegevoegd.</p>
+        <p class="muted">Kies één of meer productgroepen. Je ziet daarna de producten met voorraad die verlopen zijn of binnen 60 dagen de THT bereiken. Vink aan wat je samen in één mail naar andere afdelingen wilt sturen.</p>
         <div class="stock-mail-mode-picker" id="stockMailModePicker">
-          <button type="button" data-mail-mode="drink" onclick="setStockMailMode('drink')">Bijvoeding</button>
-          <button type="button" data-mail-mode="general" onclick="setStockMailMode('general')">Algemeen</button>
-          <button type="button" data-mail-mode="sonde" onclick="setStockMailMode('sonde')">Sondevoeding</button>
+          <button type="button" data-mail-mode="drink" onclick="toggleStockMailMode('drink')">Bijvoeding</button>
+          <button type="button" data-mail-mode="general" onclick="toggleStockMailMode('general')">Algemeen</button>
+          <button type="button" data-mail-mode="sonde" onclick="toggleStockMailMode('sonde')">Sondevoeding</button>
         </div>
         <div class="stock-mail-actions">
           <button type="button" class="secondary" onclick="setAllStockMailFamilies(true)">Alles selecteren</button>
@@ -1103,7 +1103,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.64"></script>
+    <script src="js/app.js?v=3.3.65"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

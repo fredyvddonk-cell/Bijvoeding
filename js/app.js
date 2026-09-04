@@ -2500,7 +2500,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.65",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2550,7 +2550,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.65",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2642,7 +2642,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.65",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2683,64 +2683,93 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.64 — voorraadmail voor Bijvoeding, Algemeen en Sondevoeding.
-let stockMailMode = "drink";
+// V3.3.65 — één kort-houdbaarheidsmail over meerdere productgroepen.
+let stockMailModes = new Set(["drink", "general", "sonde"]);
 
-function stockMailModeLabel(mode = stockMailMode) {
+function stockMailModeLabel(mode) {
   return mode === "drink" ? "Bijvoeding" : mode === "sonde" ? "Sondevoeding" : "Algemeen";
 }
 
-function stockMailFamilies(mode = stockMailMode) {
-  const map = new Map();
-  allProductsOrdered()
-    .filter(p => p.mode === mode && p.externalProduct !== true && activeProduct(p))
-    .forEach(p => {
-      const name = canonicalName(p.name);
-      const key = `${mode}:${name.toLocaleLowerCase("nl-NL")}`;
-      if (!map.has(key)) map.set(key, { key, name, mode, products: [] });
-      map.get(key).products.push(p);
+function shortExpiryMailProducts() {
+  return allProductsOrdered()
+    .filter(p => stockMailModes.has(p.mode))
+    .filter(p => p.externalProduct !== true && activeProduct(p))
+    .filter(p => stockUnits(p) > 0 && p.expiryDate)
+    .filter(p => {
+      const e = expiryInfo(p);
+      return e.expired || e.soon;
+    })
+    .sort((a, b) => {
+      const modeOrder = {drink:0, general:1, sonde:2};
+      const modeDiff = (modeOrder[a.mode] ?? 9) - (modeOrder[b.mode] ?? 9);
+      if (modeDiff) return modeDiff;
+      const thtDiff = String(a.expiryDate || "9999-99").localeCompare(String(b.expiryDate || "9999-99"));
+      if (thtDiff) return thtDiff;
+      return stockMailDisplayName(a).localeCompare(stockMailDisplayName(b), "nl-NL", {sensitivity:"base"});
     });
-  return [...map.values()];
 }
 
-function setStockMailMode(mode) {
+function stockMailDisplayName(p) {
+  const family = canonicalName(p.name);
+  const variant = stockMailVariantName(p);
+  if (!variant || variant === "Standaard" || variant === "Zonder smaak") return family;
+  return `${family} – ${variant}`;
+}
+
+function toggleStockMailMode(mode) {
   if (!["drink", "general", "sonde"].includes(mode)) return;
-  stockMailMode = mode;
-  document.querySelectorAll("[data-mail-mode]").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.mailMode === mode);
-  });
-  const title = document.getElementById("stockMailTitle");
-  if (title) title.textContent = `Voorraad ${stockMailModeLabel(mode).toLowerCase()} mailen`;
+  if (stockMailModes.has(mode)) stockMailModes.delete(mode);
+  else stockMailModes.add(mode);
+  renderStockMailModePicker();
   renderStockMailFamilyList();
+}
+
+function renderStockMailModePicker() {
+  document.querySelectorAll("[data-mail-mode]").forEach(btn => {
+    btn.classList.toggle("active", stockMailModes.has(btn.dataset.mailMode));
+    btn.setAttribute("aria-pressed", stockMailModes.has(btn.dataset.mailMode) ? "true" : "false");
+  });
 }
 
 function renderStockMailFamilyList() {
   const list = document.getElementById("stockMailFamilyList");
   if (!list) return;
-  const families = stockMailFamilies();
-  if (!families.length) {
-    list.innerHTML = `<div class="empty">Geen actieve producten in ${esc(stockMailModeLabel().toLowerCase())}.</div>`;
+  if (!stockMailModes.size) {
+    list.innerHTML = `<div class="empty">Kies minimaal één productgroep.</div>`;
     return;
   }
-  list.innerHTML = families.map(g => {
-    const variants = g.products.length;
-    const sub = g.mode === "drink"
-      ? `${variants} ${variants === 1 ? "smaak/variant" : "smaken/varianten"}`
-      : g.mode === "sonde"
-        ? `${variants} ${variants === 1 ? "inhoud/variant" : "inhouden/varianten"}`
-        : `${variants} ${variants === 1 ? "variant" : "varianten"}`;
-    return `<label class="stock-mail-family">
-      <input type="checkbox" class="stock-mail-family-check" value="${esc(g.key)}">
-      <span><strong>${esc(g.name)}</strong><small>${esc(sub)}</small></span>
-    </label>`;
-  }).join("");
+  const products = shortExpiryMailProducts();
+  if (!products.length) {
+    list.innerHTML = `<div class="empty">In de gekozen productgroep${stockMailModes.size === 1 ? "" : "en"} zijn geen producten met voorraad die verlopen zijn of binnen 60 dagen de THT bereiken.</div>`;
+    return;
+  }
+  let currentMode = null;
+  const html = [];
+  products.forEach(p => {
+    if (p.mode !== currentMode) {
+      currentMode = p.mode;
+      html.push(`<div class="stock-mail-group-title">${esc(stockMailModeLabel(p.mode))}</div>`);
+    }
+    const e = expiryInfo(p);
+    const status = e.expired ? "THT verlopen" : "Kort houdbaar";
+    html.push(`<label class="stock-mail-family stock-mail-product-row">
+      <input type="checkbox" class="stock-mail-family-check" value="${esc(p.id)}" checked>
+      <span>
+        <strong>${esc(stockMailDisplayName(p))}</strong>
+        <small>${esc(stockMailQuantityText(p))} · THT ${esc(stockMailThtText(p))} · ${esc(status)}</small>
+      </span>
+    </label>`);
+  });
+  list.innerHTML = html.join("");
 }
 
 function openStockMailModal() {
-  const modal = document.getElementById("stockMailModal");
-  stockMailMode = ["drink", "general", "sonde"].includes(currentMode) ? currentMode : "drink";
-  modal?.classList.remove("hidden");
-  setStockMailMode(stockMailMode);
+  stockMailModes = new Set(["drink", "general", "sonde"]);
+  document.getElementById("stockMailModal")?.classList.remove("hidden");
+  const title = document.getElementById("stockMailTitle");
+  if (title) title.textContent = "Kort houdbare producten mailen";
+  renderStockMailModePicker();
+  renderStockMailFamilyList();
 }
 
 function closeStockMailModal() {
@@ -2768,28 +2797,43 @@ function stockMailThtText(p) {
 }
 
 function createStockMail() {
-  const selected = new Set([...document.querySelectorAll(".stock-mail-family-check:checked")].map(input => input.value));
-  if (!selected.size) {
+  const selectedIds = new Set([...document.querySelectorAll(".stock-mail-family-check:checked")].map(input => input.value));
+  if (!selectedIds.size) {
     alert("Selecteer minimaal één product.");
     return;
   }
-  const families = stockMailFamilies().filter(g => selected.has(g.key));
+  const products = shortExpiryMailProducts().filter(p => selectedIds.has(p.id));
+  if (!products.length) {
+    alert("De geselecteerde producten zijn niet meer beschikbaar in deze lijst.");
+    return;
+  }
   const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const label = stockMailModeLabel();
-  const body = [`Voorraad ${label.toLowerCase()}`, `Datum: ${date}`, ""];
+  const body = [
+    "KORT HOUDBARE PRODUCTEN – BESCHIKBAAR",
+    `Datum: ${date}`,
+    "",
+    "Onderstaande producten hebben bij ons een korte houdbaarheid en zijn beschikbaar voor andere afdelingen.",
+    "Kunnen jullie hiervan iets gebruiken?",
+    ""
+  ];
 
-  families.forEach((g, familyIndex) => {
-    body.push(g.name);
-    const products = [...g.products].sort((a, b) => stockMailVariantName(a).localeCompare(stockMailVariantName(b), "nl-NL", { sensitivity: "base" }));
-    products.forEach(p => {
-      const variant = stockMailVariantName(p);
-      const prefix = products.length > 1 || variant !== "Standaard" ? `${variant}: ` : "";
-      body.push(`- ${prefix}${stockMailQuantityText(p)} — THT ${stockMailThtText(p)}`);
-    });
-    if (familyIndex < families.length - 1) body.push("");
+  ["drink", "general", "sonde"].forEach(mode => {
+    const rows = products.filter(p => p.mode === mode);
+    if (!rows.length) return;
+    body.push(stockMailModeLabel(mode).toUpperCase());
+    body.push("-".repeat(stockMailModeLabel(mode).length));
+    rows
+      .sort((a,b) => String(a.expiryDate).localeCompare(String(b.expiryDate)) || stockMailDisplayName(a).localeCompare(stockMailDisplayName(b), "nl-NL", {sensitivity:"base"}))
+      .forEach(p => {
+        const e = expiryInfo(p);
+        body.push(`• ${stockMailDisplayName(p)}`);
+        body.push(`  ${stockMailQuantityText(p)} | THT ${stockMailThtText(p)}${e.expired ? " | VERLOPEN" : ""}`);
+      });
+    body.push("");
   });
 
-  const subject = `Voorraad ${label.toLowerCase()} - ${date}`;
+  body.push(`Totaal: ${products.length} geselecteerd product${products.length === 1 ? "" : "en"}.`);
+  const subject = `Kort houdbare producten beschikbaar - ${date}`;
   const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
   closeStockMailModal();
   window.location.href = href;
@@ -2811,7 +2855,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.64",
+        version: "V3.3.65",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
