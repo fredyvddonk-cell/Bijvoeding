@@ -376,3 +376,9 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 .stock-mail-family input{width:20px;height:20px;margin:0;accent-color:var(--purple);flex:0 0 auto}
 .stock-mail-family span{display:block;min-width:0}.stock-mail-family strong{display:block;font-size:1rem}.stock-mail-family small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
 @media(max-width:520px){.stock-mail-toolbar .secondary{width:100%}.stock-mail-actions{grid-template-columns:1fr}}
+
+/* V3.3.64 — hoofdgroep kiezen voor voorraadmail */
+.stock-mail-mode-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stock-mail-mode-picker button{border:1px solid var(--border);border-radius:10px;background:#fff;padding:10px 8px;font-weight:700;cursor:pointer}
+.stock-mail-mode-picker button.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+@media(max-width:520px){.stock-mail-mode-picker{grid-template-columns:1fr}}

@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.63</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.63" />
+    <title>Bij- &amp; Sondevoeding V3.3.64</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.64" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.63</span>
+        <span class="version">V3.3.64</span>
       </div>
     </header>
 
@@ -996,7 +996,12 @@
           <h2 id="stockMailTitle">Voorraad bijvoeding mailen</h2>
           <button type="button" class="modal-close" onclick="closeStockMailModal()">×</button>
         </div>
-        <p class="muted">Kies welke soort bijvoeding je wilt doorgeven. De smaken, aantallen en THT worden automatisch in de mail gezet.</p>
+        <p class="muted">Kies eerst de hoofdgroep. Daarna bepaal je zelf welke producten in de mail komen. Varianten, aantallen en THT worden automatisch toegevoegd.</p>
+        <div class="stock-mail-mode-picker" id="stockMailModePicker">
+          <button type="button" data-mail-mode="drink" onclick="setStockMailMode('drink')">Bijvoeding</button>
+          <button type="button" data-mail-mode="general" onclick="setStockMailMode('general')">Algemeen</button>
+          <button type="button" data-mail-mode="sonde" onclick="setStockMailMode('sonde')">Sondevoeding</button>
+        </div>
         <div class="stock-mail-actions">
           <button type="button" class="secondary" onclick="setAllStockMailFamilies(true)">Alles selecteren</button>
           <button type="button" class="secondary" onclick="setAllStockMailFamilies(false)">Selectie wissen</button>
@@ -1098,7 +1103,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.63"></script>
+    <script src="js/app.js?v=3.3.64"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

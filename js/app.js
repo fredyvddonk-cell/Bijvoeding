@@ -996,7 +996,7 @@ function renderOverview() {
 }
 function renderAll() {
   const stockMailToolbar = document.getElementById("stockMailToolbar");
-  if (stockMailToolbar) stockMailToolbar.classList.toggle("hidden", currentMode !== "drink");
+  if (stockMailToolbar) stockMailToolbar.classList.remove("hidden");
   flavorField.classList.toggle("hidden", currentMode === "sonde");
   if (typeof manualMinimumField !== "undefined") manualMinimumField.classList.toggle("hidden", currentMode !== "general");
   looseField.classList.toggle("hidden", Number(contentPerOrderUnit.value || 1) <= 1);
@@ -2500,7 +2500,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2550,7 +2550,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2642,7 +2642,7 @@ async function createWeeklyQuantitiesPdf(unit){
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
   doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.63",W-mr,H-3.5,{align:"right"});
+  doc.setFontSize(6.5);doc.text("Appversie: V3.3.64",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
@@ -2683,38 +2683,64 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.63 — geselecteerde bijvoedingssoorten per smaak, voorraad en THT mailen.
-function stockMailFamilies() {
+// V3.3.64 — voorraadmail voor Bijvoeding, Algemeen en Sondevoeding.
+let stockMailMode = "drink";
+
+function stockMailModeLabel(mode = stockMailMode) {
+  return mode === "drink" ? "Bijvoeding" : mode === "sonde" ? "Sondevoeding" : "Algemeen";
+}
+
+function stockMailFamilies(mode = stockMailMode) {
   const map = new Map();
   allProductsOrdered()
-    .filter(p => p.mode === "drink" && p.externalProduct !== true && (isInUse(p) || stockUnits(p) > 0))
+    .filter(p => p.mode === mode && p.externalProduct !== true && activeProduct(p))
     .forEach(p => {
       const name = canonicalName(p.name);
-      const key = name.toLocaleLowerCase("nl-NL");
-      if (!map.has(key)) map.set(key, { key, name, products: [] });
+      const key = `${mode}:${name.toLocaleLowerCase("nl-NL")}`;
+      if (!map.has(key)) map.set(key, { key, name, mode, products: [] });
       map.get(key).products.push(p);
     });
   return [...map.values()];
 }
 
-function openStockMailModal() {
-  if (currentMode !== "drink") {
-    alert("Deze mailfunctie is bedoeld voor Bijvoeding.");
-    return;
-  }
-  const modal = document.getElementById("stockMailModal");
+function setStockMailMode(mode) {
+  if (!["drink", "general", "sonde"].includes(mode)) return;
+  stockMailMode = mode;
+  document.querySelectorAll("[data-mail-mode]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mailMode === mode);
+  });
+  const title = document.getElementById("stockMailTitle");
+  if (title) title.textContent = `Voorraad ${stockMailModeLabel(mode).toLowerCase()} mailen`;
+  renderStockMailFamilyList();
+}
+
+function renderStockMailFamilyList() {
   const list = document.getElementById("stockMailFamilyList");
+  if (!list) return;
   const families = stockMailFamilies();
   if (!families.length) {
-    alert("Er zijn geen bijvoedingssoorten met gebruik of voorraad om te mailen.");
+    list.innerHTML = `<div class="empty">Geen actieve producten in ${esc(stockMailModeLabel().toLowerCase())}.</div>`;
     return;
   }
-  list.innerHTML = families.map(g => `
-    <label class="stock-mail-family">
+  list.innerHTML = families.map(g => {
+    const variants = g.products.length;
+    const sub = g.mode === "drink"
+      ? `${variants} ${variants === 1 ? "smaak/variant" : "smaken/varianten"}`
+      : g.mode === "sonde"
+        ? `${variants} ${variants === 1 ? "inhoud/variant" : "inhouden/varianten"}`
+        : `${variants} ${variants === 1 ? "variant" : "varianten"}`;
+    return `<label class="stock-mail-family">
       <input type="checkbox" class="stock-mail-family-check" value="${esc(g.key)}">
-      <span><strong>${esc(g.name)}</strong><small>${g.products.length} ${g.products.length === 1 ? "smaak/variant" : "smaken/varianten"}</small></span>
-    </label>`).join("");
-  modal.classList.remove("hidden");
+      <span><strong>${esc(g.name)}</strong><small>${esc(sub)}</small></span>
+    </label>`;
+  }).join("");
+}
+
+function openStockMailModal() {
+  const modal = document.getElementById("stockMailModal");
+  stockMailMode = ["drink", "general", "sonde"].includes(currentMode) ? currentMode : "drink";
+  modal?.classList.remove("hidden");
+  setStockMailMode(stockMailMode);
 }
 
 function closeStockMailModal() {
@@ -2731,31 +2757,39 @@ function stockMailQuantityText(p) {
   return `${fmt(p.stockFull || 0)} ${plural(p.orderUnit, p.stockFull || 0)}`;
 }
 
-function stockMailFlavorName(p) {
+function stockMailVariantName(p) {
+  if (p.mode === "sonde") return variantLabel(p) || "Standaard";
+  if (p.mode === "general") return String(p.flavor || variantLabel(p) || "Standaard").trim();
   return String(p.flavor || variantLabel(p) || "Zonder smaak").trim();
+}
+
+function stockMailThtText(p) {
+  return p.expiryDate ? formatExpiryMonth(p.expiryDate) : "geen THT ingevuld";
 }
 
 function createStockMail() {
   const selected = new Set([...document.querySelectorAll(".stock-mail-family-check:checked")].map(input => input.value));
   if (!selected.size) {
-    alert("Selecteer minimaal één soort bijvoeding.");
+    alert("Selecteer minimaal één product.");
     return;
   }
   const families = stockMailFamilies().filter(g => selected.has(g.key));
   const date = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const body = ["Voorraad bijvoeding", `Datum: ${date}`, ""];
+  const label = stockMailModeLabel();
+  const body = [`Voorraad ${label.toLowerCase()}`, `Datum: ${date}`, ""];
 
   families.forEach((g, familyIndex) => {
     body.push(g.name);
-    const products = [...g.products].sort((a, b) => stockMailFlavorName(a).localeCompare(stockMailFlavorName(b), "nl-NL", { sensitivity: "base" }));
+    const products = [...g.products].sort((a, b) => stockMailVariantName(a).localeCompare(stockMailVariantName(b), "nl-NL", { sensitivity: "base" }));
     products.forEach(p => {
-      const tht = p.expiryDate ? formatExpiryMonth(p.expiryDate) : "geen THT ingevuld";
-      body.push(`- ${stockMailFlavorName(p)}: ${stockMailQuantityText(p)} — THT ${tht}`);
+      const variant = stockMailVariantName(p);
+      const prefix = products.length > 1 || variant !== "Standaard" ? `${variant}: ` : "";
+      body.push(`- ${prefix}${stockMailQuantityText(p)} — THT ${stockMailThtText(p)}`);
     });
     if (familyIndex < families.length - 1) body.push("");
   });
 
-  const subject = `Voorraad bijvoeding - ${date}`;
+  const subject = `Voorraad ${label.toLowerCase()} - ${date}`;
   const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join("\r\n"))}`;
   closeStockMailModal();
   window.location.href = href;
@@ -2777,7 +2811,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.63",
+        version: "V3.3.64",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data

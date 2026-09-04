@@ -1,26 +1,58 @@
-Bij- & Sondevoeding V3.3.63
+Bij- & Sondevoeding V3.3.64
 
-Nieuw in V3.3.63:
-- Nieuwe knop “Voorraad mailen” bij Bijvoeding.
-- Zelf één of meerdere bijvoedingssoorten selecteren.
-- De mail wordt automatisch uitgesplitst per smaak/variant met actuele hoeveelheid en THT.
-- Knoppen “Alles selecteren” en “Selectie wissen” toegevoegd.
-- De standaard mailapp opent met onderwerp en voorraadlijst al ingevuld.
+Nieuw in V3.3.64:
+- Voorraad mailen werkt nu voor Bijvoeding, Algemeen en Sondevoeding.
+- In het mailscherm kies je eerst de hoofdgroep.
+- Daarna selecteer je zelf één of meerdere producten.
+- Varianten/smaken, actuele voorraad en THT worden automatisch in de mail gezet.
 
-- Kamer toevoegen hersteld: tijdstipregels worden correct ingelezen vóór validatie en opslag.
-- Variantnamen bij algemene producten zijn gecentreerd in de voorraadkaart.
-- Hierdoor vallen smaakkeuzes zoals Banaan/Tutti frutti en vormen zoals Gel/Poeder duidelijker op.
+  "./index.html",
+  "./css/style.css",
+  "./data/defaults.js",
+  "./js/app.js",
+  "./manifest.webmanifest",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./logo-header.png",
+];
 
-- Algemene producten tonen geen status “In gebruik” of “Niet in gebruik”, ook niet als een product meerdere varianten heeft.
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
+  );
+  self.skipWaiting();
+});
 
-Vorige wijzigingen:
-- Bugfix Overzicht: sondevoeding gebruikt nu hetzelfde besteladvies per productfamilie als Bestellen. Bij meerdere inhoudsvarianten verschijnt BESTELLEN daardoor ook correct op Overzicht.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
+      ),
+  );
+  self.clients.claim();
+});
 
-Vorige wijzigingen:
-- Abound, Slikgel, Thicken Up Clear en Jevity Plus 1,5 gebruiken bij Bestellen dezelfde bediening als de overige producten.
-- Bij gegroepeerde producten staat nu Werkelijk besteld met invoerveld en Opslaan.
-- Zodra een werkelijk besteld aantal is opgeslagen, verschijnt Bestelling ontvangen.
-- Na Bestelling ontvangen verdwijnt de openstaande bestelstatus; de fysieke voorraad wordt niet automatisch verhoogd.
-- Smaken en inhoudsvarianten blijven onder het hoofdproduct zichtbaar voor controle.
-- De voorraadfiltering uit V3.3.56 blijft behouden.
-- Eerdere verbeteringen voor THT, productvarianten en besteloverzicht blijven behouden.
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
+  // Network first: nieuwe GitHub-versies worden zo snel mogelijk opgehaald.
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() =>
+        caches
+          .match(event.request)
+          .then((cached) => cached || caches.match("./index.html")),
+      ),
+  );
+});
