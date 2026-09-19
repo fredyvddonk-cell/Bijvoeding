@@ -958,7 +958,7 @@ function renderDrinkOrders() {
     const variantOrderEntries = g.products.filter(orderableProduct).map(x => {
       const amount = Number(x.alreadyOrdered || 0);
       const inputId = `ordered-variant-${x.id}`;
-      return `<div class="order-entry"><label for="${inputId}">${esc(variantLabel(x) || "Zonder smaak")}</label><input id="${inputId}" type="number" min="0" step="1" enterkeyhint="done" value="${amount}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveProductOrdered('${x.id}','${inputId}');this.blur();}"><span>${esc(plural(x.orderUnit, amount || 2))}</span><button type="button" class="small-primary" onclick="saveProductOrdered('${x.id}', '${inputId}')">Opslaan</button>${amount > 0 ? orderedDateHtml(x.orderedDate) : ""}</div>`;
+      return `<div class="order-entry"><label for="${inputId}">${esc(variantLabel(x) || "Zonder smaak")}</label><input id="${inputId}" type="number" min="0" max="99" step="1" inputmode="numeric" enterkeyhint="done" value="${amount > 0 ? amount : ""}" placeholder="0" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();saveProductOrdered('${x.id}','${inputId}');this.blur();}"><span>${esc(plural(x.orderUnit, amount || 2))}</span><button type="button" class="small-primary order-save-btn" onclick="saveProductOrdered('${x.id}', '${inputId}')">Opslaan</button>${amount > 0 ? orderedDateHtml(x.orderedDate) : ""}</div>`;
     }).join("");
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>

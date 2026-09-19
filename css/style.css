@@ -397,3 +397,6 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 .stock-mail-qty-wrap input{width:72px;height:38px;padding:6px 8px;border:1px solid var(--border);border-radius:9px;background:#fff;font:inherit;text-align:center}
 .stock-mail-qty-wrap input:disabled{opacity:.45;background:#f3f3f5}
 @media (max-width:560px){.stock-mail-product-row{flex-wrap:wrap}.stock-mail-product-info{flex:1 1 calc(100% - 36px)}.stock-mail-qty-wrap{margin-left:30px}}
+
+/* V3.3.79: compact invoer werkelijk besteld */
+.order-entry input{width:48px;min-width:48px;max-width:48px;text-align:center;padding:7px 4px}.order-entry .order-save-btn{margin-left:auto;align-self:center;flex:0 0 auto;padding:8px 14px}
