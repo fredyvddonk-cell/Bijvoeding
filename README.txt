@@ -1,6 +1,6 @@
-Bij- & Sondevoeding V3.3.73
+Bij- & Sondevoeding V3.3.74
 
-Nieuw in V3.3.73:
+Nieuw in V3.3.74:
 - Aftekenlijst en weekhoeveelheden kunnen per unit samen in één PDF worden gemaakt.
 - Pagina 1 bevat de aftekenlijst en pagina 2 de weekhoeveelheden.
 - Weeknummer en datumbereik staan duidelijk naast de titel van de aftekenlijst.
