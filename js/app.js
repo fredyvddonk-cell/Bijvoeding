@@ -950,17 +950,20 @@ function renderDrinkOrders() {
     const flavorSuggestion = flavorOrderSuggestion(g, totalOrder);
     const flavorSuggestionHtml = flavorSuggestion.length ? `<div class="order-flavor-suggestion"><div class="order-flavor-title">Voorstel smaken</div>${flavorSuggestion.map(x => `<div class="order-flavor-row"><span><strong>${esc(variantLabel(x.product) || "Zonder smaak")}</strong>${x.preference ? ` <span class="pref-tag">voorkeur</span>` : ""}</span><span><strong>${x.packages}</strong> ${esc(plural(x.product.orderUnit, x.packages))}</span></div>`).join("")}<div class="order-flavor-note">Verdeling binnen het bestaande besteladvies. Voorkeurssmaken krijgen voorrang op basis van verbruik en aanwezige voorraad.</div></div>` : "";
     const ordered = familyOrderedPackages(g.name, "drink");
-    const orderedDate = familyOrderedDate(g.name, "drink");
-    const orderedInputId = `ordered-family-${p.id}`;
     const orderStatus = ordered > 0
-      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${orderedDateHtml(orderedDate)}${totalOrder > 0 ? `<br><span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
+      ? `<span class="status-ordered">${ordered} ${esc(plural(p.orderUnit, ordered))} besteld</span>${totalOrder > 0 ? `<br><span class="status-order">Nog ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))} bestellen</span>` : ""}`
       : totalOrder > 0
         ? `<span class="status-order">Bestellen · ${totalOrder} ${esc(plural(p.orderUnit, totalOrder))}</span>`
         : `<span class="status-ok">Voldoende voorraad</span>`;
+    const variantOrderEntries = g.products.filter(orderableProduct).map(x => {
+      const amount = Number(x.alreadyOrdered || 0);
+      const inputId = `ordered-variant-${x.id}`;
+      return `<div class="order-entry"><label for="${inputId}">${esc(variantLabel(x) || "Zonder smaak")}</label><input id="${inputId}" type="number" min="0" step="1" enterkeyhint="done" value="${amount}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveProductOrdered('${x.id}','${inputId}');this.blur();}"><span>${esc(plural(x.orderUnit, amount || 2))}</span><button type="button" class="small-primary" onclick="saveProductOrdered('${x.id}', '${inputId}')">Opslaan</button>${amount > 0 ? orderedDateHtml(x.orderedDate) : ""}</div>`;
+    }).join("");
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
       <div class="order-summary">${orderStatus}</div>
-      <div class="order-entry"><label for="${orderedInputId}">Werkelijk besteld</label><input id="${orderedInputId}" type="number" min="0" step="1" enterkeyhint="done" value="${ordered}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}','drink','${orderedInputId}');this.blur();}"><span>${esc(plural(p.orderUnit, ordered || 2))}</span><button type="button" class="small-primary" onclick="saveFamilyOrdered('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink', '${orderedInputId}')">Opslaan</button></div>
+      ${variantOrderEntries ? `<div class="order-variant-orders"><div class="order-flavor-title">Werkelijk besteld per smaak</div>${variantOrderEntries}</div>` : ""}
       ${ordered > 0 ? `<button type="button" class="secondary compact-btn" onclick="receiveFamilyOrder('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink')">Bestelling ontvangen</button>` : ""}
       ${flavorSuggestionHtml}
       <div class="order-variant-list">${stockRows}</div>
