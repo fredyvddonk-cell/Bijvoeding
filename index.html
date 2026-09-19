@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.74</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.74" />
+    <title>Bij- &amp; Sondevoeding V3.3.77</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.77" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.74</span>
+        <span class="version">V3.3.77</span>
       </div>
     </header>
 
@@ -238,18 +238,9 @@
                 />
               </div>
             </div>
-            <div class="field" id="scheduleNoteField">
-              <label for="scheduleChoice">Gebruik op dit tijdstip</label
-              ><select id="scheduleChoice">
-                <option value="fixed">Deze voeding geven</option>
-                <option value="or">OF-keuze met andere bijvoeding</option>
-              </select>
-              <div class="field-help">
-                Kies OF wanneer op hetzelfde tijdstip één van meerdere
-                bijvoedingen gegeven mag worden. Voeg ieder alternatief als
-                aparte voedingsregel toe met hetzelfde tijdstip.
-              </div>
-            </div>
+            <select id="scheduleChoice" class="hidden" aria-hidden="true">
+              <option value="fixed" selected>Deze voeding geven</option>
+            </select>
             <div class="field">
               <label for="scheduleNote">Extra informatie</label
               ><input
@@ -659,17 +650,9 @@
               />
             </div>
           </div>
-          <div class="field" id="editScheduleNoteField">
-            <label for="editScheduleChoice">Gebruik op dit tijdstip</label
-            ><select id="editScheduleChoice">
-              <option value="fixed">Deze voeding geven</option>
-              <option value="or">OF-keuze met andere bijvoeding</option>
-            </select>
-            <div class="field-help">
-              OF-keuzes met hetzelfde kamer- en tijdstip worden samen
-              weergegeven in het dagschema.
-            </div>
-          </div>
+          <select id="editScheduleChoice" class="hidden" aria-hidden="true">
+            <option value="fixed" selected>Deze voeding geven</option>
+          </select>
           <div class="field">
             <label for="editScheduleNote">Extra informatie</label
             ><input
@@ -1104,7 +1087,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.74"></script>
+    <script src="js/app.js?v=3.3.77"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

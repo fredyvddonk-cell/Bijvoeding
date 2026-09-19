@@ -139,6 +139,8 @@ function loadData() {
 
       r.productName = r.productName ? canonicalName(r.productName) : r.productName;
       r.productId = null;
+      // V3.3.77: OF-keuze is vervallen. Bestaande kamerregels worden gewone vaste regels.
+      r.scheduleChoice = "fixed";
     });
 
     // Verwijderde standaardproducten worden bewust niet opnieuw toegevoegd.
@@ -332,15 +334,24 @@ function saveProductOrdered(id, inputId) {
 }
 function receiveFamilyOrder(encodedName, mode) {
   const name = decodeURIComponent(encodedName || "");
-  if (!familyOrderedPackages(name, mode)) return;
-  if (!confirm(`Is de bestelling van ${name} ontvangen en in de voorraad geteld?`)) return;
-  clearFamilyOrdered(name, mode);
+  const products = familyProducts(name, mode, true);
+  const ordered = products.reduce((sum, p) => sum + Number(p.alreadyOrdered || 0), 0);
+  if (!ordered) return;
+  if (!confirm(`Is de bestelling van ${name} ontvangen? De bestelde hoeveelheid wordt aan de voorraad toegevoegd.`)) return;
+  products.forEach(p => {
+    const amount = Number(p.alreadyOrdered || 0);
+    if (amount > 0) p.stockFull = Number(p.stockFull || 0) + amount;
+    p.alreadyOrdered = 0;
+    p.orderedDate = "";
+  });
   saveData();
 }
 function receiveProductOrder(id) {
   const p = data.products.find(x => x.id === id);
-  if (!p || Number(p.alreadyOrdered || 0) <= 0) return;
-  if (!confirm(`Is de bestelling van ${labelProduct(p)} ontvangen en in de voorraad geteld?`)) return;
+  const ordered = Number(p?.alreadyOrdered || 0);
+  if (!p || ordered <= 0) return;
+  if (!confirm(`Is de bestelling van ${labelProduct(p)} ontvangen? De bestelde hoeveelheid wordt aan de voorraad toegevoegd.`)) return;
+  p.stockFull = Number(p.stockFull || 0) + ordered;
   p.alreadyOrdered = 0;
   p.orderedDate = "";
   saveData();
@@ -2558,7 +2569,7 @@ async function createSchedulePdf(unit,dateValue){
     });
   });
   // Kleine versieaanduiding onderaan het printblad.
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.74",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.77",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob"); const filename=`Bijvoeding-Unit-${unit}-week-${week}.pdf`;
   return new File([blob],filename,{type:"application/pdf"});
 }
@@ -2608,7 +2619,7 @@ async function createOverviewPdf(unit){
       y+=rh;
     });
   });
-  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.74",W-mr,H-3.5,{align:"right"});
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.77",W-mr,H-3.5,{align:"right"});
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Overzicht-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 async function mergeSchedulePdfsForUnit(unit, weekFiles, weekDates){
@@ -2696,10 +2707,12 @@ async function createWeeklyQuantitiesPdf(unit,dateValue){
   const doc=new jsPDF({orientation:"p",unit:"mm",format:"a4",compress:true});
   const W=210,H=297,ml=16,mr=16,tableW=W-ml-mr;
   let y=18;
-  const {dates,week}=weekInfo(dateValue||new Date().toISOString().slice(0,10));
-  const longDate=d=>`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+  const printDate=new Date();
+  const validFrom=`${String(printDate.getDate()).padStart(2,"0")}-${String(printDate.getMonth()+1).padStart(2,"0")}-${printDate.getFullYear()}`;
   doc.setTextColor(45,45,55);doc.setFont("helvetica","bold");doc.setFontSize(13);
-  doc.text(`Weekhoeveelheden bijvoeding - Unit ${unit} | Week ${week} | ${longDate(dates[0])} t/m ${longDate(dates[6])}`,ml,y); y+=7;
+  doc.text(`Weekhoeveelheden bijvoeding - Unit ${unit}`,ml,y); y+=7;
+  doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(70,70,80);
+  doc.text(`Geldig vanaf: ${validFrom}`,ml,y); y+=6;
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(100,100,110);
   doc.text("Benodigd voor één volledige week volgens het ingestelde kamerschema.",ml,y); y+=8;
   const qtyW=38, nameW=tableW-qtyW;
@@ -2718,9 +2731,12 @@ async function createWeeklyQuantitiesPdf(unit,dateValue){
     y+=rh;
   }
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(120,120,130);
-  doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,Math.min(H-9,y+6));
-  doc.setFontSize(6.5);doc.text("Appversie: V3.3.74",W-mr,H-3.5,{align:"right"});
-  const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}-week-${week}.pdf`,{type:"application/pdf"});
+  const footerY=Math.min(H-13,y+6);
+  doc.text("OF-keuzes worden één keer als geplande gift geteld; de gekozen variant staat als alternatief vermeld.",ml,footerY);
+  doc.setFont("helvetica","italic");doc.setFontSize(7.5);doc.setTextColor(90,90,100);
+  doc.text("Opnieuw printen bij wijzigingen in de bijvoeding.",ml,footerY+4.5);
+  doc.setFont("helvetica","normal");doc.setFontSize(6.5);doc.setTextColor(130,130,140);doc.text("Appversie: V3.3.77",W-mr,H-3.5,{align:"right"});
+  const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
 async function makeSelectedSchedules(){
@@ -2769,7 +2785,21 @@ async function makeSelectedSchedules(){
   if(!files.length){alert("Er konden geen PDF-bestanden worden gemaakt voor de gekozen selectie.");return;}
   try{
     const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":types[0]==="weekly"?"Bijvoeding weekhoeveelheden":"Bijvoeding aftekenlijsten");
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title,text:`Bijgevoegd ${files.length} PDF-bestand${files.length===1?"":"en"}.`,files});}
+    const mailText=[];
+    mailText.push("Hoi allemaal,","");
+    if(types.includes("check")){
+      mailText.push("Bijgevoegd de aftekenlijst(en) voor de geselecteerde unit(s) en week.","");
+      mailText.push("Kleine reminder: denk eraan om aan het begin van de week de weekvoorraad bijvoeding op de unit klaar te zetten. Zo is er voldoende voorraad voor de hele week en hoef je minder vaak naar de centrale voorraad te lopen omdat iets op is.","");
+    }else{
+      mailText.push("Bijgevoegd de bijvoedingslijst(en) voor de geselecteerde unit(s).","");
+    }
+    if(types.includes("weekly")){
+      const pageLabel=types.includes("check")?"Op pagina 2 staan de weekhoeveelheden.":"Op de lijst staan de weekhoeveelheden.";
+      mailText.push(`${pageLabel} Deze kun je gebruiken om voldoende bijvoeding voor één week op de unit klaar te zetten. De weekhoeveelheden blijven geldig vanaf de datum die op de lijst staat en hoeven alleen opnieuw geprint te worden wanneer er iets wijzigt.`,"");
+      mailText.push("Tip: hang de lijst met weekhoeveelheden in het keukenkastje bij de bijvoeding. Zo is snel te zien wat er voor die unit nodig is. Door deze hoeveelheid aan te houden, is er voldoende voorraad op de unit en hoef je tijdens de week minder vaak naar de centrale voorraad te lopen omdat iets op is.","");
+    }
+    mailText.push("Groetjes,","Fredy");
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title,text:mailText.join("\n"),files});}
     else{for(const file of files){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}alert(`${files.length} PDF-bestand${files.length===1?"":"en"} gemaakt. Voeg ze samen als bijlagen toe aan één e-mail.`);}
   }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
 }
@@ -2777,7 +2807,7 @@ async function makeSelectedSchedules(){
 
 
 
-// V3.3.74 — mailselectie met zelf gekozen aantallen en duidelijke eenheden.
+// V3.3.77 — mailselectie met zelf gekozen aantallen en duidelijke eenheden.
 let stockMailModes = new Set(["drink", "general", "sonde"]);
 
 function stockMailModeLabel(mode) {
@@ -2997,7 +3027,7 @@ function createStockMail() {
     try {
       const payload = {
         app: "Bij- & Sondevoeding",
-        version: "V3.3.74",
+        version: "V3.3.77",
         createdAt: new Date().toISOString(),
         storageKey: STORAGE_KEY,
         data: data
@@ -3104,4 +3134,4 @@ function createStockMail() {
 // V3.3.53 - foto/screenshot-invoer koppelen.
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initOrderScan); else initOrderScan();
 
-// V3.3.74 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
+// V3.3.77 — besteladvies bij bijvoeding toont een smaakvoorstel, met voorrang voor voorkeurssmaken.
