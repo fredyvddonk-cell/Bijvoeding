@@ -429,10 +429,13 @@ function advice(p) {
 }
 
 function roomOptionValue(name) {
-  return `group:${encodeURIComponent(name)}`;
+  // Gebruik voor kamerkeuzes altijd de canonieke productfamilie als waarde.
+  // Daardoor blijft een bestaande kamer ook na groeperen/naamswijzigingen
+  // correct geselecteerd en kan de bijvoeding weer gewoon gewijzigd worden.
+  return `group:${encodeURIComponent(canonicalName(name))}`;
 }
 function parseRoomProductName(value) {
-  return value.startsWith("group:") ? decodeURIComponent(value.slice(6)) : "";
+  return value.startsWith("group:") ? canonicalName(decodeURIComponent(value.slice(6))) : "";
 }
 function roomOptions(mode) {
   const names = familyNames(mode);
