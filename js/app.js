@@ -1,9 +1,24 @@
 let data = loadData();
 let currentMode = "drink";
 
-// V3.3.83 — expliciete DOM-koppelingen voor Kamer-formulieren.
+// V3.3.84 — expliciete DOM-koppelingen voor Kamer-formulieren.
 // Mobiele browsers maken elementen met een id niet altijd als globale JS-variabele beschikbaar.
 const room = document.getElementById("room");
+const saveRoom = document.getElementById("saveRoom");
+const saveGeneralTarget = document.getElementById("saveGeneralTarget");
+const saveProduct = document.getElementById("saveProduct");
+const saveProductEdit = document.getElementById("saveProductEdit");
+const saveExpiryCheck = document.getElementById("saveExpiryCheck");
+const deleteProductFromModal = document.getElementById("deleteProductFromModal");
+const productType = document.getElementById("productType");
+const productList = document.getElementById("productList");
+const orderUnit = document.getElementById("orderUnit");
+const looseUnitsAllowed = document.getElementById("looseUnitsAllowed");
+const externalProduct = document.getElementById("externalProduct");
+const editProductType = document.getElementById("editProductType");
+const editOrderUnit = document.getElementById("editOrderUnit");
+const editLooseUnitsAllowed = document.getElementById("editLooseUnitsAllowed");
+const editExternalProduct = document.getElementById("editExternalProduct");
 const unit = document.getElementById("unit");
 const roomType = document.getElementById("roomType");
 const roomProduct = document.getElementById("roomProduct");
