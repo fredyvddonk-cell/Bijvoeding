@@ -9,8 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Bij- &amp; Sondevoeding V3.3.84</title>
-    <link rel="stylesheet" href="css/style.css?v=3.3.84" />
+    <title>Bij- &amp; Sondevoeding V3.3.85</title>
+    <link rel="stylesheet" href="css/style.css?v=3.3.85" />
   </head>
   <body>
     <header>
@@ -22,7 +22,7 @@
         <p class="brand-subtitle">
           Voorraad <b>•</b> Verbruik <b>•</b> Bestellen
         </p>
-        <span class="version">V3.3.84</span>
+        <span class="version">V3.3.85</span>
       </div>
     </header>
 
@@ -238,9 +238,11 @@
                 />
               </div>
             </div>
-            <select id="scheduleChoice" class="hidden" aria-hidden="true">
-              <option value="fixed" selected>Deze voeding geven</option>
-            </select>
+            <div id="scheduleNoteField" class="hidden" aria-hidden="true">
+              <select id="scheduleChoice">
+                <option value="fixed" selected>Deze voeding geven</option>
+              </select>
+            </div>
             <div class="field">
               <label for="scheduleNote">Extra informatie</label
               ><input
@@ -650,9 +652,11 @@
               />
             </div>
           </div>
-          <select id="editScheduleChoice" class="hidden" aria-hidden="true">
-            <option value="fixed" selected>Deze voeding geven</option>
-          </select>
+          <div id="editScheduleNoteField" class="hidden" aria-hidden="true">
+            <select id="editScheduleChoice">
+              <option value="fixed" selected>Deze voeding geven</option>
+            </select>
+          </div>
           <div class="field">
             <label for="editScheduleNote">Extra informatie</label
             ><input
@@ -1087,7 +1091,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="data/defaults.js"></script>
-    <script src="js/app.js?v=3.3.84"></script>
+    <script src="js/app.js?v=3.3.85"></script>
 
     <script>
       if ("serviceWorker" in navigator) {

@@ -1,7 +1,7 @@
 let data = loadData();
 let currentMode = "drink";
 
-// V3.3.84 — expliciete DOM-koppelingen voor Kamer-formulieren.
+// V3.3.85 — herstel Kamer-formulieren; behoud expliciete DOM-koppelingen voor Kamer-formulieren.
 // Mobiele browsers maken elementen met een id niet altijd als globale JS-variabele beschikbaar.
 const room = document.getElementById("room");
 const saveRoom = document.getElementById("saveRoom");

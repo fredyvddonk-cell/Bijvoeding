@@ -1,4 +1,4 @@
-const CACHE_NAME = "bij-sondevoeding-V3.3.84";
+const CACHE_NAME = "bij-sondevoeding-V3.3.85";
 const APP_SHELL = [
   "./",
   "./index.html",
