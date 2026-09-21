@@ -1660,12 +1660,25 @@ function renderUsage() {
       <div class="room-line-type-row"><span class="room-line-text">${esc(roomProductLabel(r))}${r.scheduleChoice === "or" ? ` <span class="choice-chip">OF-keuze</span>` : ""}</span><span class="type-chip ${r.mode}">${esc(typeName(r.mode))}</span></div>
       <div class="room-line-main"><span></span><span class="room-line-use">${esc(withUnit(r.dailyAmount, r.dailyUnit))}/dag</span></div>
       ${roomScheduleSummary(r)}
-      <div class="room-line-actions"><button class="small-primary" onclick="editRoom('${r.id}')">Wijzigen</button><button class="small-copy" onclick="copyRoom('${r.id}')">Kopiëren</button><button class="small-danger" onclick="deleteRoom('${r.id}')">Verwijderen</button></div>
+      <div class="room-line-actions"><button type="button" class="small-primary" data-room-action="edit" data-room-id="${esc(r.id)}">Wijzigen</button><button type="button" class="small-copy" data-room-action="copy" data-room-id="${esc(r.id)}">Kopiëren</button><button type="button" class="small-danger" data-room-action="delete" data-room-id="${esc(r.id)}">Verwijderen</button></div>
     </div>`).join("")}
   </div>`).join("")}
     </div>
   </details>`).join("") : `<div class="empty">Nog geen kamers ingevoerd.</div>`;
 }
+
+// Kameracties via één vaste klikafhandeling. Dit voorkomt dat Wijzigen/Kopiëren
+// op mobiele browsers niet reageren door opnieuw gerenderde knoppen.
+if (usageList) usageList.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-room-action][data-room-id]");
+  if (!button || !usageList.contains(button)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const id = button.dataset.roomId;
+  if (button.dataset.roomAction === "edit") editRoom(id);
+  else if (button.dataset.roomAction === "copy") copyRoom(id);
+  else if (button.dataset.roomAction === "delete") deleteRoom(id);
+});
 
 function roomScheduleSummary(r){
   const entries=roomScheduleEntries(r);
