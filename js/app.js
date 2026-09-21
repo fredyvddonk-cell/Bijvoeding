@@ -1,6 +1,36 @@
 let data = loadData();
 let currentMode = "drink";
 
+// V3.3.83 — expliciete DOM-koppelingen voor Kamer-formulieren.
+// Mobiele browsers maken elementen met een id niet altijd als globale JS-variabele beschikbaar.
+const room = document.getElementById("room");
+const unit = document.getElementById("unit");
+const roomType = document.getElementById("roomType");
+const roomProduct = document.getElementById("roomProduct");
+const roomFlavorChoices = document.getElementById("roomFlavorChoices");
+const dailyAmount = document.getElementById("dailyAmount");
+const dailyUnit = document.getElementById("dailyUnit");
+const scheduleTimes = document.getElementById("scheduleTimes");
+const scheduleAmount = document.getElementById("scheduleAmount");
+const scheduleDays = document.getElementById("scheduleDays");
+const scheduleChoice = document.getElementById("scheduleChoice");
+const scheduleNote = document.getElementById("scheduleNote");
+const scheduleShowOnPdf = document.getElementById("scheduleShowOnPdf");
+const editRoomNumber = document.getElementById("editRoomNumber");
+const editRoomUnit = document.getElementById("editRoomUnit");
+const editRoomProduct = document.getElementById("editRoomProduct");
+const editRoomFlavorChoices = document.getElementById("editRoomFlavorChoices");
+const editDailyAmount = document.getElementById("editDailyAmount");
+const editDailyUnit = document.getElementById("editDailyUnit");
+const editScheduleTimes = document.getElementById("editScheduleTimes");
+const editScheduleAmount = document.getElementById("editScheduleAmount");
+const editScheduleDays = document.getElementById("editScheduleDays");
+const editScheduleChoice = document.getElementById("editScheduleChoice");
+const editScheduleNote = document.getElementById("editScheduleNote");
+const editScheduleShowOnPdf = document.getElementById("editScheduleShowOnPdf");
+const saveRoomEdit = document.getElementById("saveRoomEdit");
+const roomEditModal = document.getElementById("roomEditModal");
+
 const CUPBOARD_ORDER = [
   ["Abound", "Neutraal"], ["Abound", "Sinaasappel"],
   ["Nutridrink Crème 2 kcal Protein", "Banaan"], ["Nutridrink Crème 2 kcal Protein", "Bosvruchten"], ["Nutridrink Crème 2 kcal Protein", "Chocolade"], ["Nutridrink Crème 2 kcal Protein", "Mokka"], ["Nutridrink Crème 2 kcal Protein", "Vanille"],

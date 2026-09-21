@@ -1,6 +1,6 @@
-Bij- & Sondevoeding V3.3.82
+Bij- & Sondevoeding V3.3.83
 
-Nieuw in V3.3.82:
+Nieuw in V3.3.83:
 - Knoppen Wijzigen en Kopiëren bij Kamers reageren weer betrouwbaar, ook op mobiel.
 - Kameracties gebruiken nu één vaste klikafhandeling na opnieuw renderen.
 - Werkelijk besteld per smaak/variant staat standaard ingeklapt.
