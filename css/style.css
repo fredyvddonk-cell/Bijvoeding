@@ -400,3 +400,6 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 
 /* V3.3.79: compact invoer werkelijk besteld */
 .order-entry input{width:48px;min-width:48px;max-width:48px;text-align:center;padding:7px 4px}.order-entry .order-save-btn{margin-left:auto;align-self:center;flex:0 0 auto;padding:8px 14px}
+
+/* V3.3.80 — bestelvelden per smaak standaard ingeklapt */
+.order-entry-details{margin-top:10px;border:1px solid var(--border);border-radius:12px;background:#fafafa;overflow:hidden}.order-entry-details>summary{cursor:pointer;font-weight:900;padding:10px 12px;list-style-position:inside}.order-entry-details[open]>summary{border-bottom:1px solid var(--border)}.order-variant-order-body{padding:0 10px 10px}.order-variant-order-body .order-entry{margin-top:8px}

@@ -963,7 +963,7 @@ function renderDrinkOrders() {
     return `<div class="item order-card order-family-card">
       <div class="order-product">${esc(g.name)}</div>
       <div class="order-summary">${orderStatus}</div>
-      ${variantOrderEntries ? `<div class="order-variant-orders"><div class="order-flavor-title">Werkelijk besteld per smaak</div>${variantOrderEntries}</div>` : ""}
+      ${variantOrderEntries ? `<details class="order-variant-orders order-entry-details"><summary>Werkelijk besteld per smaak invoeren</summary><div class="order-variant-order-body">${variantOrderEntries}</div></details>` : ""}
       ${ordered > 0 ? `<button type="button" class="secondary compact-btn" onclick="receiveFamilyOrder('${encodeURIComponent(g.name).replace(/'/g, "%27")}', 'drink')">Bestelling ontvangen</button>` : ""}
       ${flavorSuggestionHtml}
       <div class="order-variant-list">${stockRows}</div>
