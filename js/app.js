@@ -2803,6 +2803,20 @@ async function createWeeklyQuantitiesPdf(unit,dateValue){
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
+// Voeg alle geselecteerde lijsten (alle units, weken en typen) in één PDF samen.
+async function mergeAllSelectedPdfs(files){
+  if(files.length===1) return new File([await files[0].arrayBuffer()], "Bijvoeding-Alle-geselecteerde-lijsten.pdf", {type:"application/pdf"});
+  if(!window.PDFLib?.PDFDocument) throw new Error("PDF-bundelmodule kon niet worden geladen.");
+  const merged=await PDFLib.PDFDocument.create();
+  for(const file of files){
+    const source=await PDFLib.PDFDocument.load(await file.arrayBuffer());
+    const pages=await merged.copyPages(source,source.getPageIndices());
+    for(const page of pages) merged.addPage(page);
+  }
+  const bytes=await merged.save();
+  return new File([bytes], "Bijvoeding-Alle-geselecteerde-lijsten.pdf", {type:"application/pdf"});
+}
+
 async function makeSelectedSchedules(){
   const units=[...document.querySelectorAll(".pdf-unit-check:checked")].map(x=>x.value);
   const types=[...document.querySelectorAll(".pdf-type-input:checked")].map(x=>x.value);
@@ -2848,6 +2862,8 @@ async function makeSelectedSchedules(){
   }
   if(!files.length){alert("Er konden geen PDF-bestanden worden gemaakt voor de gekozen selectie.");return;}
   try{
+    const combinedFile=await mergeAllSelectedPdfs(files);
+    const shareFiles=[combinedFile];
     const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":types[0]==="weekly"?"Bijvoeding weekhoeveelheden":"Bijvoeding aftekenlijsten");
     const mailText=[];
     mailText.push("Hoi allemaal,","");
@@ -2858,14 +2874,14 @@ async function makeSelectedSchedules(){
       mailText.push("Bijgevoegd de bijvoedingslijst(en) voor de geselecteerde unit(s).","");
     }
     if(types.includes("weekly")){
-      const pageLabel=types.includes("check")?"Op pagina 2 staan de weekhoeveelheden.":"Op de lijst staan de weekhoeveelheden.";
+      const pageLabel="In de PDF staan ook de weekhoeveelheden.";
       mailText.push(`${pageLabel} Deze kun je gebruiken om voldoende bijvoeding voor één week op de unit klaar te zetten. De weekhoeveelheden blijven geldig vanaf de datum die op de lijst staat en hoeven alleen opnieuw geprint te worden wanneer er iets wijzigt.`,"");
       mailText.push("Tip: hang de lijst met weekhoeveelheden in het keukenkastje bij de bijvoeding. Zo is snel te zien wat er voor die unit nodig is. Door deze hoeveelheid aan te houden, is er voldoende voorraad op de unit en hoef je tijdens de week minder vaak naar de centrale voorraad te lopen omdat iets op is.","");
     }
     mailText.push("Groetjes,","Fredy");
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))){await navigator.share({title,text:mailText.join("\n"),files});}
-    else{for(const file of files){const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}alert(`${files.length} PDF-bestand${files.length===1?"":"en"} gemaakt. Voeg ze samen als bijlagen toe aan één e-mail.`);}
-  }catch(e){if(e?.name!=="AbortError") alert("Delen lukte niet. Probeer de PDF-bestanden opnieuw te maken.");}
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:shareFiles}))){await navigator.share({title,text:mailText.join("\n"),files:shareFiles});}
+    else{const url=URL.createObjectURL(combinedFile);const a=document.createElement("a");a.href=url;a.download=combinedFile.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);alert("Eén PDF-bestand gemaakt met alle geselecteerde pagina’s.");}
+  }catch(e){if(e?.name!=="AbortError") alert("PDF samenvoegen of delen lukte niet: "+(e?.message||"probeer opnieuw"));}
 }
 
 

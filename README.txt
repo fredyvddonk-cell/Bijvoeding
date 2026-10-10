@@ -1,8 +1,6 @@
-Bij- & Sondevoeding V3.3.85
+Bij- & Sondevoeding V3.3.86
 
-Nieuw in V3.3.85:
-- Knoppen Wijzigen en Kopiëren bij Kamers reageren weer betrouwbaar, ook op mobiel.
-- Kameracties gebruiken nu één vaste klikafhandeling na opnieuw renderen.
-- Werkelijk besteld per smaak/variant staat standaard ingeklapt.
-- De invoervelden worden pas zichtbaar na openen van Werkelijk besteld per smaak invoeren.
-- Bestelscherm blijft hierdoor rustiger bij meerdere gegroepeerde producten.
+Nieuw:
+- Besteloverzicht: bestandskiezer expliciet geschikt gemaakt voor fotoselectie via Bestanden/OneDrive (mits OneDrive op het toestel is gekoppeld).
+- PDF: alle geselecteerde units, weken en soorten worden samengevoegd tot één meerpagina-PDF, ook bij delen via mobiel.
+- Bestaande functies behouden.
