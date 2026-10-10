@@ -1,6 +1,6 @@
-Bij- & Sondevoeding V3.3.86
+Bij- & Sondevoeding V3.3.87
 
 Nieuw:
-- Besteloverzicht: bestandskiezer expliciet geschikt gemaakt voor fotoselectie via Bestanden/OneDrive (mits OneDrive op het toestel is gekoppeld).
-- PDF: alle geselecteerde units, weken en soorten worden samengevoegd tot één meerpagina-PDF, ook bij delen via mobiel.
-- Bestaande functies behouden.
+- Afbeelding / OneDrive opent een algemene bestandskeuze in plaats van alleen Google Foto’s; de app controleert daarna of het bestand een afbeelding is.
+- PDF: geselecteerde pagina’s blijven gecombineerd in één meerpagina-PDF (uit V3.3.86).
+- Bestaande functies verder ongewijzigd.
