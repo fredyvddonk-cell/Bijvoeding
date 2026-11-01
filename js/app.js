@@ -298,6 +298,9 @@ function activeFlavorIds(name, mode) {
 function roomMatchesProduct(r, p) {
   if (!activeProduct(p)) return false;
   if (canonicalName(r.productName) !== canonicalName(p.name)) return false;
+  // Sondevoeding wordt per productfamilie (naam) aan kamers gekoppeld.
+  // Een bestaand artikel kan meerdere inhoudsvarianten/IDs hebben.
+  if (r.mode === "sonde" && p.mode === "sonde") return true;
   if (r.mode === "drink" && r.allFlavors) return true;
   return Array.isArray(r.selectedProductIds) && r.selectedProductIds.includes(p.id);
 }
