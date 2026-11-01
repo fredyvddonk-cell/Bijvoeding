@@ -1,4 +1,4 @@
-const CACHE_NAME = "bij-sondevoeding-V3.3.88";
+const CACHE_NAME = "bij-sondevoeding-V3.3.89";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "./icon-192.png",
   "./icon-512.png",
   "./logo-header.png",
+  "./assets/koelkastkaartje-basis.pdf",
 ];
 
 self.addEventListener("install", (event) => {

@@ -2806,6 +2806,63 @@ async function createWeeklyQuantitiesPdf(unit,dateValue){
   const blob=doc.output("blob");return new File([blob],`Bijvoeding-Weekhoeveelheden-Unit-${unit}.pdf`,{type:"application/pdf"});
 }
 
+// Koelkastkaartjes: het originele aangeleverde kaartontwerp als PDF-achtergrond.
+// Alleen product, hoeveelheid en noodzakelijke smaakvoorkeur worden ingevuld.
+async function createFridgeCardsPdf(units){
+  if(!window.PDFLib?.PDFDocument) throw new Error("PDF-module niet beschikbaar.");
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const rows=[];
+  for(const r of data.rooms){
+    if(r.mode!=="drink" || !units.includes(String(r.unit)) || r.showOnPdf===false) continue;
+    const entries=roomScheduleEntries(r);
+    for(const e of entries){
+      if(!(Number(e.amount)>0)) continue;
+      const flavor=scheduleFlavorText(r);
+      const note=String(e.note||r.scheduleNote||"");
+      const excluded=note.match(/(?:geen|niet|lust geen)\s+([a-zà-ÿ][a-zà-ÿ \/-]*)/i);
+      const oneFlavor=familyProducts(r.productName,"drink").filter(p=>p.flavor).length===1;
+      let preference="";
+      if(excluded) preference="GEEN "+excluded[1].trim().toUpperCase();
+      else if(!r.allFlavors && !oneFlavor && flavor) preference="ALLEEN "+flavor.toUpperCase();
+      const amount=withUnit(Number(e.amount),r.dailyUnit);
+      rows.push({name:String(r.productName||""),amount,preference});
+    }
+  }
+  if(!rows.length) return null;
+  // Eén kaart per unieke product-/hoeveelheid-/smaakcombinatie; geen bewonersinformatie.
+  const unique=[...new Map(rows.map(r=>[[r.name,r.amount,r.preference].join("|"),r])).values()];
+  const response=await fetch("assets/koelkastkaartje-basis.pdf");
+  if(!response.ok) throw new Error("Kaartontwerp kon niet worden geladen.");
+  const templateBytes=await response.arrayBuffer();
+  const template=await PDFDocument.load(templateBytes);
+  const doc=await PDFDocument.create();
+  const font=await doc.embedFont(StandardFonts.Helvetica);
+  const bold=await doc.embedFont(StandardFonts.HelveticaBold);
+  const [card]=await doc.embedPdf(await template.save());
+  const W=595.28,H=841.89,cw=340.157,ch=113.386;
+  // A4: één kolom van vijf kaartjes op ware grootte, zonder schaalverandering.
+  const marginX=(W-cw)/2,marginY=22;
+  const ink=rgb(.17,.18,.22);
+  function fit(text,max,size,f){while(size>6 && f.widthOfTextAtSize(text,size)>max)size-=.3;return size;}
+  function center(page,text,fontObj,size,cx,y,max){const fs=fit(text,max,size,fontObj);page.drawText(text,{x:cx-fontObj.widthOfTextAtSize(text,fs)/2,y,size:fs,font:fontObj,color:ink});}
+  for(let i=0;i<unique.length;i++){
+    const r=unique[i],slot=i%6;
+    if(slot===0)doc.addPage([W,H]);
+    const pg=doc.getPages().at(-1);
+    const x=marginX,y=H-marginY-ch-slot*(ch+17);
+    pg.drawPage(card,{x,y,width:cw,height:ch});
+    const words=r.name.toUpperCase().split(/\s+/), lines=[];
+    let current="";
+    for(const word of words){const trial=(current?current+" ":"")+word;if(current&&bold.widthOfTextAtSize(trial,11)>106){lines.push(current);current=word;}else current=trial;}
+    if(current)lines.push(current);
+    const nameLines=lines.slice(0,3),middle=y+ch/2+3;
+    nameLines.forEach((line,j)=>center(pg,line,bold,11,x+101,middle+(nameLines.length-1)*7-j*14,108));
+    const right=r.preference ? r.preference+" · "+r.amount : r.amount;
+    center(pg,right,font,9,x+264,y+ch-70,105);
+  }
+  return new File([await doc.save()],"Bijvoeding-Koelkastkaartjes.pdf",{type:"application/pdf"});
+}
+
 // Voeg alle geselecteerde lijsten (alle units, weken en typen) in één PDF samen.
 async function mergeAllSelectedPdfs(files){
   if(files.length===1) return new File([await files[0].arrayBuffer()], "Bijvoeding-Alle-geselecteerde-lijsten.pdf", {type:"application/pdf"});
@@ -2830,6 +2887,7 @@ async function makeSelectedSchedules(){
   closePdfUnitModal();
   const files=[];
   if(types.includes("overview")){for(const unit of units){const f=await createOverviewPdf(unit);if(f)files.push(f);}}
+  if(types.includes("cards")){const f=await createFridgeCardsPdf(units);if(f)files.push(f);}
 
   // Als aftekenlijst + weekhoeveelheden samen zijn gekozen, maak per unit en week
   // één bestand: pagina 1 aftekenlijst, pagina 2 weekhoeveelheden.
@@ -2867,12 +2925,14 @@ async function makeSelectedSchedules(){
   try{
     const combinedFile=await mergeAllSelectedPdfs(files);
     const shareFiles=[combinedFile];
-    const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":types[0]==="weekly"?"Bijvoeding weekhoeveelheden":"Bijvoeding aftekenlijsten");
+    const title=types.length>1?"Bijvoeding PDF-lijsten":(types[0]==="overview"?"Bijvoeding overzichten":types[0]==="weekly"?"Bijvoeding weekhoeveelheden":types[0]==="cards"?"Koelkastkaartjes":"Bijvoeding aftekenlijsten");
     const mailText=[];
     mailText.push("Hoi allemaal,","");
     if(types.includes("check")){
       mailText.push("Bijgevoegd de aftekenlijst(en) voor de geselecteerde unit(s) en week.","");
       mailText.push("Kleine reminder: denk eraan om aan het begin van de week de weekvoorraad bijvoeding op de unit klaar te zetten. Zo is er voldoende voorraad voor de hele week en hoef je minder vaak naar de centrale voorraad te lopen omdat iets op is.","");
+    }else if(types.includes("cards")){
+      mailText.push("Bijgevoegd de koelkastkaartjes voor de geselecteerde unit(s).","");
     }else{
       mailText.push("Bijgevoegd de bijvoedingslijst(en) voor de geselecteerde unit(s).","");
     }
