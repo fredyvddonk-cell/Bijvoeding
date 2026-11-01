@@ -404,5 +404,5 @@ body.order-scan-open{overflow:hidden;touch-action:none}
 /* V3.3.80 — bestelvelden per smaak standaard ingeklapt */
 .order-entry-details{margin-top:10px;border:1px solid var(--border);border-radius:12px;background:#fafafa;overflow:hidden}.order-entry-details>summary{cursor:pointer;font-weight:900;padding:10px 12px;list-style-position:inside}.order-entry-details[open]>summary{border-bottom:1px solid var(--border)}.order-variant-order-body{padding:0 10px 10px}.order-variant-order-body .order-entry{margin-top:8px}
 
-/* V3.3.89: vaste lichte achtergrond bij mobiele PWA-start en safe areas. */
+/* V3.3.90: vaste lichte achtergrond bij mobiele PWA-start en safe areas. */
 :root,html,body{background-color:#ffffff!important;color-scheme:light;}
